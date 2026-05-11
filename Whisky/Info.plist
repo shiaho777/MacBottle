@@ -54,9 +54,9 @@
 		</dict>
 	</array>
 	<key>SUFeedURL</key>
-	<string>https://data.getwhisky.app/appcast.xml</string>
+	<string>https://updates.macbottle.app/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>tnZFAvPUfCpM7Tr7Sx5gKRm6BUQQ6htJQeOMP44evms=</string>
+	<string>MACBOTTLE_REPLACE_WITH_REAL_EDDSA_PUBLIC_KEY_BEFORE_RELEASE</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
