@@ -31,6 +31,7 @@ struct BottleView: View {
     @State private var path = NavigationPath()
     @State private var programLoading: Bool = false
     @State private var showWinetricksSheet: Bool = false
+    @StateObject private var recipeSync = RecipeSyncController()
 
     private let gridLayout = [GridItem(.adaptive(minimum: 100, maximum: .infinity))]
 
@@ -116,11 +117,15 @@ struct BottleView: View {
             }
             .onAppear {
                 updateStartMenu()
+                recipeSync.checkInBackground()
             }
             .disabled(!bottle.isAvailable)
             .navigationTitle(bottle.settings.name)
             .sheet(isPresented: $showWinetricksSheet) {
                 WinetricksView(bottle: bottle)
+            }
+            .sheet(item: $recipeSync.pending) { pending in
+                RecipeSyncView(controller: recipeSync, pending: pending)
             }
             .onChange(of: bottle.settings) { oldValue, newValue in
                 guard oldValue != newValue else { return }

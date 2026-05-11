@@ -17,6 +17,8 @@
 		6E064B1429DD331F00D9A2D2 /* SparkleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E064B1329DD331F00D9A2D2 /* SparkleView.swift */; };
 		6E17B6462AF3FDC100831173 /* PinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E17B6452AF3FDC100831173 /* PinView.swift */; };
 		6E17B6492AF4118F00831173 /* EnvironmentArgView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E17B6482AF4118F00831173 /* EnvironmentArgView.swift */; };
+		ECE00000000000000000001A /* RecipeSyncController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000001B /* RecipeSyncController.swift */; };
+		ECE00000000000000000002A /* RecipeSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000002B /* RecipeSyncView.swift */; };
 		6E182FCA2B0BF64E00AADE81 /* WinetricksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E182FC92B0BF64E00AADE81 /* WinetricksView.swift */; };
 		6E2B25C12B0E20F50084A67A /* PinAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2B25C02B0E20F50084A67A /* PinAddView.swift */; };
 		6E2FB15E2B589A7800E344C6 /* cabextract in Embed WhiskyCmd */ = {isa = PBXBuildFile; fileRef = 6E2FB15D2B589A7800E344C6 /* cabextract */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -120,6 +122,8 @@
 		6E064B1329DD331F00D9A2D2 /* SparkleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleView.swift; sourceTree = "<group>"; };
 		6E17B6452AF3FDC100831173 /* PinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinView.swift; sourceTree = "<group>"; };
 		6E17B6482AF4118F00831173 /* EnvironmentArgView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentArgView.swift; sourceTree = "<group>"; };
+		ECE00000000000000000001B /* RecipeSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeSyncController.swift; sourceTree = "<group>"; };
+		ECE00000000000000000002B /* RecipeSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeSyncView.swift; sourceTree = "<group>"; };
 		6E182FC92B0BF64E00AADE81 /* WinetricksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinetricksView.swift; sourceTree = "<group>"; };
 		6E2B25C02B0E20F50084A67A /* PinAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinAddView.swift; sourceTree = "<group>"; };
 		6E2FB15D2B589A7800E344C6 /* cabextract */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = cabextract; sourceTree = "<group>"; };
@@ -330,12 +334,22 @@
 				6E6C0CF02A419A5800356232 /* Setup */,
 				6E17B6472AF3FE2E00831173 /* Programs */,
 				6E355E5629D78202002D83BE /* Bottle */,
+				ECE00000000000000000003C /* Recipe */,
 				6E40495529CCA19C006E3F1B /* WhiskyApp.swift */,
 				6E40495729CCA19C006E3F1B /* ContentView.swift */,
 				6E064B1329DD331F00D9A2D2 /* SparkleView.swift */,
 				6E7C07BF2AAF570100F6E66B /* FileOpenView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		ECE00000000000000000003C /* Recipe */ = {
+			isa = PBXGroup;
+			children = (
+				ECE00000000000000000001B /* RecipeSyncController.swift */,
+				ECE00000000000000000002B /* RecipeSyncView.swift */,
+			);
+			path = Recipe;
 			sourceTree = "<group>";
 		};
 		6E5197CE29D71FE800CF655E /* View Models */ = {
@@ -624,6 +638,8 @@
 				6E40498129CCA8B0006E3F1B /* BottleView.swift in Sources */,
 				6E355E5E29D7D85D002D83BE /* ProgramView.swift in Sources */,
 				ECE00000000000000000000A /* RecipeSection.swift in Sources */,
+				ECE00000000000000000001A /* RecipeSyncController.swift in Sources */,
+				ECE00000000000000000002A /* RecipeSyncView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
