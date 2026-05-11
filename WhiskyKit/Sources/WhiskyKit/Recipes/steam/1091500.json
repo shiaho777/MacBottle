@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "steam.1091500",
   "title": "Cyberpunk 2077",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/1091500/header.jpg",
   "dx_version": "d3d12",
   "min_macos": "14.0",
   "renderer": "d3dmetal",

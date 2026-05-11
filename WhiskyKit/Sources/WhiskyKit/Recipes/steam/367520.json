@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "steam.367520",
+  "title": "Hollow Knight",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg",
+  "dx_version": "d3d9",
+  "min_macos": "14.0",
+  "renderer": "wined3d",
+  "winetricks": [],
+  "env": {
+    "WINEESYNC": "1"
+  },
+  "registry": [],
+  "compatibility": "platinum",
+  "notes": "Lightweight 2D title. Runs flawlessly at 120fps on ProMotion displays."
+}

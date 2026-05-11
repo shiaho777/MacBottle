@@ -48,6 +48,7 @@ struct RecipeSection: View {
             }
 
             if let recipe = attachedRecipe {
+                RecipeHeaderView(recipe: recipe)
                 RecipeDetailRows(recipe: recipe)
             } else {
                 // swiftlint:disable:next line_length
@@ -114,6 +115,69 @@ private struct RecipeDetailRows: View {
         case .silver:   return .gray
         case .bronze:   return .orange
         case .broken:   return .red
+        }
+    }
+}
+
+/// Large header row with the recipe's title and cover art.
+///
+/// Icons are fetched asynchronously from the URL declared in the recipe.
+/// Failures fall back to a neutral SF Symbol so the UI stays coherent
+/// whether or not the network is reachable — by design the app must be
+/// fully usable offline with only bundled recipes.
+private struct RecipeHeaderView: View {
+    let recipe: Recipe
+
+    // Steam header art is 460×215; cap the displayed height so the row
+    // stays compact even on very tall cover art from other sources.
+    private static let artHeight: CGFloat = 72
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let url = recipe.iconURL {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        case .failure:
+                            fallbackGlyph
+                        case .empty:
+                            ProgressView().controlSize(.small)
+                        @unknown default:
+                            fallbackGlyph
+                        }
+                    }
+                } else {
+                    fallbackGlyph
+                }
+            }
+            .frame(width: Self.artHeight * (460.0 / 215.0), height: Self.artHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(.separator, lineWidth: 0.5)
+            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: recipe.title)
+                    .font(.headline)
+                Text(verbatim: recipe.id)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var fallbackGlyph: some View {
+        ZStack {
+            Rectangle().fill(.quaternary)
+            Image(systemName: "gamecontroller")
+                .font(.title2)
+                .foregroundStyle(.secondary)
         }
     }
 }

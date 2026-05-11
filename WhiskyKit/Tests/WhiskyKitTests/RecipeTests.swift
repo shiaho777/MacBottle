@@ -128,11 +128,40 @@ final class RecipeTests: XCTestCase {
         let store = RecipeStore(bundle: .module)
         let recipes = store.loadAll()
 
-        // We ship at least the v0.2 seed set. If this fails, either a
-        // new recipe is malformed or the Recipes/ directory was not
-        // copied into the bundle by SwiftPM.
-        XCTAssertGreaterThanOrEqual(recipes.count, 10,
-            "Expected at least 10 shipped recipes; got \(recipes.count)")
+        // We ship at least the v0.5.1 seed set (10 original + 8 popular
+        // additions). If this fails, either a new recipe is malformed or
+        // the Recipes/ directory was not copied into the bundle by SwiftPM.
+        XCTAssertGreaterThanOrEqual(recipes.count, 18,
+            "Expected at least 18 shipped recipes; got \(recipes.count)")
+    }
+
+    func testShippedRecipesMostlyHaveIcons() {
+        // Icons are optional in the schema but strongly encouraged. Guard
+        // the seed set so regressions in recipe quality show up in CI:
+        // strictly more than half of shipped recipes should declare an
+        // icon_url. The threshold is deliberately loose — not every
+        // recipe has a canonical icon source.
+        let recipes = RecipeStore(bundle: .module).loadAll().values
+        let withIcon = recipes.filter { $0.iconURL != nil }.count
+        XCTAssertGreaterThan(withIcon, recipes.count / 2,
+            "Shipped recipes should usually declare icon_url; \(withIcon) of \(recipes.count) do")
+    }
+
+    func testIconURLDecodesFromSnakeCaseField() throws {
+        let json = Data("""
+        {
+          "schema": 1,
+          "id": "steam.1",
+          "title": "x",
+          "icon_url": "https://example.com/a.jpg",
+          "dx_version": "d3d11",
+          "min_macos": "14.0",
+          "renderer": "d3dmetal",
+          "compatibility": "gold"
+        }
+        """.utf8)
+        let recipe = try JSONDecoder().decode(Recipe.self, from: json)
+        XCTAssertEqual(recipe.iconURL?.host, "example.com")
     }
 
     func testShippedRecipeIdsAreUnique() {

@@ -47,8 +47,17 @@
 | v0.2 | Recipe 系统（schema、loader、applier、示例配方） |
 | v0.3 | CI schema-lint + PR 模板 + 完善架构文档 + Recipe UI |
 | v0.4 | Wine 引擎抽象层，CrossOverEngine 为首个实现 |
-| v0.5 | 用户可切换引擎，第二个实现（纯上游 Wine 或 GPTK2） |
+| v0.5 | 远程配方同步（Stage 1 数据层 + Stage 2 同步引擎 + Stage 3 diff UI） |
+| v0.6 | 用户可切换引擎，第二个实现（纯上游 Wine 或 GPTK2） |
 | v1.0 | 正式发布，GitHub Release，Show HN 一次 |
+
+### v0.5 子阶段
+
+远程配方同步是 MacBottle 的核心护城河交付，拆为三个独立 commit：
+
+- **v0.5.1 数据层**：配方 schema 加图标、扩充到约 20 款热门游戏、UI 展示图标
+- **v0.5.2 同步引擎**：`RecipeSyncSource` 走 GitHub Contents API，`RecipeCache` 落盘到 Application Support，带 ETag 缓存
+- **v0.5.3 diff UI**：用户进入游戏列表时自动检查，变更弹 sheet 展示 `+新增 / -删除 / ~更新`，支持全选和逐条勾选
 
 v1.0 之后：**只合 PR，只做引擎层维护。** 配方由社区贡献者自行添加。
 

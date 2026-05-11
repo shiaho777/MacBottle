@@ -32,6 +32,7 @@ reviewers can find a file by platform id without grep.
 | `schema` | integer | yes | Must be `1`. |
 | `id` | string | yes | `<platform>.<platformID>`. Pattern: `^(steam\|gog\|generic)\.[A-Za-z0-9_-]+$`. |
 | `title` | string | yes | 1-200 chars, human readable. |
+| `icon_url` | string | no | HTTPS URL to a cover image (JPEG/PNG). Steam header art is `https://cdn.cloudflare.steamstatic.com/steam/apps/<AppID>/header.jpg`. ~460×215 or square, under 200 KB recommended. |
 | `dx_version` | enum | yes | `d3d9` \| `d3d10` \| `d3d11` \| `d3d12` \| `vulkan` \| `opengl`. |
 | `min_macos` | string | yes | Semantic version, e.g. `14.0`. |
 | `renderer` | enum | yes | `d3dmetal` (default, Apple Silicon) \| `dxvk` \| `wined3d`. |
@@ -78,6 +79,23 @@ Mirrors the ProtonDB scale; choose honestly. If in doubt, go one tier lower.
   "min_macos": "14.0",
   "renderer": "wined3d",
   "compatibility": "platinum"
+}
+```
+
+## Recommended shape (Steam title)
+
+```json
+{
+  "schema": 1,
+  "id": "steam.2050650",
+  "title": "Black Myth: Wukong",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/2050650/header.jpg",
+  "dx_version": "d3d12",
+  "min_macos": "14.0",
+  "renderer": "d3dmetal",
+  "env": { "WINEESYNC": "1" },
+  "compatibility": "silver",
+  "notes": "First launch compiles shaders for several minutes."
 }
 ```
 

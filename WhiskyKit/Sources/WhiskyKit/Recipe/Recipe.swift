@@ -46,6 +46,17 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
     /// display strings in the UI layer based on the bottle's locale.
     public let title: String
 
+    /// Optional HTTPS URL to a game icon image (PNG or JPEG, ~460×215 or
+    /// square, under 200 KB recommended). Rendered in the program settings
+    /// UI. When missing the UI falls back to a neutral SF Symbol glyph.
+    ///
+    /// For Steam titles, conventional sources are
+    /// `https://cdn.cloudflare.steamstatic.com/steam/apps/<appid>/header.jpg`
+    /// or `.../library_600x900.jpg`. Recipe authors are free to host the
+    /// icon anywhere HTTPS-reachable, but the URL is fetched by the client
+    /// at runtime so its availability directly affects user experience.
+    public let iconURL: URL?
+
     /// DirectX API requirement of the game. Affects renderer selection.
     public let dxVersion: DXVersion
 
@@ -81,6 +92,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         schema: Int = 1,
         id: String,
         title: String,
+        iconURL: URL? = nil,
         dxVersion: DXVersion,
         minMacOS: String,
         renderer: RecipeRenderer,
@@ -93,6 +105,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         self.schema = schema
         self.id = id
         self.title = title
+        self.iconURL = iconURL
         self.dxVersion = dxVersion
         self.minMacOS = minMacOS
         self.renderer = renderer
@@ -109,6 +122,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         case schema
         case id
         case title
+        case iconURL = "icon_url"
         case dxVersion = "dx_version"
         case minMacOS = "min_macos"
         case renderer
@@ -124,6 +138,7 @@ public struct Recipe: Codable, Hashable, Sendable, Identifiable {
         self.schema = try container.decode(Int.self, forKey: .schema)
         self.id = try container.decode(String.self, forKey: .id)
         self.title = try container.decode(String.self, forKey: .title)
+        self.iconURL = try container.decodeIfPresent(URL.self, forKey: .iconURL)
         self.dxVersion = try container.decode(DXVersion.self, forKey: .dxVersion)
         self.minMacOS = try container.decode(String.self, forKey: .minMacOS)
         self.renderer = try container.decode(RecipeRenderer.self, forKey: .renderer)

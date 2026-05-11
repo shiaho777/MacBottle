@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "steam.2050650",
   "title": "Black Myth: Wukong",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/2050650/header.jpg",
   "dx_version": "d3d12",
   "min_macos": "14.0",
   "renderer": "d3dmetal",

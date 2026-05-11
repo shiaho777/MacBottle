@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "steam.632470",
+  "title": "Disco Elysium",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/632470/header.jpg",
+  "dx_version": "d3d11",
+  "min_macos": "14.0",
+  "renderer": "d3dmetal",
+  "winetricks": [],
+  "env": {
+    "WINEESYNC": "1"
+  },
+  "registry": [],
+  "compatibility": "gold",
+  "notes": "Text-heavy dialogue game. A native macOS build exists; use MacBottle for the Final Cut Windows version if regional pricing differs."
+}

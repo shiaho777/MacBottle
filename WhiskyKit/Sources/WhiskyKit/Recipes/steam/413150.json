@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "id": "steam.413150",
+  "title": "Stardew Valley",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/413150/header.jpg",
+  "dx_version": "d3d9",
+  "min_macos": "14.0",
+  "renderer": "wined3d",
+  "winetricks": [
+    "dotnet48"
+  ],
+  "env": {
+    "WINEESYNC": "1"
+  },
+  "registry": [],
+  "compatibility": "platinum",
+  "notes": "A native macOS build exists. Use MacBottle only for SMAPI mods that require Windows dependencies."
+}

@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "steam.105600",
   "title": "Terraria",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/105600/header.jpg",
   "dx_version": "d3d9",
   "min_macos": "14.0",
   "renderer": "wined3d",

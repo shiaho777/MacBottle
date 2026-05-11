@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "steam.582010",
   "title": "Monster Hunter: World",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/582010/header.jpg",
   "dx_version": "d3d11",
   "min_macos": "14.0",
   "renderer": "d3dmetal",

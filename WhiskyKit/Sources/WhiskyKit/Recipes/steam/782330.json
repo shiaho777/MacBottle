@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "steam.782330",
+  "title": "DOOM Eternal",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/782330/header.jpg",
+  "dx_version": "vulkan",
+  "min_macos": "14.0",
+  "renderer": "dxvk",
+  "winetricks": [],
+  "env": {
+    "WINEESYNC": "1"
+  },
+  "registry": [],
+  "compatibility": "gold",
+  "notes": "Launch with the Vulkan backend (default). Disable Bethesda launcher overlay for best stability."
+}

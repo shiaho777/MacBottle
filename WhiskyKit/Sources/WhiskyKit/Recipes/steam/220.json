@@ -2,6 +2,7 @@
   "schema": 1,
   "id": "steam.220",
   "title": "Half-Life 2",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/220/header.jpg",
   "dx_version": "d3d9",
   "min_macos": "14.0",
   "renderer": "d3dmetal",
