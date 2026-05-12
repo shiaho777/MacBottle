@@ -101,6 +101,13 @@ final class GameInstaller: ObservableObject {
             return
         }
 
+        // Wait for drive_c/windows to exist (Wine prefix init is async)
+        let windowsDir = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        let windowsReady = await waitForPath(windowsDir, timeout: 30)
+        if !windowsReady {
+            Logger.wineKit.warning("GameInstaller: drive_c/windows not found after 30s, skipping font install")
+        }
+
         await applyRecipeSettings(to: bottle)
 
         switch recipe.installer {
@@ -301,6 +308,17 @@ final class GameInstaller: ObservableObject {
             try? await Task.sleep(nanoseconds: 300_000_000)
         }
         return nil
+    }
+
+    private func waitForPath(_ url: URL, timeout: TimeInterval = 30) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        return false
     }
 
     /// Convert a macOS file URL living under a bottle's drive_c to the
