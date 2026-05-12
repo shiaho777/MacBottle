@@ -232,10 +232,8 @@ final class GameInstaller: ObservableObject {
 
     // swiftlint:disable:next function_body_length
     private func installCJKFontSubstitutions(bottle: Bottle) async {
-        // Step 1: Copy the bundled WenQuanYi Micro Hei font (open-source,
-        // GPL+FE, ~5 MB) into the bottle's Windows Fonts directory. This
-        // font covers all CJK glyphs and is picked up by both GDI apps
-        // (like NSIS installers) and Chromium-based apps (like Steam).
+        // Step 1: Copy the bundled WenQuanYi Micro Hei font into the
+        // bottle's Fonts directory for Chromium-based apps (Steam UI).
         let fontsDir = bottle.url
             .appending(path: "drive_c")
             .appending(path: "windows")
@@ -252,19 +250,22 @@ final class GameInstaller: ObservableObject {
             }
         }
 
-        // Step 2: Register font substitutions so Windows apps that
-        // request SimSun / Microsoft YaHei get WenQuanYi Micro Hei.
+        // Step 2: Register font substitutions pointing to BOTH STHeiti
+        // (macOS system font, works immediately for GDI apps) AND
+        // WenQuanYi (for apps that enumerate Fonts/ directory).
+        // STHeiti is the primary because Wine already knows about it
+        // via the Z: drive mapping — no font cache rebuild needed.
         let substitutions: [(windows: String, replacement: String)] = [
-            ("SimSun", "WenQuanYi Micro Hei"),
-            ("NSimSun", "WenQuanYi Micro Hei"),
-            ("Microsoft YaHei", "WenQuanYi Micro Hei"),
-            ("Microsoft YaHei UI", "WenQuanYi Micro Hei"),
-            ("宋体", "WenQuanYi Micro Hei"),
-            ("新宋体", "WenQuanYi Micro Hei"),
-            ("MS UI Gothic", "WenQuanYi Micro Hei"),
-            ("MS Gothic", "WenQuanYi Micro Hei"),
-            ("Gulim", "WenQuanYi Micro Hei"),
-            ("Batang", "WenQuanYi Micro Hei")
+            ("SimSun", "STHeiti"),
+            ("NSimSun", "STHeiti"),
+            ("Microsoft YaHei", "STHeiti"),
+            ("Microsoft YaHei UI", "STHeiti"),
+            ("宋体", "STHeiti"),
+            ("新宋体", "STHeiti"),
+            ("MS UI Gothic", "STHeiti"),
+            ("MS Gothic", "STHeiti"),
+            ("Gulim", "STHeiti"),
+            ("Batang", "STHeiti")
         ]
 
         for sub in substitutions {
@@ -283,8 +284,8 @@ final class GameInstaller: ObservableObject {
             }
         }
 
-        // Step 3: Register the font file itself in the Windows Fonts
-        // registry key so apps that enumerate installed fonts find it.
+        // Step 3: Register WenQuanYi in the Windows Fonts registry so
+        // Chromium/CEF can find it when scanning installed fonts.
         do {
             try await Wine.runWine(
                 ["reg", "add",
