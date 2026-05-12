@@ -31,13 +31,14 @@ final class RecipeSyncController: ObservableObject {
     enum Phase: Equatable {
         case idle
         case checking
-        case reviewing       // diff ready, awaiting user
+        case reviewing           // diff ready, awaiting user
         case applying
         case done
+        case upToDate            // check completed, nothing to sync
         case failed(message: String)
     }
 
-    /// Full payload ready for the sheet. Identifiable so the BottleView
+    /// Full payload ready for the sheet. Identifiable so the sheet host
     /// can use `.sheet(item:)` to present exactly when a non-empty diff
     /// arrives.
     struct Pending: Identifiable {
@@ -49,16 +50,12 @@ final class RecipeSyncController: ObservableObject {
     @Published var pending: Pending?
     @Published var selectedIDs: Set<String> = []
     @Published var applyProgress: (completed: Int, total: Int) = (0, 0)
+    /// Last time `check()` completed, successfully or not. The toolbar
+    /// uses this to show "Last checked X ago" in its tooltip.
+    @Published var lastCheckedAt: Date?
 
     private let service: RecipeSyncService
     private let store: RecipeStore
-
-    /// Remember when we last queried per process so BottleView's
-    /// `onAppear` does not hammer the network if the user is navigating
-    /// back and forth. Keyed globally because the remote manifest is
-    /// shared across bottles.
-    private static var lastCheckAt: Date = .distantPast
-    private static let minimumCheckInterval: TimeInterval = 10
 
     init(
         service: RecipeSyncService = RecipeSyncService(),
@@ -68,16 +65,12 @@ final class RecipeSyncController: ObservableObject {
         self.store = store
     }
 
-    /// Run a background check. Silently skips when a recent check
-    /// already happened. Surfaces the result to the sheet only if the
-    /// diff is non-empty.
-    func checkInBackground() {
-        let now = Date()
-        guard now.timeIntervalSince(Self.lastCheckAt) >= Self.minimumCheckInterval else {
-            Logger.wineKit.debug("RecipeSyncController: skipping check (throttled)")
-            return
-        }
-        Self.lastCheckAt = now
+    /// Trigger a check. Always runs — the user explicitly asked for it
+    /// by clicking the toolbar button, so we never throttle or skip.
+    func check() {
+        // Re-entrant clicks while a check is already in flight are
+        // swallowed so the user doesn't spawn parallel requests.
+        guard !isBusy else { return }
 
         phase = .checking
         Task { [weak self] in
@@ -86,12 +79,22 @@ final class RecipeSyncController: ObservableObject {
         }
     }
 
+    private var isBusy: Bool {
+        switch phase {
+        case .checking, .applying:
+            return true
+        case .idle, .reviewing, .done, .upToDate, .failed:
+            return false
+        }
+    }
+
     private func performCheck() async {
         do {
             let known = store.loadAll()
             let result = try await service.check(knownRecipes: known)
+            lastCheckedAt = Date()
             if result.changes.isEmpty {
-                self.phase = .idle
+                self.phase = .upToDate
                 self.pending = nil
                 return
             }
@@ -103,8 +106,7 @@ final class RecipeSyncController: ObservableObject {
             Logger.wineKit.error(
                 "RecipeSyncController: check failed: \(error.localizedDescription)"
             )
-            // Silent failure: a failed check should not block the user.
-            // Surface it via phase so tests can still assert behaviour.
+            lastCheckedAt = Date()
             self.phase = .failed(message: error.localizedDescription)
             self.pending = nil
         }

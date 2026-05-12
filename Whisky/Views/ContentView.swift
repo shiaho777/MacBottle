@@ -53,6 +53,9 @@ struct ContentView: View {
                 }
             }
             ToolbarItem(placement: .primaryAction) {
+                RecipeSyncToolbarButton()
+            }
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     bottleVM.loadBottles()
                     if let bottle = bottleVM.bottles.first(where: { $0.url == selected }) {
