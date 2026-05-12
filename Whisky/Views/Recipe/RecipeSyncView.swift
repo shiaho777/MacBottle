@@ -85,22 +85,38 @@ struct RecipeSyncView: View {
                     total: Double(max(controller.applyProgress.total, 1))
                 )
                 .frame(maxWidth: 200)
-                Text(verbatim: "\(controller.applyProgress.completed) / \(controller.applyProgress.total)")
+                Text(verbatim: "Downloading \(controller.applyProgress.completed) of "
+                    + "\(controller.applyProgress.total)…")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            } else if case .done = controller.phase {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                Text("All changes applied.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if case .failed(let message) = controller.phase {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text(verbatim: message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer()
-            Button("Cancel", role: .cancel) {
+            Button(cancelLabel, role: .cancel) {
                 controller.dismiss()
             }
             .keyboardShortcut(.cancelAction)
 
-            Button(primaryActionLabel) {
-                controller.applySelection()
+            if !isDone {
+                Button(primaryActionLabel) {
+                    controller.applySelection()
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+                .disabled(controller.selectedIDs.isEmpty || isApplying)
             }
-            .keyboardShortcut(.defaultAction)
-            .buttonStyle(.borderedProminent)
-            .disabled(controller.selectedIDs.isEmpty || isApplying)
         }
         .padding(16)
     }
@@ -121,6 +137,15 @@ struct RecipeSyncView: View {
     private var isApplying: Bool {
         if case .applying = controller.phase { return true }
         return false
+    }
+
+    private var isDone: Bool {
+        if case .done = controller.phase { return true }
+        return false
+    }
+
+    private var cancelLabel: LocalizedStringKey {
+        isDone ? "Close" : "Cancel"
     }
 
     private var primaryActionLabel: LocalizedStringKey {

@@ -164,9 +164,10 @@ final class RecipeSyncController: ObservableObject {
             }
 
             // Whether fully or partially applied, refresh the store so
-            // the program pickers pick up new recipes.
+            // the program pickers pick up new recipes. Keep `pending`
+            // populated so the sheet stays up showing the final status
+            // — `dismiss()` clears it when the user is ready to close.
             store.invalidateCache()
-            pending = nil
             selectedIDs.removeAll()
         } catch {
             Logger.wineKit.error(
