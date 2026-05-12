@@ -193,11 +193,14 @@ private struct ChangeRow: View {
     @ViewBuilder
     private var iconView: some View {
         if let url = change.iconURL {
-            AsyncImage(url: url) { phase in
+            AsyncImage(url: url, transaction: .init(animation: .easeInOut)) { phase in
                 switch phase {
                 case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fill)
-                case .failure, .empty:
+                case .empty:
+                    ProgressView()
+                        .controlSize(.small)
+                case .failure:
                     placeholder
                 @unknown default:
                     placeholder

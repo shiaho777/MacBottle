@@ -56,9 +56,10 @@ struct WhiskyApp: App {
         // Don't ask me how this works, it just does
         .handlesExternalEvents(matching: ["{same path of URL?}"])
         .commands {
-            CommandGroup(after: .appInfo) {
-                SparkleView(updater: updaterController.updater)
-            }
+            // MacBottle: "Check for Updates…" menu entry is removed
+            // until a real appcast and EdDSA key pair are provisioned.
+            // See `init()` above for the matching `startingUpdater:
+            // false` flag. Re-add once releases ship.
             CommandGroup(before: .systemServices) {
                 Divider()
                 Button("open.setup") {
