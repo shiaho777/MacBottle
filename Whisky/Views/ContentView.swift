@@ -35,6 +35,13 @@ struct ContentView: View {
     @State private var triggerRefresh: Bool = false
     @State private var refreshAnimation: Angle = .degrees(0)
 
+    /// Stable marker URL for the Library sidebar row. Uses a scheme that
+    /// doesn't collide with real bottle URLs (which are `file://`).
+    private static let libraryMarker: URL = {
+        // swiftlint:disable:next force_unwrapping
+        URL(string: "macbottle://library")!
+    }()
+
     @State private var bottleFilter = ""
 
     var body: some View {
@@ -136,6 +143,10 @@ struct ContentView: View {
         ScrollViewReader { proxy in
             List(selection: $selected) {
                 Section {
+                    Label("Game Library", systemImage: "square.grid.2x2")
+                        .tag(Self.libraryMarker)
+                }
+                Section("容器") {
                     ForEach(filteredBottles) { bottle in
                         Group {
                             if bottle.inFlight {
@@ -171,7 +182,9 @@ struct ContentView: View {
 
     @ViewBuilder
     var detail: some View {
-        if let bottle = selected {
+        if selected == Self.libraryMarker {
+            RecipeLibraryView()
+        } else if let bottle = selected {
             if let bottle = bottleVM.bottles.first(where: { $0.url == bottle }) {
                 BottleView(bottle: bottle)
                     .disabled(bottle.inFlight)

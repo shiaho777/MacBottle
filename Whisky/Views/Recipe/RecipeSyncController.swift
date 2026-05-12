@@ -170,6 +170,7 @@ final class RecipeSyncController: ObservableObject {
             // populated so the sheet stays up showing the final status
             // — `dismiss()` clears it when the user is ready to close.
             store.invalidateCache()
+            NotificationCenter.default.post(name: .macbottleRecipesChanged, object: nil)
             selectedIDs.removeAll()
         } catch {
             Logger.wineKit.error(
