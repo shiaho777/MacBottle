@@ -43,13 +43,21 @@ actor ImageCache {
     // against the download task coordinator.
     private let memory = NSCache<NSURL, NSImage>()
     private let diskRoot: URL
-    private var inFlight: [URL: Task<NSImage?, Never>] = [:]
+    private var inFlight: [URL: Task<CachedImage, Never>] = [:]
+
+    private struct CachedImage: @unchecked Sendable {
+        let value: NSImage?
+    }
 
     init(diskRoot: URL? = nil) {
         if let diskRoot {
             self.diskRoot = diskRoot
         } else {
-            guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            let urls = FileManager.default.urls(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask
+            )
+            guard let base = urls.first else {
                 preconditionFailure("application support directory missing")
             }
             self.diskRoot = base
@@ -69,17 +77,18 @@ actor ImageCache {
         }
 
         if let existing = inFlight[url] {
-            return await existing.value
+            return await existing.value.value
         }
 
-        let task = Task<NSImage?, Never> { [diskRoot] in
+        let task = Task<CachedImage, Never> { [diskRoot] in
             if let onDisk = Self.readFromDisk(url: url, root: diskRoot) {
-                return onDisk
+                return CachedImage(value: onDisk)
             }
-            return await Self.downloadAndStore(url: url, root: diskRoot)
+            let downloaded = await Self.downloadAndStore(url: url, root: diskRoot)
+            return CachedImage(value: downloaded)
         }
         inFlight[url] = task
-        let image = await task.value
+        let image = await task.value.value
         inFlight[url] = nil
         if let image {
             memory.setObject(image, forKey: url as NSURL)
