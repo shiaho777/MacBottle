@@ -129,8 +129,9 @@ public final class RemoteRecipeSource: Sendable {
 
         /// `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/`
         public var rawBaseURL: URL {
-            guard let url = URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/\(branch)/") else {
-                preconditionFailure("static raw.githubusercontent base URL")
+            let absolute = "https://raw.githubusercontent.com/\(owner)/\(repo)/\(branch)/"
+            guard let url = URL(string: absolute) else {
+                preconditionFailure("static raw GitHub base URL")
             }
             return url
         }
