@@ -44,7 +44,11 @@ final class ImageCache: @unchecked Sendable {
     private let memory = NSCache<NSURL, NSImage>()
     private let diskRoot: URL
     private let lock = NSLock()
-    private var inFlight: [URL: Task<NSImage?, Never>] = [:]
+    private var inFlight: [URL: Task<CachedImage, Never>] = [:]
+
+    private struct CachedImage: @unchecked Sendable {
+        let value: NSImage?
+    }
 
     init(diskRoot: URL? = nil) {
         if let diskRoot {
@@ -73,24 +77,25 @@ final class ImageCache: @unchecked Sendable {
             return hit
         }
 
-        let existing: Task<NSImage?, Never>?
+        let existing: Task<CachedImage, Never>?
         lock.lock()
         existing = inFlight[url]
         lock.unlock()
         if let existing {
-            return await existing.value
+            return await existing.value.value
         }
 
-        let task = Task<NSImage?, Never> { [diskRoot] in
+        let task = Task<CachedImage, Never> { [diskRoot] in
             if let onDisk = Self.readFromDisk(url: url, root: diskRoot) {
-                return onDisk
+                return CachedImage(value: onDisk)
             }
-            return await Self.downloadAndStore(url: url, root: diskRoot)
+            let downloaded = await Self.downloadAndStore(url: url, root: diskRoot)
+            return CachedImage(value: downloaded)
         }
         lock.lock()
         inFlight[url] = task
         lock.unlock()
-        let image = await task.value
+        let image = await task.value.value
         lock.lock()
         inFlight[url] = nil
         lock.unlock()
