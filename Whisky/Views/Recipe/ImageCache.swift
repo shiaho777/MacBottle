@@ -35,7 +35,7 @@ import os.log
 /// inside `List`: every time a row scrolls in or out it rebuilds its
 /// internal state and refetches the URL. That was the source of the
 /// "icons reload on scroll" regression.
-actor ImageCache {
+final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
 
     // NSCache is thread-safe and auto-evicts under memory pressure, but
@@ -43,11 +43,8 @@ actor ImageCache {
     // against the download task coordinator.
     private let memory = NSCache<NSURL, NSImage>()
     private let diskRoot: URL
-    private var inFlight: [URL: Task<CachedImage, Never>] = [:]
-
-    private struct CachedImage: @unchecked Sendable {
-        let value: NSImage?
-    }
+    private let lock = NSLock()
+    private var inFlight: [URL: Task<NSImage?, Never>] = [:]
 
     init(diskRoot: URL? = nil) {
         if let diskRoot {
@@ -76,20 +73,27 @@ actor ImageCache {
             return hit
         }
 
-        if let existing = inFlight[url] {
-            return await existing.value.value
+        let existing: Task<NSImage?, Never>?
+        lock.lock()
+        existing = inFlight[url]
+        lock.unlock()
+        if let existing {
+            return await existing.value
         }
 
-        let task = Task<CachedImage, Never> { [diskRoot] in
+        let task = Task<NSImage?, Never> { [diskRoot] in
             if let onDisk = Self.readFromDisk(url: url, root: diskRoot) {
-                return CachedImage(value: onDisk)
+                return onDisk
             }
-            let downloaded = await Self.downloadAndStore(url: url, root: diskRoot)
-            return CachedImage(value: downloaded)
+            return await Self.downloadAndStore(url: url, root: diskRoot)
         }
+        lock.lock()
         inFlight[url] = task
-        let image = await task.value.value
+        lock.unlock()
+        let image = await task.value
+        lock.lock()
         inFlight[url] = nil
+        lock.unlock()
         if let image {
             memory.setObject(image, forKey: url as NSURL)
         }
@@ -98,7 +102,7 @@ actor ImageCache {
 
     // MARK: - Disk helpers
 
-    nonisolated private static func diskURL(for url: URL, root: URL) -> URL {
+    private static func diskURL(for url: URL, root: URL) -> URL {
         // SHA-ish filename from the absolute URL string. FNV-1a 64-bit
         // keeps the dependency footprint at zero while collisions are
         // astronomically unlikely for a few hundred icons.
@@ -110,13 +114,13 @@ actor ImageCache {
         return root.appending(path: String(format: "%016llx", hash))
     }
 
-    nonisolated private static func readFromDisk(url: URL, root: URL) -> NSImage? {
+    private static func readFromDisk(url: URL, root: URL) -> NSImage? {
         let path = diskURL(for: url, root: root)
         guard let data = try? Data(contentsOf: path) else { return nil }
         return NSImage(data: data)
     }
 
-    nonisolated private static func downloadAndStore(url: URL, root: URL) async -> NSImage? {
+    private static func downloadAndStore(url: URL, root: URL) async -> NSImage? {
         do {
             var request = URLRequest(url: url)
             request.cachePolicy = .returnCacheDataElseLoad
