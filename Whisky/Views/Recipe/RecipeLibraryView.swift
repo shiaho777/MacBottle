@@ -35,7 +35,7 @@ struct RecipeLibraryView: View {
     @State private var query: String = ""
     @State private var selectedRecipe: Recipe?
 
-    private let columns = [GridItem(.adaptive(minimum: 200, maximum: 260), spacing: 16)]
+    private let columns = [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 18)]
 
     var body: some View {
         ScrollView {
@@ -52,10 +52,10 @@ struct RecipeLibraryView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(16)
+            .padding(MacBottleTheme.pagePadding)
         }
-        .navigationTitle("Game Library")
-        .searchable(text: $query, placement: .toolbar, prompt: "Search recipes")
+        .navigationTitle("游戏库")
+        .searchable(text: $query, placement: .toolbar, prompt: "搜索游戏 / 配方")
         .overlay {
             if recipes.isEmpty {
                 emptyState
@@ -86,20 +86,11 @@ struct RecipeLibraryView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "gamecontroller")
-                .font(.system(size: 56))
-                .foregroundStyle(.secondary)
-            Text("No recipes yet")
-                .font(.title3)
-                .foregroundStyle(.primary)
-            Text("Click the sync button in the toolbar to fetch the latest recipes from GitHub.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
-        }
-        .padding()
+        EmptyStateCard(
+            systemImage: "gamecontroller.fill",
+            title: "还没有游戏配方",
+            message: "点击工具栏同步按钮，从社区获取最新配方。"
+        )
     }
 
     private func reload() {

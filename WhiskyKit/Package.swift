@@ -31,7 +31,7 @@ let package = Package(
         )
     ],
     dependencies: [
-      .package(url: "https://github.com/SwiftPackageIndex/SemanticVersion.git", from: "0.3.0")
+      .package(url: "https://github.com/SwiftPackageIndex/SemanticVersion.git", from: "0.5.1")
     ],
     targets: [
         .target(

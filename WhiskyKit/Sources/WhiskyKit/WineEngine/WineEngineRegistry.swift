@@ -17,41 +17,63 @@
 //
 
 import Foundation
+import os.log
 
-/// Process-wide holder of the currently active `WineEngine`.
-///
-/// There is exactly one engine selected at any time because a Wine
-/// environment is not cheap to swap — every bottle is implicitly bound to
-/// the engine that created it. Switching engines for real is a v0.4+
-/// feature. For now, the registry exists so every caller reads the engine
-/// through a single symbol, and the day we actually support multiple
-/// engines, only the registry needs to grow a setter.
 public final class WineEngineRegistry: @unchecked Sendable {
-    public static let shared = WineEngineRegistry()
+    public static let shared = WineEngineRegistry(loadPersisted: true)
+
+    public static let selectionDefaultsKey = "macbottle.wineEngineID"
 
     private let lock = NSLock()
     private var _current: any WineEngine
 
-    /// The default engine for v0.1: CrossOver-derived Wine inherited from
-    /// Whisky. This will become user-configurable in v0.4 when the
-    /// abstraction has a second concrete implementation to switch between.
-    public init(current: any WineEngine = CrossOverEngine.default) {
-        self._current = current
+    public init(current: (any WineEngine)? = nil, loadPersisted: Bool = false) {
+        if let current {
+            self._current = current
+            return
+        }
+        if loadPersisted,
+           let id = UserDefaults.standard.string(forKey: Self.selectionDefaultsKey),
+           let engine = WineEngineCatalog.engine(id: id),
+           engine.isInstalled() {
+            self._current = engine
+            return
+        }
+        self._current = CrossOverEngine.default
     }
 
-    /// The engine the rest of MacBottle should route through.
     public var current: any WineEngine {
         lock.lock()
         defer { lock.unlock() }
         return _current
     }
 
-    /// Replace the active engine. Intended for v0.4 engine switching and
-    /// for tests that need to swap in a fake engine pointing at a temp
-    /// directory. Callers on the main flow should prefer reading `current`.
-    public func setCurrent(_ engine: any WineEngine) {
+    public var available: [any WineEngine] {
+        WineEngineCatalog.allEngines()
+    }
+
+    public func setCurrent(_ engine: any WineEngine, persist: Bool = true) {
         lock.lock()
         _current = engine
         lock.unlock()
+        if persist {
+            UserDefaults.standard.set(engine.identifier, forKey: Self.selectionDefaultsKey)
+        }
+        Logger.wineKit.info("WineEngineRegistry active engine: \(engine.identifier)")
+    }
+
+    @discardableResult
+    public func select(identifier: String, installIfNeeded: Bool = false) throws -> any WineEngine {
+        if identifier == WineEngineCatalog.d3dMetalIdentifier, installIfNeeded {
+            _ = try WineEngineCatalog.ensureD3DMetalEngine()
+        }
+        guard let engine = WineEngineCatalog.engine(id: identifier) else {
+            throw WineEngineCatalogError.engineNotInstalled
+        }
+        guard engine.isInstalled() else {
+            throw WineEngineCatalogError.engineNotInstalled
+        }
+        setCurrent(engine, persist: true)
+        return engine
     }
 }

@@ -17,16 +17,18 @@
 //
 
 import Foundation
+import Observation
+import AppKit
 import SemanticVersion
 import WhiskyKit
+import os.log
 
-// swiftlint:disable:next todo
-// TODO: Don't use unchecked!
-final class BottleVM: ObservableObject, @unchecked Sendable {
+@Observable
+final class BottleVM: @unchecked Sendable {
     @MainActor static let shared = BottleVM()
 
     var bottlesList = BottleData()
-    @Published var bottles: [Bottle] = []
+    var bottles: [Bottle] = []
 
     @MainActor
     func loadBottles() {
@@ -43,6 +45,13 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
         Task.detached {
             var bottleId: Bottle?
             do {
+                guard WhiskyWineInstaller.isWhiskyWineInstalled() else {
+                    throw BottleCreationError.wineNotInstalled
+                }
+                guard FileManager.default.fileExists(atPath: Wine.wineBinary.path(percentEncoded: false)) else {
+                    throw BottleCreationError.wineBinaryMissing(Wine.wineBinary.path(percentEncoded: false))
+                }
+
                 try FileManager.default.createDirectory(atPath: newBottleDir.path(percentEncoded: false),
                                                         withIntermediateDirectories: true)
                 let bottle = Bottle(bottleUrl: newBottleDir, inFlight: true)
@@ -57,13 +66,13 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
                 try await Wine.changeWinVersion(bottle: bottle, win: winVersion)
                 let wineVer = try await Wine.wineVersion()
                 bottle.settings.wineVersion = SemanticVersion(wineVer) ?? SemanticVersion(0, 0, 0)
-                // Add record
                 await MainActor.run {
                     self.bottlesList.paths.append(newBottleDir)
                     self.loadBottles()
                 }
             } catch {
-                print("Failed to create new bottle: \(error)")
+                Logger.app.error("Failed to create new bottle: \(error.localizedDescription)")
+                try? FileManager.default.removeItem(at: newBottleDir)
                 if let bottle = bottleId {
                     await MainActor.run {
                         if let index = self.bottles.firstIndex(of: bottle) {
@@ -71,8 +80,35 @@ final class BottleVM: ObservableObject, @unchecked Sendable {
                         }
                     }
                 }
+                await MainActor.run {
+                    Self.presentCreationError(error)
+                }
             }
         }
         return newBottleDir
+    }
+
+    @MainActor
+    private static func presentCreationError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "Failed to create bottle"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .critical
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+}
+
+enum BottleCreationError: LocalizedError {
+    case wineNotInstalled
+    case wineBinaryMissing(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .wineNotInstalled:
+            return "WhiskyWine is not installed. Open Setup from the Whisky menu and install Wine first."
+        case .wineBinaryMissing(let path):
+            return "Wine binary not found at \(path)."
+        }
     }
 }

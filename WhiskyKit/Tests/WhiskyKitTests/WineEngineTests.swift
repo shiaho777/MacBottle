@@ -46,9 +46,26 @@ final class WineEngineTests: XCTestCase {
     // MARK: - Registry behaviour
 
     func testRegistryDefaultsToCrossOver() {
-        // A fresh registry (not shared) defaults to the CrossOver engine.
-        let registry = WineEngineRegistry()
+        let registry = WineEngineRegistry(current: CrossOverEngine.default)
         XCTAssertEqual(registry.current.identifier, "crossover")
+    }
+
+    func testLocalPathEngineIdentity() {
+        let root = FileManager.default.temporaryDirectory.appending(path: "macbottle-local-engine")
+        let engine = LocalPathEngine(
+            identifier: "crossover-d3dmetal",
+            displayName: "CrossOver + D3DMetal",
+            libraryRoot: root
+        )
+        XCTAssertEqual(engine.identifier, WineEngineCatalog.d3dMetalIdentifier)
+        XCTAssertFalse(engine.isInstalled())
+        XCTAssertTrue(engine.wineBinary.path.hasSuffix("/Wine/bin/wine"))
+    }
+
+    func testCatalogListsBothEngines() {
+        let ids = WineEngineCatalog.allEngines().map(\.identifier)
+        XCTAssertTrue(ids.contains(WineEngineCatalog.modernIdentifier))
+        XCTAssertTrue(ids.contains(WineEngineCatalog.d3dMetalIdentifier))
     }
 
     func testRegistrySwapsEngine() {

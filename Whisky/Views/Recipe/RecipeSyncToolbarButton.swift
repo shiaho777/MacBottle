@@ -27,7 +27,7 @@ import WhiskyKit
 /// either (a) opens the sheet immediately with a pending diff, or
 /// (b) runs a check and opens the sheet once results arrive.
 struct RecipeSyncToolbarButton: View {
-    @StateObject private var controller = RecipeSyncController()
+    @State private var controller = RecipeSyncController()
     @State private var showUpToDate = false
 
     var body: some View {

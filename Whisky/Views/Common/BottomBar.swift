@@ -36,7 +36,7 @@ private struct BottomBarViewModifier<BarContent>: ViewModifier where BarContent:
                     Divider()
                     barContent
                 }
-                .background(.regularMaterial)
+                .background(.bar)
                 .buttonStyle(BottomBarButtonStyle())
             }
     }
@@ -49,7 +49,10 @@ struct BottomBarButtonStyle: PrimitiveButtonStyle {
         } label: {
             configuration.label
                 .foregroundStyle(.foreground)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 

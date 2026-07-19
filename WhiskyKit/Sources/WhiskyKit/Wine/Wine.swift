@@ -22,36 +22,54 @@ import os.log
 public class Wine {
     /// URL to the installed `DXVK` folder
     private static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
-    /// Path to the `wine64` binary
-    public static let wineBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wine64")
-    /// Parth to the `wineserver` binary
-    private static let wineserverBinary: URL = WhiskyWineInstaller.binFolder.appending(path: "wineserver")
+    public static var wineBinary: URL {
+        let wine64 = WhiskyWineInstaller.binFolder.appending(path: "wine64")
+        if FileManager.default.fileExists(atPath: wine64.path(percentEncoded: false)) {
+            return wine64
+        }
+        return WhiskyWineInstaller.binFolder.appending(path: "wine")
+    }
+    private static var wineserverBinary: URL {
+        WhiskyWineInstaller.binFolder.appending(path: "wineserver")
+    }
 
     /// Run a process on a executable file given by the `executableURL`
     private static func runProcess(
         name: String? = nil, args: [String], environment: [String: String], executableURL: URL, directory: URL? = nil,
-        fileHandle: FileHandle?
+        fileHandle: FileHandle?,
+        qualityOfService: QualityOfService = .userInitiated,
+        quiet: Bool = false,
+        systemLog: Bool = true
     ) throws -> AsyncStream<ProcessOutput> {
         let process = Process()
         process.executableURL = executableURL
         process.arguments = args
         process.currentDirectoryURL = directory ?? executableURL.deletingLastPathComponent()
         process.environment = environment
-        process.qualityOfService = .userInitiated
+        process.qualityOfService = qualityOfService
 
         return try process.runStream(
-            name: name ?? args.joined(separator: " "), fileHandle: fileHandle
+            name: name ?? args.joined(separator: " "),
+            fileHandle: fileHandle,
+            quiet: quiet,
+            systemLog: systemLog
         )
     }
 
     /// Run a `wine` process with the given arguments and environment variables returning a stream of output
     private static func runWineProcess(
         name: String? = nil, args: [String], environment: [String: String] = [:],
-        fileHandle: FileHandle?
+        fileHandle: FileHandle?,
+        qualityOfService: QualityOfService = .userInitiated,
+        quiet: Bool = false,
+        systemLog: Bool = true
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
             name: name, args: args, environment: environment, executableURL: wineBinary,
-            fileHandle: fileHandle
+            fileHandle: fileHandle,
+            qualityOfService: qualityOfService,
+            quiet: quiet,
+            systemLog: systemLog
         )
     }
 
@@ -68,16 +86,37 @@ public class Wine {
 
     /// Run a `wine` process with the given arguments and environment variables returning a stream of output
     public static func runWineProcess(
-        name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:]
+        name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:],
+        executableURL: URL? = nil,
+        qualityOfService: QualityOfService = .userInitiated,
+        quiet: Bool = false,
+        logFileHandle: FileHandle? = nil,
+        systemLog: Bool = true
     ) throws -> AsyncStream<ProcessOutput> {
-        let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
-        fileHandle.writeInfo(for: bottle)
+        let fileHandle: FileHandle?
+        if let logFileHandle {
+            fileHandle = logFileHandle
+        } else if quiet {
+            fileHandle = nil
+        } else {
+            fileHandle = try makeFileHandle()
+            fileHandle?.writeApplicationInfo()
+            if let fileHandle {
+                fileHandle.writeInfo(for: bottle)
+            }
+        }
 
         return try runWineProcess(
             name: name, args: args,
-            environment: constructWineEnvironment(for: bottle, environment: environment),
-            fileHandle: fileHandle
+            environment: constructWineEnvironment(
+                for: bottle,
+                environment: environment,
+                executableURL: executableURL
+            ),
+            fileHandle: fileHandle,
+            qualityOfService: qualityOfService,
+            quiet: quiet,
+            systemLog: systemLog
         )
     }
 
@@ -86,7 +125,7 @@ public class Wine {
         name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:]
     ) throws -> AsyncStream<ProcessOutput> {
         let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
+        fileHandle.writeApplicationInfo()
         fileHandle.writeInfo(for: bottle)
 
         return try runWineserverProcess(
@@ -96,26 +135,169 @@ public class Wine {
         )
     }
 
-    /// Execute a `wine start /unix {url}` command returning the output result
     public static func runProgram(
-        at url: URL, args: [String] = [], bottle: Bottle, environment: [String: String] = [:]
+        at url: URL,
+        args: [String] = [],
+        bottle: Bottle,
+        environment: [String: String] = [:],
+        wait: Bool = true,
+        applyDXVK: Bool = true,
+        recipe: Recipe? = nil,
+        autoSelectEngine: Bool = true,
+        captureRunLog: Bool = true
     ) async throws {
-        if bottle.settings.dxvk {
+        let engineDecision: LaunchEnginePolicy.Decision?
+        if autoSelectEngine {
+            engineDecision = LaunchEnginePolicy.applyForLaunch(
+                executable: url,
+                recipe: recipe,
+                bottleDXVKEnabled: bottle.settings.dxvk,
+                bottleEngineID: bottle.settings.engineID
+            )
+        } else {
+            engineDecision = nil
+        }
+        defer {
+            if autoSelectEngine {
+                LaunchEnginePolicy.restoreUserSelection()
+            }
+        }
+
+        var shouldApplyDXVK = applyDXVK && bottle.settings.dxvk
+        if engineDecision?.engineID == WineEngineCatalog.d3dMetalIdentifier {
+            shouldApplyDXVK = false
+        } else if recipe?.renderer == .d3dmetal {
+            shouldApplyDXVK = false
+        } else if recipe?.renderer == .wined3d {
+            shouldApplyDXVK = false
+        }
+
+        if shouldApplyDXVK {
             try enableDXVK(bottle: bottle)
         }
 
-        for await _ in try Self.runWineProcess(
+        var environment = environment
+        if !shouldApplyDXVK {
+            environment["WINEDLLOVERRIDES"] = environment["WINEDLLOVERRIDES"] ?? ""
+        }
+
+        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
+        DisplayPolicy.apply(for: profile, bottle: bottle)
+        let qos = RuntimeLaunchOptimizer.processQualityOfService(for: profile)
+        let launchArgs = RuntimeLaunchOptimizer.startArguments(
+            profile: profile,
+            executable: url,
+            extraArgs: args
+        )
+
+        let capture: ProgramRunCapture?
+        if captureRunLog {
+            capture = try await MainActor.run {
+                try ProgramRunLogStore.shared.beginRun(programURL: url, bottle: bottle)
+            }
+            if environment["WINEDEBUG"] == nil {
+                if ProgramRunLogStore.verboseWineDebugEnabled {
+                    environment["WINEDEBUG"] = ProgramRunLogStore.verboseWineDebugChannels
+                } else {
+                    environment["WINEDEBUG"] = "-all"
+                }
+            }
+        } else {
+            capture = nil
+        }
+
+        let quiet = capture == nil && RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
+        let stream = try Self.runWineProcess(
             name: url.lastPathComponent,
-            args: ["start", "/unix", url.path(percentEncoded: false)] + args,
-            bottle: bottle, environment: environment
-        ) { }
+            args: launchArgs,
+            bottle: bottle,
+            environment: environment,
+            executableURL: url,
+            qualityOfService: qos,
+            quiet: quiet,
+            logFileHandle: capture?.fileHandle,
+            systemLog: capture == nil
+        )
+
+        let runID = capture?.record.id
+        let consume: () async -> Void = {
+            var exitCode: Int32?
+            var pending: [(String, Bool)] = []
+            pending.reserveCapacity(64)
+
+            let flush: () async -> Void = {
+                guard let runID, !pending.isEmpty else {
+                    pending.removeAll(keepingCapacity: true)
+                    return
+                }
+                let batch = pending
+                pending.removeAll(keepingCapacity: true)
+                await MainActor.run {
+                    for item in batch {
+                        ProgramRunLogStore.shared.appendLine(runID: runID, line: item.0, isError: item.1)
+                    }
+                }
+            }
+
+            for await output in stream {
+                switch output {
+                case .started:
+                    break
+                case .message(let line):
+                    if runID != nil {
+                        pending.append((line, false))
+                        if pending.count >= 32 {
+                            await flush()
+                        }
+                    }
+                case .error(let line):
+                    if runID != nil {
+                        pending.append((line, true))
+                        if pending.count >= 32 {
+                            await flush()
+                        }
+                    }
+                case .terminated(let process):
+                    exitCode = process.terminationStatus
+                }
+            }
+            await flush()
+            if let runID {
+                await MainActor.run {
+                    ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: exitCode)
+                }
+            }
+        }
+
+        if wait {
+            await consume()
+            return
+        }
+
+        Task(priority: .userInitiated) {
+            await consume()
+        }
     }
 
     public static func generateRunCommand(
         at url: URL, bottle: Bottle, args: String, environment: [String: String]
     ) -> String {
-        var wineCmd = "\(wineBinary.esc) start /unix \(url.esc) \(args)"
-        let env = constructWineEnvironment(for: bottle, environment: environment)
+        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
+        let extra = args.split { $0.isWhitespace }.map(String.init)
+        let startBits = RuntimeLaunchOptimizer.startArguments(
+            profile: profile,
+            executable: url,
+            extraArgs: extra
+        )
+        let startCmd = startBits.map { token in
+            token.contains(" ") ? "\"\(token)\"" : token
+        }.joined(separator: " ")
+        var wineCmd = "\(wineBinary.esc) \(startCmd)"
+        let env = constructWineEnvironment(
+            for: bottle,
+            environment: environment,
+            executableURL: url
+        )
         for environment in env {
             wineCmd = "\(environment.key)=\"\(environment.value)\" " + wineCmd
         }
@@ -124,25 +306,27 @@ public class Wine {
     }
 
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
+        let wineName = wineBinary.lastPathComponent
         var cmd = """
         export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"wine64\"
-        alias wine=\"wine64\"
-        alias winecfg=\"wine64 winecfg\"
-        alias msiexec=\"wine64 msiexec\"
-        alias regedit=\"wine64 regedit\"
-        alias regsvr32=\"wine64 regsvr32\"
-        alias wineboot=\"wine64 wineboot\"
-        alias wineconsole=\"wine64 wineconsole\"
-        alias winedbg=\"wine64 winedbg\"
-        alias winefile=\"wine64 winefile\"
-        alias winepath=\"wine64 winepath\"
+        export WINE=\"\(wineName)\"
         """
 
-        let env = constructWineEnvironment(for: bottle, environment: constructWineEnvironment(for: bottle))
+        let env = constructWineEnvironment(for: bottle)
         for environment in env {
             cmd += "\nexport \(environment.key)=\"\(environment.value)\""
         }
+
+        let driveC = bottle.url.appending(path: "drive_c").path
+        cmd += """
+
+        cd "\(driveC)"
+        clear
+        echo "MacBottle bottle: \(bottle.settings.name)"
+        echo "Wine: $($WINE --version 2>/dev/null)"
+        echo "WINEPREFIX: $WINEPREFIX"
+        echo "Commands: wine, winecfg, wineboot, regedit"
+        """
 
         return cmd
     }
@@ -172,7 +356,7 @@ public class Wine {
     ) async throws -> String {
         var result: [String] = []
         let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicaitonInfo()
+        fileHandle.writeApplicationInfo()
         var environment = environment
 
         if let bottle = bottle {
@@ -208,10 +392,8 @@ public class Wine {
         return try await runWine(["cmd", "/c", url.path(percentEncoded: false)], bottle: bottle)
     }
 
-    public static func killBottle(bottle: Bottle) throws {
-        Task.detached(priority: .userInitiated) {
-            try await runWineserver(["-k"], bottle: bottle)
-        }
+    public static func killBottle(bottle: Bottle) async throws {
+        try await runWineserver(["-k"], bottle: bottle)
     }
 
     public static func enableDXVK(bottle: Bottle) throws {
@@ -227,27 +409,34 @@ public class Wine {
 
     /// Construct an environment merging the bottle values with the given values
     private static func constructWineEnvironment(
-        for bottle: Bottle, environment: [String: String] = [:]
+        for bottle: Bottle,
+        environment: [String: String] = [:],
+        executableURL: URL? = nil
     ) -> [String: String] {
         var result: [String: String] = [
             "WINEPREFIX": bottle.url.path,
-            "WINEDEBUG": "fixme-all",
-            "GST_DEBUG": "1"
+            "WINEDEBUG": "-all",
+            "GST_DEBUG": "0"
         ]
         bottle.settings.environmentVariables(wineEnv: &result)
+        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: executableURL)
+        result = RuntimeLaunchOptimizer.environment(
+            profile: profile,
+            bottleDXVKEnabled: bottle.settings.dxvk,
+            base: result
+        )
         guard !environment.isEmpty else { return result }
         result.merge(environment, uniquingKeysWith: { $1 })
         return result
     }
 
-    /// Construct an environment merging the bottle values with the given values
     private static func constructWineServerEnvironment(
         for bottle: Bottle, environment: [String: String] = [:]
     ) -> [String: String] {
         var result: [String: String] = [
             "WINEPREFIX": bottle.url.path,
-            "WINEDEBUG": "fixme-all",
-            "GST_DEBUG": "1"
+            "WINEDEBUG": "-all",
+            "GST_DEBUG": "0"
         ]
         guard !environment.isEmpty else { return result }
         result.merge(environment, uniquingKeysWith: { $1 })
@@ -256,7 +445,7 @@ public class Wine {
 }
 
 enum WineInterfaceError: Error {
-    case invalidResponce
+    case invalidResponse
 }
 
 enum RegistryType: String {
@@ -330,7 +519,7 @@ extension Wine {
             }
         }
 
-        throw WineInterfaceError.invalidResponce
+        throw WineInterfaceError.invalidResponse
     }
 
     public static func buildVersion(bottle: Bottle) async throws -> String? {

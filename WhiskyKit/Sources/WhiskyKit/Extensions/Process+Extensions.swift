@@ -27,23 +27,41 @@ public enum ProcessOutput: Hashable {
 }
 
 public extension Process {
-    /// Run the process returning a stream output
-    func runStream(name: String, fileHandle: FileHandle?) throws -> AsyncStream<ProcessOutput> {
-        let stream = makeStream(name: name, fileHandle: fileHandle)
-        self.logProcessInfo(name: name)
-        fileHandle?.writeInfo(for: self)
+    func runStream(
+        name: String,
+        fileHandle: FileHandle?,
+        quiet: Bool = false,
+        systemLog: Bool = true
+    ) throws -> AsyncStream<ProcessOutput> {
+        let stream: AsyncStream<ProcessOutput>
+        if quiet {
+            stream = makeQuietStream(name: name, fileHandle: fileHandle)
+            if systemLog {
+                Logger.wineKit.info("Running process \(name) (quiet)")
+            }
+        } else {
+            stream = makeVerboseStream(name: name, fileHandle: fileHandle, systemLog: systemLog)
+            if systemLog {
+                self.logProcessInfo(name: name)
+            }
+            fileHandle?.writeInfo(for: self)
+        }
         try run()
         return stream
     }
 
-    private func makeStream(name: String, fileHandle: FileHandle?) -> AsyncStream<ProcessOutput> {
+    private func makeVerboseStream(
+        name: String,
+        fileHandle: FileHandle?,
+        systemLog: Bool
+    ) -> AsyncStream<ProcessOutput> {
         let pipe = Pipe()
         let errorPipe = Pipe()
         standardOutput = pipe
         standardError = errorPipe
 
-        return AsyncStream<ProcessOutput> { continuation in
-            continuation.onTermination = { termination in
+        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+            continuation.onTermination = { @Sendable termination in
                 switch termination {
                 case .finished:
                     break
@@ -61,7 +79,9 @@ public extension Process {
                 guard let line = pipe.nextLine() else { return }
                 continuation.yield(.message(line))
                 guard !line.isEmpty else { return }
-                Logger.wineKit.info("\(line, privacy: .public)")
+                if systemLog {
+                    Logger.wineKit.info("\(line, privacy: .public)")
+                }
                 fileHandle?.write(line: line)
             }
 
@@ -69,11 +89,13 @@ public extension Process {
                 guard let line = pipe.nextLine() else { return }
                 continuation.yield(.error(line))
                 guard !line.isEmpty else { return }
-                Logger.wineKit.warning("\(line, privacy: .public)")
+                if systemLog {
+                    Logger.wineKit.warning("\(line, privacy: .public)")
+                }
                 fileHandle?.write(line: line)
             }
 
-            terminationHandler = { (process: Process) in
+            self.terminationHandler = { (process: Process) in
                 do {
                     _ = try pipe.fileHandleForReading.readToEnd()
                     _ = try errorPipe.fileHandleForReading.readToEnd()
@@ -83,6 +105,24 @@ public extension Process {
                 }
 
                 process.logTermination(name: name)
+                continuation.yield(.terminated(process))
+                continuation.finish()
+            }
+        }
+    }
+
+    private func makeQuietStream(name: String, fileHandle: FileHandle?) -> AsyncStream<ProcessOutput> {
+        standardOutput = FileHandle.nullDevice
+        standardError = FileHandle.nullDevice
+
+        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+            continuation.onTermination = { @Sendable _ in
+            }
+
+            continuation.yield(.started(self))
+
+            self.terminationHandler = { (process: Process) in
+                try? fileHandle?.close()
                 continuation.yield(.terminated(process))
                 continuation.finish()
             }

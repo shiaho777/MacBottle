@@ -22,6 +22,7 @@ import os.log
 
 extension Program {
     public func run() {
+        markLaunched()
         if NSEvent.modifierFlags.contains(.shift) {
             self.runInTerminal()
         } else {
@@ -32,11 +33,22 @@ extension Program {
     func runInWine() {
         let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
         let environment = generateEnvironment()
+        let recipe: Recipe?
+        if let recipeID = settings.recipeID {
+            recipe = RecipeStore.shared.recipe(id: recipeID)
+        } else {
+            recipe = nil
+        }
 
         Task.detached(priority: .userInitiated) {
             do {
                 try await Wine.runProgram(
-                    at: self.url, args: arguments, bottle: self.bottle, environment: environment
+                    at: self.url,
+                    args: arguments,
+                    bottle: self.bottle,
+                    environment: environment,
+                    recipe: recipe,
+                    autoSelectEngine: true
                 )
             } catch {
                 await MainActor.run {
@@ -53,24 +65,13 @@ extension Program {
     }
 
     public func runInTerminal() {
-        let wineCmd = generateTerminalCommand().replacingOccurrences(of: "\\", with: "\\\\")
-
-        let script = """
-        tell application "Terminal"
-            activate
-            do script "\(wineCmd)"
-        end tell
-        """
-
+        let wineCmd = generateTerminalCommand()
         Task.detached(priority: .userInitiated) {
-            var error: NSDictionary?
-            guard let appleScript = NSAppleScript(source: script) else { return }
-            appleScript.executeAndReturnError(&error)
-
-            if let error = error {
-                Logger.wineKit.error("Failed to run terminal script \(error)")
-                guard let description = error["NSAppleScriptErrorMessage"] as? String else { return }
-                await self.showRunError(message: String(describing: description))
+            do {
+                try await TerminalLauncher.run(command: wineCmd)
+            } catch {
+                Logger.wineKit.error("Failed to run terminal command: \(error.localizedDescription)")
+                await self.showRunError(message: error.localizedDescription)
             }
         }
     }

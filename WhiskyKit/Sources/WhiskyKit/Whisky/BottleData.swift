@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import os.log
 import SemanticVersion
 
 public struct BottleData: Codable {
@@ -75,7 +76,8 @@ public struct BottleData: Codable {
             let data = try Data(contentsOf: Self.bottleEntriesDir)
             self = try decoder.decode(BottleData.self, from: data)
             if self.fileVersion != Self.currentVersion {
-                print("Invalid file version \(self.fileVersion)")
+                let version = self.fileVersion
+                Logger.wineKit.warning("Invalid file version \(version)")
                 return false
             }
             return true

@@ -27,23 +27,14 @@ enum Focusable: Hashable {
     case row(id: UUID, section: KeySection)
 }
 
-class Key: Identifiable {
-    static func == (lhs: Key, rhs: Key) -> Bool {
-        return lhs.id == rhs.id
-    }
-
+struct Key: Identifiable, Equatable, Hashable {
     var id: UUID = UUID()
-    @Published var key: String
-    @Published var value: String
-
-    init(key: String, value: String) {
-        self.key = key
-        self.value = value
-    }
+    var key: String
+    var value: String
 }
 
 struct EnvironmentArgView: View {
-    @ObservedObject var program: Program
+    @Bindable var program: Program
     @Binding var isExpanded: Bool
 
     @FocusState var focus: Focusable?
@@ -52,10 +43,12 @@ struct EnvironmentArgView: View {
 
     var body: some View {
         Section(isExpanded: $isExpanded) {
-            List(environmentKeys, id: \.id) { key in
-                KeyItem(focus: _focus,
-                        environmentKeys: $environmentKeys,
-                        key: key)
+            List {
+                ForEach($environmentKeys) { $key in
+                    KeyItem(focus: _focus,
+                            environmentKeys: $environmentKeys,
+                            key: $key)
+                }
             }
             .alternatingRowBackgrounds(.enabled)
             .onAppear {
@@ -139,7 +132,7 @@ struct EnvironmentArgView: View {
 struct KeyItem: View {
     @FocusState var focus: Focusable?
     @Binding var environmentKeys: [Key]
-    @State var key: Key
+    @Binding var key: Key
     @State var hovered: Bool = false
 
     var body: some View {

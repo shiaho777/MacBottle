@@ -30,11 +30,11 @@ public class Rosetta2 {
         let process = Process()
         let fileHandle = try Wine.makeFileHandle()
 
-        process.launchPath = "/usr/sbin/softwareupdate"
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/softwareupdate")
         process.arguments = ["--install-rosetta", "--agree-to-license"]
         process.standardOutput = fileHandle
         process.standardError = fileHandle
-        fileHandle.writeApplicaitonInfo()
+        fileHandle.writeApplicationInfo()
         fileHandle.writeInfo(for: process)
 
         return try await withCheckedThrowingContinuation { continuation in

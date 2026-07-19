@@ -1,11 +1,11 @@
 {
-  "generated_at" : "2026-07-19T09:36:45Z",
+  "generated_at" : "2026-07-19T09:52:50Z",
   "recipes" : [
     {
       "id" : "gog.1207658924",
       "path" : "gog\/1207658924.json",
-      "sha" : "41ff96356d0ceadd791cda46dc7d8c5c962ab488",
-      "size" : 523
+      "sha" : "9c89e7a65bb34b6be5eb955f136c809d88f8acc2",
+      "size" : 490
     },
     {
       "id" : "steam.105600",

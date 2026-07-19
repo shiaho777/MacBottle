@@ -17,19 +17,21 @@
 //
 
 import Foundation
+import Observation
 import SwiftUI
 import os.log
 
 // swiftlint:disable:next todo
 // TODO: Should not be unchecked!
-public final class Bottle: ObservableObject, Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
+@Observable
+public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
     public let url: URL
     private let metadataURL: URL
-    @Published public var settings: BottleSettings {
+    public var settings: BottleSettings {
         didSet { saveSettings() }
     }
-    @Published public var programs: [Program] = []
-    @Published public var inFlight: Bool = false
+    public var programs: [Program] = []
+    public var inFlight: Bool = false
     public var isAvailable: Bool = false
 
     /// All pins with their associated programs
@@ -40,6 +42,54 @@ public final class Bottle: ObservableObject, Equatable, Hashable, Identifiable, 
             guard let program = programs.first(where: { $0.url == pin.url && exists }) else { return nil }
             return (pin, program, "\(pin.name)//\(program.url)")
         }
+    }
+
+
+    private func pinIndex(for url: URL) -> Int? {
+        let target = url.standardizedFileURL.path(percentEncoded: false)
+        return settings.pins.firstIndex {
+            guard let pinURL = $0.url else { return false }
+            return pinURL.standardizedFileURL.path(percentEncoded: false) == target
+        }
+    }
+
+    public func reorderPin(from sourceURL: URL, to destinationURL: URL) {
+        guard sourceURL.standardizedFileURL != destinationURL.standardizedFileURL,
+              let fromIndex = pinIndex(for: sourceURL),
+              let toIndex = pinIndex(for: destinationURL) else {
+            return
+        }
+        var pins = settings.pins
+        let item = pins.remove(at: fromIndex)
+        let insertIndex = fromIndex < toIndex ? toIndex - 1 : toIndex
+        pins.insert(item, at: max(0, min(insertIndex, pins.count)))
+        settings.pins = pins
+    }
+
+    public func movePin(_ url: URL, by delta: Int) {
+        guard let fromIndex = pinIndex(for: url) else { return }
+        let target = fromIndex + delta
+        guard settings.pins.indices.contains(target) else { return }
+        var pins = settings.pins
+        pins.swapAt(fromIndex, target)
+        settings.pins = pins
+    }
+
+    public func movePinToStart(_ url: URL) {
+        guard let fromIndex = pinIndex(for: url), fromIndex > 0 else { return }
+        var pins = settings.pins
+        let item = pins.remove(at: fromIndex)
+        pins.insert(item, at: 0)
+        settings.pins = pins
+    }
+
+    public func movePinToEnd(_ url: URL) {
+        guard let fromIndex = pinIndex(for: url) else { return }
+        guard fromIndex < settings.pins.count - 1 else { return }
+        var pins = settings.pins
+        let item = pins.remove(at: fromIndex)
+        pins.append(item)
+        settings.pins = pins
     }
 
     public init(bottleUrl: URL, inFlight: Bool = false, isAvailable: Bool = false) {

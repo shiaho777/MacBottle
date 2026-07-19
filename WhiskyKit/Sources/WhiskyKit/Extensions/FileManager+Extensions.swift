@@ -1,5 +1,5 @@
 //
-//  FileHandle+Extensions.swift
+//  FileManager+Extensions.swift
 //  WhiskyKit
 //
 //  This file is part of Whisky.
@@ -26,27 +26,49 @@ extension FileManager {
             at: sourceDirectory, includingPropertiesForKeys: [.isRegularFileKey])
 
         while let fileURL = enumerator?.nextObject() as? URL {
-            guard fileURL.pathExtension == "dll" else { return }
+            guard fileURL.pathExtension == "dll" else { continue }
             let originalURL = destinationDirectory.appending(path: fileURL.lastPathComponent)
             try FileManager.default.replaceFile(at: originalURL, with: fileURL, makeOriginalCopy: makeOriginalCopy)
         }
     }
 
     func replaceFile(at originalURL: URL, with replacementURL: URL, makeOriginalCopy: Bool = true) throws {
-        if fileExists(atPath: originalURL.path(percentEncoded: false)) {
+        let originalPath = originalURL.path(percentEncoded: false)
+        let replacementPath = replacementURL.path(percentEncoded: false)
+        guard fileExists(atPath: replacementPath) else { return }
+
+        if fileExists(atPath: originalPath) {
             if makeOriginalCopy {
                 let copyURL = originalURL.appendingPathExtension("orig")
-
-                if fileExists(atPath: copyURL.path(percentEncoded: false)) {
+                let copyPath = copyURL.path(percentEncoded: false)
+                if fileExists(atPath: copyPath), filesLikelyIdentical(originalURL, replacementURL) {
+                    return
+                }
+                if fileExists(atPath: copyPath) {
                     try FileManager.default.removeItem(at: copyURL)
                 }
-
                 try FileManager.default.moveItem(at: originalURL, to: copyURL)
+            } else if filesLikelyIdentical(originalURL, replacementURL) {
+                return
             } else {
                 try FileManager.default.removeItem(at: originalURL)
             }
-
             try FileManager.default.copyItem(at: replacementURL, to: originalURL)
+            return
         }
+
+        try FileManager.default.copyItem(at: replacementURL, to: originalURL)
+    }
+
+    private func filesLikelyIdentical(_ lhs: URL, _ rhs: URL) -> Bool {
+        guard
+            let left = try? attributesOfItem(atPath: lhs.path(percentEncoded: false)),
+            let right = try? attributesOfItem(atPath: rhs.path(percentEncoded: false)),
+            let leftSize = left[.size] as? NSNumber,
+            let rightSize = right[.size] as? NSNumber
+        else {
+            return false
+        }
+        return leftSize == rightSize
     }
 }

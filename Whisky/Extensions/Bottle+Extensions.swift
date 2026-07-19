@@ -27,28 +27,18 @@ extension Bottle {
     }
 
     func openTerminal() {
-        let whiskyCmdURL = Bundle.main.url(forResource: "WhiskyCmd", withExtension: nil)
-        if let whiskyCmdURL = whiskyCmdURL {
-            let whiskyCmd = whiskyCmdURL.path(percentEncoded: false)
-            let cmd = "eval \\\"$(\\\"\(whiskyCmd)\\\" shellenv \\\"\(settings.name)\\\")\\\""
+        guard let whiskyCmdURL = Bundle.main.url(forResource: "WhiskyCmd", withExtension: nil) else {
+            return
+        }
+        let whiskyCmd = whiskyCmdURL.path(percentEncoded: false)
+        let cmd = "eval \"$(\"\(whiskyCmd)\" shellenv \"\(settings.name)\")\""
 
-            let script = """
-            tell application "Terminal"
-            activate
-            do script "\(cmd)"
-            end tell
-            """
-
-            Task.detached(priority: .userInitiated) {
-                var error: NSDictionary?
-                guard let appleScript = NSAppleScript(source: script) else { return }
-                appleScript.executeAndReturnError(&error)
-
-                if let error = error {
-                    Logger.wineKit.error("Failed to run terminal script \(error)")
-                    guard let description = error["NSAppleScriptErrorMessage"] as? String else { return }
-                    await self.showRunError(message: String(describing: description))
-                }
+        Task.detached(priority: .userInitiated) {
+            do {
+                try await TerminalLauncher.run(command: cmd)
+            } catch {
+                Logger.wineKit.error("Failed to open bottle terminal: \(error.localizedDescription)")
+                await self.showRunError(message: error.localizedDescription)
             }
         }
     }
@@ -105,7 +95,7 @@ extension Bottle {
                     }
                 }
             } catch {
-                print(error)
+                Logger.wineKit.error("Bottle operation error: \(error.localizedDescription)")
             }
         }
 
@@ -115,30 +105,58 @@ extension Bottle {
     func updateInstalledPrograms() {
         let driveC = url.appending(path: "drive_c")
         var programs: [Program] = []
-        var foundURLS: Set<URL> = []
+        var foundURLs: Set<URL> = []
+        let fileManager = FileManager.default
 
-        for folderName in ["Program Files", "Program Files (x86)"] {
-            let folderURL = driveC.appending(path: folderName)
-            let enumerator = FileManager.default.enumerator(
-                at: folderURL, includingPropertiesForKeys: [.isExecutableKey], options: [.skipsHiddenFiles]
-            )
+        var roots: [URL] = [
+            driveC.appending(path: "Program Files"),
+            driveC.appending(path: "Program Files (x86)")
+        ]
 
-            while let url = enumerator?.nextObject() as? URL {
-                guard !url.hasDirectoryPath && url.pathExtension == "exe" else { continue }
-                guard !settings.blocklist.contains(url) else { continue }
-                foundURLS.insert(url)
-                programs.append(Program(url: url, bottle: self))
+        let usersRoot = driveC.appending(path: "users")
+        if let users = try? fileManager.contentsOfDirectory(
+            at: usersRoot,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for user in users {
+                roots.append(user.appending(path: "Desktop"))
+                roots.append(user.appending(path: "Downloads"))
+                roots.append(user.appending(path: "Documents"))
             }
         }
 
-        // Add missing programs from pins
-        for pin in settings.pins {
-            guard let url = pin.url else { continue }
-            guard !foundURLS.contains(url) else { continue }
-            programs.append(Program(url: url, bottle: self))
+        for root in roots {
+            guard fileManager.fileExists(atPath: root.path(percentEncoded: false)) else { continue }
+            let enumerator = fileManager.enumerator(
+                at: root,
+                includingPropertiesForKeys: [.isRegularFileKey],
+                options: [.skipsHiddenFiles]
+            )
+            while let fileURL = enumerator?.nextObject() as? URL {
+                guard fileURL.pathExtension.lowercased() == "exe" else { continue }
+                guard !fileURL.hasDirectoryPath else { continue }
+                let path = fileURL.path(percentEncoded: false).lowercased()
+                if path.contains("/windows/") { continue }
+                if path.contains("/internet explorer/") { continue }
+                guard !settings.blocklist.contains(fileURL) else { continue }
+                guard !foundURLs.contains(fileURL) else { continue }
+                foundURLs.insert(fileURL)
+                programs.append(Program(url: fileURL, bottle: self))
+            }
         }
 
-        self.programs = programs.sorted { $0.name.lowercased() < $1.name.lowercased() }
+        for pin in settings.pins {
+            guard let pinURL = pin.url else { continue }
+            guard !foundURLs.contains(pinURL) else { continue }
+            guard fileManager.fileExists(atPath: pinURL.path(percentEncoded: false)) else { continue }
+            foundURLs.insert(pinURL)
+            programs.append(Program(url: pinURL, bottle: self))
+        }
+
+        self.programs = programs.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
     }
 
     @MainActor
@@ -166,7 +184,7 @@ extension Bottle {
             }
             BottleVM.shared.loadBottles()
         } catch {
-            print("Failed to move bottle")
+            Logger.wineKit.error("Failed to move bottle")
         }
     }
 
@@ -174,7 +192,7 @@ extension Bottle {
         do {
             try Tar.tar(folder: url, toURL: destination)
         } catch {
-            print("Failed to export bottle")
+            Logger.wineKit.error("Failed to export bottle")
         }
     }
 
@@ -194,7 +212,7 @@ extension Bottle {
             }
             BottleVM.shared.loadBottles()
         } catch {
-            print("Failed to remove bottle")
+            Logger.wineKit.error("Failed to remove bottle")
         }
     }
 
