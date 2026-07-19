@@ -294,8 +294,16 @@ public class Wine {
 
             for await output in stream {
                 switch output {
-                case .started:
-                    break
+                case .started(let process):
+                    if let runID {
+                        let pid = process.processIdentifier
+                        await MainActor.run {
+                            ProgramRunLogStore.shared.attachHostProcess(
+                                runID: runID,
+                                processID: pid
+                            )
+                        }
+                    }
                 case .message(let line):
                     if runID != nil {
                         pending.append((line, false))

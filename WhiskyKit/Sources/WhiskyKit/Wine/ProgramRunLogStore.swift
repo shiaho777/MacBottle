@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import Darwin
 import Observation
 import CryptoKit
 import os.log
@@ -59,6 +60,7 @@ public struct ProgramRunRecord: Codable, Identifiable, Hashable, Sendable {
     public var status: ProgramRunStatus
     public var fileName: String
     public var byteCount: Int
+    public var hostProcessID: Int32?
 
     public var duration: TimeInterval {
         let end = endedAt ?? Date()
@@ -207,7 +209,8 @@ public final class ProgramRunLogStore {
             exitCode: nil,
             status: .running,
             fileName: fileName,
-            byteCount: 0
+            byteCount: 0,
+            hostProcessID: nil
         )
 
         handle.writeApplicationInfo()
@@ -240,8 +243,36 @@ public final class ProgramRunLogStore {
         bump()
     }
 
+    public func attachHostProcess(runID: UUID, processID: Int32) {
+        if let session = sessions[runID] {
+            var record = session.record
+            record.hostProcessID = processID
+            session.update(record: record)
+            var index = loadIndex(bottleKey: record.bottleKey, programKey: record.programKey)
+            if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
+                index.runs[idx] = record
+                try? saveIndex(index, bottleKey: record.bottleKey, programKey: record.programKey)
+            }
+            bump()
+            return
+        }
+        guard var record = findRecordInIndexes(runID: runID) else { return }
+        record.hostProcessID = processID
+        var index = loadIndex(bottleKey: record.bottleKey, programKey: record.programKey)
+        if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
+            index.runs[idx] = record
+            try? saveIndex(index, bottleKey: record.bottleKey, programKey: record.programKey)
+        }
+        bump()
+    }
+
     public func finishRun(runID: UUID, exitCode: Int32?) {
-        guard var record = sessions[runID]?.record ?? findRecord(runID: runID) else { return }
+        guard var record = sessions[runID]?.record
+            ?? findRecord(runID: runID)
+            ?? findRecordInIndexes(runID: runID) else { return }
+        if record.status != .running, record.endedAt != nil {
+            return
+        }
         record.endedAt = Date()
         record.exitCode = exitCode
         if let exitCode, exitCode != 0 {
@@ -279,6 +310,7 @@ public final class ProgramRunLogStore {
     }
 
     public func programs(for bottle: Bottle, sort: ProgramRunLogSort = .newest) -> [ProgramRunProgramSummary] {
+        reconcileStaleRunningRuns(for: bottle)
         let bottleKey = Self.bottleKey(for: bottle)
         let root = Self.bottleDirectory(bottleKey: bottleKey)
         guard let programDirs = try? fileManager.contentsOfDirectory(
@@ -327,6 +359,7 @@ public final class ProgramRunLogStore {
         programKey: String,
         sort: ProgramRunLogSort = .newest
     ) -> [ProgramRunRecord] {
+        reconcileStaleRunningRuns(for: bottle)
         let bottleKey = Self.bottleKey(for: bottle)
         var runs = loadIndex(bottleKey: bottleKey, programKey: programKey).runs
         for session in sessions.values where session.record.programKey == programKey
@@ -493,6 +526,122 @@ public final class ProgramRunLogStore {
     private func findRecord(runID: UUID) -> ProgramRunRecord? {
         if let session = sessions[runID] {
             return session.record
+        }
+        return nil
+    }
+
+    public func reconcileStaleRunningRuns(for bottle: Bottle) {
+        let bottleKey = Self.bottleKey(for: bottle)
+        let root = Self.bottleDirectory(bottleKey: bottleKey)
+        guard let programDirs = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            reconcileLiveSessions(bottleKey: bottleKey)
+            return
+        }
+
+        for dir in programDirs {
+            var isDir: ObjCBool = false
+            guard fileManager.fileExists(atPath: dir.path(percentEncoded: false), isDirectory: &isDir),
+                  isDir.boolValue else { continue }
+            let programKey = dir.lastPathComponent
+            var index = loadIndex(bottleKey: bottleKey, programKey: programKey)
+            var changed = false
+            for idx in index.runs.indices where index.runs[idx].status == .running {
+                var record = index.runs[idx]
+                if shouldKeepRunning(record) {
+                    continue
+                }
+                record.endedAt = Date()
+                record.status = .failed
+                if record.exitCode == nil {
+                    record.exitCode = -1
+                }
+                index.runs[idx] = record
+                if let session = sessions[record.id] {
+                    session.update(record: record)
+                }
+                changed = true
+                appendStaleNote(for: record)
+            }
+            if changed {
+                try? saveIndex(index, bottleKey: bottleKey, programKey: programKey)
+            }
+        }
+        reconcileLiveSessions(bottleKey: bottleKey)
+        bump()
+    }
+
+    private func reconcileLiveSessions(bottleKey: String) {
+        for session in sessions.values where session.record.bottleKey == bottleKey && session.isLive {
+            if shouldKeepRunning(session.record) {
+                continue
+            }
+            finishRun(runID: session.id, exitCode: session.record.exitCode ?? -1)
+        }
+    }
+
+    private func shouldKeepRunning(_ record: ProgramRunRecord) -> Bool {
+        if let session = sessions[record.id], session.isLive {
+            if let pid = record.hostProcessID ?? session.record.hostProcessID {
+                return Self.isHostProcessAlive(pid)
+            }
+            return true
+        }
+        if let pid = record.hostProcessID {
+            return Self.isHostProcessAlive(pid)
+        }
+        return false
+    }
+
+    private static func isHostProcessAlive(_ pid: Int32) -> Bool {
+        guard pid > 0 else { return false }
+        return kill(pid, 0) == 0
+    }
+
+    private func appendStaleNote(for record: ProgramRunRecord) {
+        let url = logFileURL(for: record)
+        let note = "\n---- process ended unexpectedly (status reconciled) ----\n"
+        if let handle = try? FileHandle(forWritingTo: url) {
+            defer { try? handle.close() }
+            _ = try? handle.seekToEnd()
+            if let data = note.data(using: .utf8) {
+                try? handle.write(contentsOf: data)
+            }
+        }
+        if let session = sessions[record.id] {
+            session.append(line: note)
+        }
+    }
+
+    private func findRecordInIndexes(runID: UUID) -> ProgramRunRecord? {
+        for session in sessions.values where session.id == runID {
+            return session.record
+        }
+        guard let bottleDirs = try? fileManager.contentsOfDirectory(
+            at: Self.rootFolder,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return nil
+        }
+        for bottleDir in bottleDirs {
+            guard let programDirs = try? fileManager.contentsOfDirectory(
+                at: bottleDir,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for programDir in programDirs {
+                let index = loadIndex(
+                    bottleKey: bottleDir.lastPathComponent,
+                    programKey: programDir.lastPathComponent
+                )
+                if let record = index.runs.first(where: { $0.id == runID }) {
+                    return record
+                }
+            }
         }
         return nil
     }
