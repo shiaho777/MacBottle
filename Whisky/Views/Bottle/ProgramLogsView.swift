@@ -116,8 +116,15 @@ struct ProgramLogsView: View {
             }
         }
         .onAppear {
+            store.reconcileStaleRunningRuns(for: bottle)
             focusLatestActivity()
             refreshDetail()
+        }
+        .task(id: bottle.url) {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                store.reconcileStaleRunningRuns(for: bottle)
+            }
         }
         .onChange(of: store.revision) { _, _ in
             if selectedProgramKey == nil || !programs.contains(where: { $0.programKey == selectedProgramKey }) {

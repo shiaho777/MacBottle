@@ -145,8 +145,10 @@ public enum RuntimeLaunchOptimizer {
         var args = ["start"]
         switch profile {
         case .modern64, .generic:
-            args.append("/high")
-        case .classic32, .installer:
+            args.append(contentsOf: ["/wait", "/high"])
+        case .classic32:
+            args.append("/wait")
+        case .installer:
             break
         }
         args.append(contentsOf: ["/unix", executable.path(percentEncoded: false)])

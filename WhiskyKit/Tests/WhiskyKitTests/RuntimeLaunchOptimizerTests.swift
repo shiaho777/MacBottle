@@ -83,7 +83,7 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
             executable: url,
             extraArgs: ["-windowed"]
         )
-        XCTAssertEqual(Array(args.prefix(3)), ["start", "/high", "/unix"])
+        XCTAssertEqual(Array(args.prefix(4)), ["start", "/wait", "/high", "/unix"])
         XCTAssertEqual(args.last, "-windowed")
     }
 
@@ -94,7 +94,7 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
             executable: url,
             extraArgs: []
         )
-        XCTAssertEqual(Array(args.prefix(2)), ["start", "/unix"])
+        XCTAssertEqual(Array(args.prefix(3)), ["start", "/wait", "/unix"])
         XCTAssertFalse(args.contains("/high"))
     }
 
