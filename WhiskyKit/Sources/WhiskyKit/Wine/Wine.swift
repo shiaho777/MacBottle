@@ -203,7 +203,13 @@ public class Wine {
             }
         }
 
-        var shouldApplyDXVK = applyDXVK && bottle.settings.dxvk
+        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
+
+        var shouldApplyDXVK = applyDXVK
+            && RuntimeLaunchOptimizer.effectiveDXVKEnabled(
+                profile: profile,
+                bottleDXVKEnabled: bottle.settings.dxvk
+            )
         if engineDecision?.engineID == WineEngineCatalog.d3dMetalIdentifier {
             shouldApplyDXVK = false
         } else if recipe?.renderer == .d3dmetal {
@@ -225,11 +231,10 @@ public class Wine {
         }
 
         var environment = environment
-        if !shouldApplyDXVK {
-            environment["WINEDLLOVERRIDES"] = environment["WINEDLLOVERRIDES"] ?? ""
+        if environment["WINEDLLOVERRIDES"]?.isEmpty == true {
+            environment.removeValue(forKey: "WINEDLLOVERRIDES")
         }
 
-        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
         DisplayPolicy.apply(for: profile, bottle: bottle)
         let qos = RuntimeLaunchOptimizer.processQualityOfService(for: profile)
         let launchArgs = RuntimeLaunchOptimizer.startArguments(

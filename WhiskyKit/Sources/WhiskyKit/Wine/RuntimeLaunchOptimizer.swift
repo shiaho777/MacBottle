@@ -84,6 +84,22 @@ public enum RuntimeLaunchOptimizer {
         return resolved
     }
 
+    public static func prefersDXVK(for profile: RuntimeProfile) -> Bool {
+        switch profile {
+        case .modern64, .generic:
+            return true
+        case .classic32, .installer:
+            return false
+        }
+    }
+
+    public static func effectiveDXVKEnabled(
+        profile: RuntimeProfile,
+        bottleDXVKEnabled: Bool
+    ) -> Bool {
+        bottleDXVKEnabled && prefersDXVK(for: profile)
+    }
+
     public static func environment(
         profile: RuntimeProfile,
         bottleDXVKEnabled: Bool,
@@ -91,13 +107,17 @@ public enum RuntimeLaunchOptimizer {
         d3dMetalStatus: D3DMetalStatus? = nil
     ) -> [String: String] {
         var env = base
-        applyUniversalModernDefaults(&env, bottleDXVKEnabled: bottleDXVKEnabled)
+        let useDXVK = effectiveDXVKEnabled(
+            profile: profile,
+            bottleDXVKEnabled: bottleDXVKEnabled
+        )
+        applyUniversalModernDefaults(&env, bottleDXVKEnabled: useDXVK)
 
         switch profile {
         case .classic32:
             applyClassic32(&env)
         case .modern64:
-            applyModern64(&env, bottleDXVKEnabled: bottleDXVKEnabled)
+            applyModern64(&env, bottleDXVKEnabled: useDXVK)
         case .installer:
             applyInstaller(&env)
         case .generic:
@@ -108,7 +128,7 @@ public enum RuntimeLaunchOptimizer {
         let d3dm = D3DMetalCapability.environmentContributions(
             status: status,
             profile: profile,
-            bottleDXVKEnabled: bottleDXVKEnabled
+            bottleDXVKEnabled: useDXVK
         )
         for (key, value) in d3dm where env[key] == nil {
             env[key] = value
@@ -124,9 +144,9 @@ public enum RuntimeLaunchOptimizer {
     ) -> [String] {
         var args = ["start"]
         switch profile {
-        case .classic32, .modern64, .generic:
+        case .modern64, .generic:
             args.append("/high")
-        case .installer:
+        case .classic32, .installer:
             break
         }
         args.append(contentsOf: ["/unix", executable.path(percentEncoded: false)])
@@ -193,9 +213,16 @@ public enum RuntimeLaunchOptimizer {
     private static func applyClassic32(_ env: inout [String: String]) {
         env.removeValue(forKey: "ROSETTA_ADVERTISE_AVX")
         env["WINE_DISABLE_KERNEL_WRITEWATCH"] = env["WINE_DISABLE_KERNEL_WRITEWATCH"] ?? "1"
-        env["DXVK_ASYNC"] = "0"
-        env["DXVK_LOG_LEVEL"] = "none"
-        mergeDLLOverrides(&env, additions: "d3d12=d")
+        env.removeValue(forKey: "DXVK_ASYNC")
+        env.removeValue(forKey: "DXVK_LOG_LEVEL")
+        env.removeValue(forKey: "DXVK_LOG_PATH")
+        env.removeValue(forKey: "DXVK_STATE_CACHE")
+        env.removeValue(forKey: "DXVK_HUD")
+        env.removeValue(forKey: "DXVK_FRAME_RATE")
+        mergeDLLOverrides(
+            &env,
+            additions: "d3d8,d3d9,d3d10,d3d10core,d3d11,dxgi=b;d3d12=d"
+        )
     }
 
     private static func applyModern64(
@@ -209,8 +236,12 @@ public enum RuntimeLaunchOptimizer {
 
     private static func applyInstaller(_ env: inout [String: String]) {
         env["WINEDEBUG"] = env["WINEDEBUG"] ?? "-all"
-        env["DXVK_ASYNC"] = "0"
+        env.removeValue(forKey: "DXVK_ASYNC")
         env.removeValue(forKey: "ROSETTA_ADVERTISE_AVX")
+        mergeDLLOverrides(
+            &env,
+            additions: "d3d8,d3d9,d3d10,d3d10core,d3d11,dxgi=b;d3d12=d"
+        )
     }
 
     private static func mergeDLLOverrides(

@@ -33,21 +33,32 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
     func testClassic32DisablesAVXAndWriteWatch() {
         let env = RuntimeLaunchOptimizer.environment(
             profile: .classic32,
-            bottleDXVKEnabled: false,
+            bottleDXVKEnabled: true,
             base: [
                 "WINEPREFIX": "/tmp/bottle",
                 "WINEDEBUG": "fixme-all",
                 "GST_DEBUG": "1",
                 "ROSETTA_ADVERTISE_AVX": "1",
-                "DXVK_ASYNC": "1"
+                "DXVK_ASYNC": "1",
+                "DXVK_LOG_LEVEL": "info",
+                "DXVK_STATE_CACHE": "1"
             ]
         )
         XCTAssertEqual(env["WINEDEBUG"], "-all")
         XCTAssertEqual(env["GST_DEBUG"], "0")
         XCTAssertNil(env["ROSETTA_ADVERTISE_AVX"])
         XCTAssertEqual(env["WINE_DISABLE_KERNEL_WRITEWATCH"], "1")
-        XCTAssertEqual(env["DXVK_ASYNC"], "0")
+        XCTAssertNil(env["DXVK_ASYNC"])
+        XCTAssertNil(env["DXVK_LOG_LEVEL"])
+        XCTAssertNil(env["DXVK_STATE_CACHE"])
+        XCTAssertFalse(RuntimeLaunchOptimizer.effectiveDXVKEnabled(
+            profile: .classic32,
+            bottleDXVKEnabled: true
+        ))
         XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("winemenubuilder.exe=d") == true)
+        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("d3d9") == true)
+        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("=b") == true)
+        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("d3d12=d") == true)
         XCTAssertTrue(env["MVK_CONFIG_FAST_MATH_ENABLED"] == "1")
     }
 
@@ -65,15 +76,26 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
         XCTAssertEqual(env["DXVK_STATE_CACHE"], "1")
     }
 
-    func testStartArgumentsHighPriorityForGames() {
+    func testStartArgumentsHighPriorityForModernGames() {
         let url = URL(fileURLWithPath: "/tmp/game.exe")
         let args = RuntimeLaunchOptimizer.startArguments(
-            profile: .classic32,
+            profile: .modern64,
             executable: url,
             extraArgs: ["-windowed"]
         )
         XCTAssertEqual(Array(args.prefix(3)), ["start", "/high", "/unix"])
         XCTAssertEqual(args.last, "-windowed")
+    }
+
+    func testStartArgumentsNoHighForClassic32() {
+        let url = URL(fileURLWithPath: "/tmp/classic.exe")
+        let args = RuntimeLaunchOptimizer.startArguments(
+            profile: .classic32,
+            executable: url,
+            extraArgs: []
+        )
+        XCTAssertEqual(Array(args.prefix(2)), ["start", "/unix"])
+        XCTAssertFalse(args.contains("/high"))
     }
 
     func testStartArgumentsNoHighForInstaller() {
