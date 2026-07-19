@@ -129,8 +129,10 @@ public final class RemoteRecipeSource: Sendable {
 
         /// `https://raw.githubusercontent.com/<owner>/<repo>/<branch>/`
         public var rawBaseURL: URL {
-            // swiftlint:disable:next force_unwrapping
-            URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/\(branch)/")!
+            guard let url = URL(string: "https://raw.githubusercontent.com/\(owner)/\(repo)/\(branch)/") else {
+                preconditionFailure("static raw.githubusercontent base URL")
+            }
+            return url
         }
 
         public var indexURL: URL {

@@ -49,8 +49,9 @@ actor ImageCache {
         if let diskRoot {
             self.diskRoot = diskRoot
         } else {
-            // swiftlint:disable:next force_unwrapping
-            let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            guard let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+                preconditionFailure("application support directory missing")
+            }
             self.diskRoot = base
                 .appending(path: Bundle.whiskyBundleIdentifier)
                 .appending(path: "ImageCache")
