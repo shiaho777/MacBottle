@@ -5,7 +5,7 @@
 **在 Mac 上玩 Windows 游戏，就是这么简单。**
 _Play Windows games on your Mac. Simply._
 
-[简体中文](#简体中文) · [English](#english) · [路线图](./PROJECT_PLAN.md) · [贡献指南](./CONTRIBUTING.md)
+[简体中文](#简体中文) · [English](#english) · [路线图](./PROJECT_PLAN.md) · [贡献指南](./CONTRIBUTING.md) · [交付流程](./CONTRIBUTING.md#delivery-loop-issue--pr--main--ci--merge)
 
 </div>
 
@@ -54,7 +54,7 @@ MacBottle **不提供游戏本体**，游戏由你通过 Steam、Epic、GOG、Ba
 - 翻译界面到其他语言
 - 在 V2EX、小红书、B 站分享你的使用经验
 
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
+详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。代码交付遵循 **Issue → PR → main → CI → merge**（Issue 仅在合并后通过 `Fixes #N` 关闭）。
 
 ---
 
@@ -91,7 +91,7 @@ Contributions welcome:
 - Translate the UI to more languages
 - Share your experience in your local Mac-gaming community
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Delivery loop: **Issue → PR → main → CI → merge** (Issues close on merge via `Fixes #N` only).
 
 ---
 

@@ -1,3 +1,9 @@
+# Delivery gate:
+# - Branch protection should require this workflow's jobs on PRs into main when paths match.
+# - Issues close via PR body Fixes #N / Closes #N on *merge*, not from this workflow.
+# - Do not merge while this workflow is red; do not close the linked Issue early.
+# - Path filters: markdown/docs-only changes may skip this workflow.
+
 name: Build
 
 concurrency:
@@ -47,6 +53,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Delivery policy summary
+        if: always()
+        run: |
+          {
+            echo "### Delivery gate"
+            echo "- CI gates merge; it does **not** close Issues."
+            echo "- Linked Issues close only when a PR with \`Fixes #N\` / \`Closes #N\` is **merged**."
+            echo "- Do not merge while required checks are red."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   test:
     name: WhiskyKit tests
     runs-on: macos-15
@@ -59,3 +75,13 @@ jobs:
       - name: Run unit tests
         working-directory: WhiskyKit
         run: swift test
+
+      - name: Delivery policy summary
+        if: always()
+        run: |
+          {
+            echo "### Delivery gate"
+            echo "- CI gates merge; it does **not** close Issues."
+            echo "- Linked Issues close only when a PR with \`Fixes #N\` / \`Closes #N\` is **merged**."
+            echo "- Do not merge while required checks are red."
+          } >> "$GITHUB_STEP_SUMMARY"

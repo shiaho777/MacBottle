@@ -1,12 +1,29 @@
 <!--
 Thanks for contributing to MacBottle.
+https://github.com/shiaho777/MacBottle
 
-Pick the template that matches your change and delete the others.
+Pick the section that matches your change and delete the others.
 
-- For adding or updating a game recipe (a .json under
-  WhiskyKit/Sources/WhiskyKit/Recipes/), use the "Recipe" section below.
-- For code or documentation changes, use the "Code / Docs" section below.
+- Recipe: adding/updating files under WhiskyKit/Sources/WhiskyKit/Recipes/
+- Code / Docs: Swift, docs, workflows, delivery process
 -->
+
+## Summary
+
+<!-- What user-visible outcome does this change deliver? Why? -->
+
+## Issue
+
+Fixes #
+
+<!-- Or: Closes # -->
+<!-- Full URL welcome: https://github.com/shiaho777/MacBottle/issues/N -->
+<!--
+Issue closes on *merge* via Fixes/Closes — not when the PR opens, not while CI is red.
+Bot/catalog PRs (for example recipe index regeneration) may omit Fixes.
+-->
+
+---
 
 ## Recipe
 
@@ -22,11 +39,7 @@ Pick the template that matches your change and delete the others.
 
 ### Evidence
 
-<!--
-Optional but strongly encouraged. A screenshot, short clip, or log excerpt
-showing the game running on your Mac. Nothing that includes copyrighted
-game assets beyond what's reasonable for "proof it runs".
--->
+<!-- Optional. Screenshot, short clip, or log excerpt. -->
 
 ### Checklist
 
@@ -35,6 +48,7 @@ game assets beyond what's reasonable for "proof it runs".
 - [ ] `id` is unique across existing recipes
 - [ ] `notes` is factual, in English, and does not contain promotion or piracy links
 - [ ] This recipe does not require DRM circumvention
+- [ ] Required CI is green before merge (`RecipeLint` when recipe paths change)
 
 ---
 
@@ -48,10 +62,18 @@ game assets beyond what's reasonable for "proof it runs".
 
 ### Why?
 
-<!-- Link to an issue if one exists. -->
+<!-- Link the Issue above. Prefer Fixes #N so it closes on merge. -->
 
-### Testing
+### Test plan
 
 - [ ] `swift test` passes locally (from `WhiskyKit/`)
 - [ ] The app builds in Xcode without new SwiftLint violations
 - [ ] I have added tests for new non-trivial logic, or explained why not
+- [ ] Required CI is green before merge
+  - Code: `xcodebuild Debug`, `WhiskyKit tests`, and `SwiftLint` when Swift changes
+  - Recipes: `RecipeLint` when recipe paths change
+  - Docs-only: Build may be skipped by path filters; still wait for any checks that did run
+
+### Notes for reviewers
+
+<!-- Optional: risk, rollout, screenshots, follow-ups -->

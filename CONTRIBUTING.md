@@ -4,6 +4,36 @@ Thanks for wanting to help. MacBottle is a small, focused project with one
 goal: make Windows games runnable on Apple Silicon Macs. There are three
 ways to contribute, listed here by how often people actually do them.
 
+
+## Delivery loop (Issue → PR → main → CI → merge)
+
+All intentional non-trivial work follows this loop. Agents follow the same rules in [`AGENTS.md`](./AGENTS.md).
+
+```text
+Issue open → branch from main → PR into main (Fixes #N) → CI green → merge → Issue closes
+```
+
+1. **Issue first.** Open or reuse a GitHub Issue describing the problem/goal and acceptance criteria. Recipe-only contributions may still link an Issue when useful.
+2. **Branch from `main`.** Prefer a short topic branch (for example `codex/topic-name`).
+3. **Open a PR into `main`.** Use [.github/PULL_REQUEST_TEMPLATE.md](./.github/PULL_REQUEST_TEMPLATE.md). Include `Fixes #N` or `Closes #N` so the Issue closes **on merge only** — not when the PR is opened, and not while CI is red.
+4. **CI is the merge gate.** Do not merge with red required checks. CI must not close Issues; merge does.
+5. **Required checks** (from real workflows; path filters apply):
+
+| When | Workflow | Job id | Check name |
+|------|----------|--------|------------|
+| App/code changes | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `build` | `xcodebuild Debug` |
+| App/code changes | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `test` | `WhiskyKit tests` |
+| Swift sources changed | [`.github/workflows/SwiftLint.yml`](./.github/workflows/SwiftLint.yml) | `SwiftLint` | `SwiftLint` |
+| Recipe sources/tests changed | [`.github/workflows/RecipeLint.yml`](./.github/workflows/RecipeLint.yml) | `RecipeLint` | `RecipeLint` |
+
+- Pure markdown/docs PRs may skip `Build` because of path filters.
+- [RecipeIndex](./.github/workflows/RecipeIndex.yml) regenerates `_index.json` on `main` after recipe pushes. It is not a PR gate and does not close Issues.
+- Automated index bot commits may omit `Fixes #N`.
+
+6. **No secrets or machine-local junk** in commits.
+
+**Recommended for maintainers:** enable branch protection on `main` requiring the checks above for PR merges. This repository may not have protection configured yet — treat green CI as policy either way.
+
 ## 1. Add a game recipe (easiest, highest impact)
 
 A recipe is a single JSON file under
@@ -37,7 +67,7 @@ something non-game — use the **Bug Report** issue template.
 ## 3. Contribute code
 
 Open an issue first for anything non-trivial so we can align on scope
-before you write code. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
+before you write code. See the Delivery loop above and [`AGENTS.md`](./AGENTS.md) for coding agents. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)
 for the module layout and the runtime flow of a game launch.
 
 **Build environment:**
