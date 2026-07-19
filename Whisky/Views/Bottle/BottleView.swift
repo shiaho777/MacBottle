@@ -30,6 +30,7 @@ enum BottleStage {
 
 struct BottleView: View {
     @Bindable var bottle: Bottle
+    @State private var launchCoordinator = ProgramLaunchCoordinator.shared
     @State private var path = NavigationPath()
     @State private var programLoading: Bool = false
     @State private var showWinetricksSheet: Bool = false
@@ -49,6 +50,8 @@ struct BottleView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    launchStatusBanner
+
                     BottleHeroHeader(bottle: bottle)
 
                     VStack(alignment: .leading, spacing: 10) {
@@ -145,6 +148,9 @@ struct BottleView: View {
                 if selectedProgramURL == nil {
                     selectedProgramURL = bottle.pinnedPrograms.first?.program.url
                 }
+                Task(priority: .utility) {
+                    await Wine.ensureBottleReady(bottle)
+                }
             }
             .onChange(of: bottle.pinnedPrograms.map(\.program.url)) { _, urls in
                 if let selectedProgramURL, urls.contains(selectedProgramURL) {
@@ -180,6 +186,113 @@ struct BottleView: View {
                 ProgramView(program: program)
             }
         }
+    }
+
+    private var isLaunchBannerForCurrentBottle: Bool {
+        guard let activeBottleURL = launchCoordinator.activeBottleURL else {
+            return false
+        }
+        return activeBottleURL.standardizedFileURL == bottle.url.standardizedFileURL
+    }
+
+    @ViewBuilder
+    private var launchStatusBanner: some View {
+        if isLaunchBannerForCurrentBottle {
+            scopedLaunchStatusBanner
+        }
+    }
+
+    @ViewBuilder
+    private var scopedLaunchStatusBanner: some View {
+        switch launchCoordinator.phase {
+        case .idle:
+            EmptyView()
+        case .warming(let bottleName):
+            launchBanner(
+                tint: .blue,
+                systemImage: "flame.fill",
+                title: "正在预热容器",
+                message: "为 \(bottleName) 启动 wineserver，二次启动会更快…",
+                showsProgress: true
+            )
+        case .launching(let programName, _):
+            launchBanner(
+                tint: .accentColor,
+                systemImage: "play.circle.fill",
+                title: "正在启动",
+                message: programName,
+                showsProgress: true
+            )
+        case .launched(let programName):
+            launchBanner(
+                tint: .green,
+                systemImage: "checkmark.circle.fill",
+                title: "已启动",
+                message: programName,
+                showsProgress: false
+            )
+        case .failed(let programName, let message):
+            launchBanner(
+                tint: .red,
+                systemImage: "exclamationmark.triangle.fill",
+                title: "启动失败 · \(programName)",
+                message: message,
+                showsProgress: false,
+                showsLogLink: true
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func launchBanner(
+        tint: Color,
+        systemImage: String,
+        title: String,
+        message: String,
+        showsProgress: Bool,
+        showsLogLink: Bool = false
+    ) -> some View {
+        HStack(spacing: 12) {
+            if showsProgress {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Image(systemName: systemImage)
+                    .foregroundStyle(tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 8)
+            if showsLogLink {
+                NavigationLink(value: BottleStage.logs) {
+                    Text("运行日志")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.borderless)
+            }
+            if case .failed = launchCoordinator.phase {
+                Button("关闭") {
+                    launchCoordinator.dismiss()
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .padding(12)
+        .background {
+            RoundedRectangle(cornerRadius: MacBottleTheme.compactRadius, style: .continuous)
+                .fill(tint.opacity(0.12))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: MacBottleTheme.compactRadius, style: .continuous)
+                .strokeBorder(tint.opacity(0.28), lineWidth: 1)
+        }
+        .animation(.easeInOut(duration: 0.2), value: launchCoordinator.phase)
     }
 
     @ViewBuilder
@@ -391,6 +504,7 @@ struct BottleView: View {
 private struct RecentProgramRow: View {
     @Bindable var program: Program
     @Binding var path: NavigationPath
+    @State private var launchCoordinator = ProgramLaunchCoordinator.shared
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
@@ -419,13 +533,18 @@ private struct RecentProgramRow: View {
                 path.append(program)
             }
             .buttonStyle(.borderless)
-            Button {
-                program.run()
-            } label: {
-                Image(systemName: "play.fill")
+            if launchCoordinator.isLaunching(programURL: program.url) {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Button {
+                    program.run()
+                } label: {
+                    Image(systemName: "play.fill")
+                }
+                .buttonStyle(.borderless)
+                .help("运行")
             }
-            .buttonStyle(.borderless)
-            .help("运行")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -433,5 +552,6 @@ private struct RecentProgramRow: View {
             RoundedRectangle(cornerRadius: MacBottleTheme.compactRadius, style: .continuous)
                 .fill(.background.secondary)
         }
+        .opacity(launchCoordinator.isLaunching(programURL: program.url) ? 0.75 : 1)
     }
 }

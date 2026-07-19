@@ -39,20 +39,45 @@ extension Program {
         } else {
             recipe = nil
         }
+        let programName = name
+        let programURL = url
+        let bottle = bottle
 
-        Task.detached(priority: .userInitiated) {
-            do {
-                try await Wine.runProgram(
-                    at: self.url,
-                    args: arguments,
-                    bottle: self.bottle,
-                    environment: environment,
-                    recipe: recipe,
-                    autoSelectEngine: true
-                )
-            } catch {
-                await MainActor.run {
-                    self.showRunError(message: error.localizedDescription)
+        Task { @MainActor in
+            guard ProgramLaunchCoordinator.shared.beginLaunch(
+                programURL: programURL,
+                programName: programName,
+                bottle: bottle
+            ) else {
+                return
+            }
+
+            Task.detached(priority: .userInitiated) {
+                do {
+                    try await Wine.runProgram(
+                        at: programURL,
+                        args: arguments,
+                        bottle: bottle,
+                        environment: environment,
+                        wait: false,
+                        recipe: recipe,
+                        autoSelectEngine: true
+                    )
+                    await MainActor.run {
+                        ProgramLaunchCoordinator.shared.finishLaunchSuccess(
+                            programURL: programURL,
+                            programName: programName
+                        )
+                    }
+                } catch {
+                    await MainActor.run {
+                        ProgramLaunchCoordinator.shared.finishLaunchFailure(
+                            programURL: programURL,
+                            programName: programName,
+                            message: error.localizedDescription
+                        )
+                        self.showRunError(message: error.localizedDescription)
+                    }
                 }
             }
         }
