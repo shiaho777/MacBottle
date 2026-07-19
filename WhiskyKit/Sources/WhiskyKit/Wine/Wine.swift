@@ -135,6 +135,44 @@ public class Wine {
         )
     }
 
+    public static func prewarmBottle(_ bottle: Bottle) async throws {
+        let alreadyWarm = await MainActor.run {
+            ProgramLaunchCoordinator.shared.isWarm(bottle: bottle)
+        }
+        if alreadyWarm { return }
+
+        await MainActor.run {
+            ProgramLaunchCoordinator.shared.beginWarmup(bottle: bottle)
+        }
+        do {
+            let stream = try runWineserverProcess(
+                name: "wineserver-prewarm",
+                args: ["-p"],
+                environment: constructWineServerEnvironment(for: bottle),
+                fileHandle: nil
+            )
+            for await _ in stream { }
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: true)
+            }
+        } catch {
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: false)
+            }
+            throw error
+        }
+    }
+
+    public static func ensureBottleReady(_ bottle: Bottle) async {
+        do {
+            try await prewarmBottle(bottle)
+        } catch {
+            Logger.wineKit.warning(
+                "Bottle prewarm skipped: \(error.localizedDescription, privacy: .public)"
+            )
+        }
+    }
+
     public static func runProgram(
         at url: URL,
         args: [String] = [],
@@ -146,6 +184,8 @@ public class Wine {
         autoSelectEngine: Bool = true,
         captureRunLog: Bool = true
     ) async throws {
+        await ensureBottleReady(bottle)
+
         let engineDecision: LaunchEnginePolicy.Decision?
         if autoSelectEngine {
             engineDecision = LaunchEnginePolicy.applyForLaunch(
@@ -173,7 +213,15 @@ public class Wine {
         }
 
         if shouldApplyDXVK {
-            try enableDXVK(bottle: bottle)
+            let dxvkReady = await MainActor.run {
+                ProgramLaunchCoordinator.shared.isDXVKReady(bottle: bottle)
+            }
+            if !dxvkReady {
+                try enableDXVK(bottle: bottle)
+                await MainActor.run {
+                    ProgramLaunchCoordinator.shared.markDXVKReady(bottle: bottle)
+                }
+            }
         }
 
         var environment = environment

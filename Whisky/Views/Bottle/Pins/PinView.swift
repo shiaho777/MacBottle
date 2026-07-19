@@ -33,6 +33,7 @@ struct PinView: View {
     @State private var showRenameSheet = false
     @State private var name: String = ""
     @State private var opening: Bool = false
+    @State private var launchCoordinator = ProgramLaunchCoordinator.shared
     @State private var isDropTargeted = false
 
     private var pinURL: URL? { pin.url ?? program.url }
@@ -150,11 +151,22 @@ struct PinView: View {
         .overlay {
             RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
                 .strokeBorder(
-                    isDropTargeted || isSelected
+                    isDropTargeted || isSelected || launchCoordinator.isLaunching(programURL: program.url)
                         ? Color.accentColor.opacity(0.95)
                         : Color(nsColor: .separatorColor).opacity(0.35),
-                    lineWidth: (isDropTargeted || isSelected) ? 2 : 1
+                    lineWidth: (isDropTargeted || isSelected
+                        || launchCoordinator.isLaunching(programURL: program.url)) ? 2 : 1
                 )
+        }
+        .overlay(alignment: .top) {
+            if launchCoordinator.isLaunching(programURL: program.url) {
+                Text("正在启动")
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.top, 6)
+            }
         }
     }
 
@@ -181,6 +193,8 @@ struct PinView: View {
     }
 
     func runProgram() {
+        guard launchCoordinator.canStart(programURL: program.url) else { return }
+
         withAnimation(.easeIn(duration: 0.25)) {
             opening = true
         } completion: {
