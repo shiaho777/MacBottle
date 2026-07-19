@@ -38,8 +38,10 @@ struct ContentView: View {
     /// Stable marker URL for the Library sidebar row. Uses a scheme that
     /// doesn't collide with real bottle URLs (which are `file://`).
     private static let libraryMarker: URL = {
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "macbottle://library")!
+        guard let url = URL(string: "macbottle://library") else {
+            preconditionFailure("static library marker URL")
+        }
+        return url
     }()
 
     @State private var bottleFilter = ""

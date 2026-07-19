@@ -1,3 +1,7 @@
+# Not a PR merge gate.
+# Regenerates recipe _index.json on main after recipe pushes.
+# Must not close GitHub Issues. Bot commits may omit Fixes #N.
+
 name: RecipeIndex
 
 concurrency:

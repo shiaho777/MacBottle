@@ -144,8 +144,10 @@ final class GameInstaller: ObservableObject {
     // MARK: - Steam flow
 
     private static let steamSetupURL: URL = {
-        // swiftlint:disable:next force_unwrapping
-        URL(string: "https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe")!
+        guard let url = URL(string: "https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe") else {
+            preconditionFailure("static Steam setup URL")
+        }
+        return url
     }()
 
     private func runSteamInstaller(bottle: Bottle) async {
