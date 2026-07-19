@@ -19,6 +19,7 @@
 import SwiftUI
 import Sparkle
 import WhiskyKit
+import os.log
 
 @main
 struct WhiskyApp: App {
@@ -44,7 +45,7 @@ struct WhiskyApp: App {
         WindowGroup {
             ContentView(showSetup: $showSetup)
                 .frame(minWidth: ViewWidth.large, minHeight: 316)
-                .environmentObject(BottleVM.shared)
+                .environment(BottleVM.shared)
                 .onAppear {
                     NSWindow.allowsAutomaticWindowTabbing = false
 
@@ -128,11 +129,18 @@ struct WhiskyApp: App {
     }
 
     static func killBottles() {
-        for bottle in BottleVM.shared.bottles {
-            do {
-                try Wine.killBottle(bottle: bottle)
-            } catch {
-                print("Failed to kill bottle: \(error)")
+        let bottles = BottleVM.shared.bottles
+        Task {
+            await withTaskGroup(of: Void.self) { group in
+                for bottle in bottles {
+                    group.addTask {
+                        do {
+                            try await Wine.killBottle(bottle: bottle)
+                        } catch {
+                            Logger.app.error("Failed to kill bottle: \(error.localizedDescription)")
+                        }
+                    }
+                }
             }
         }
     }
@@ -168,7 +176,7 @@ struct WhiskyApp: App {
             do {
                 try FileManager.default.removeItem(at: log)
             } catch {
-                print("Failed to delete log: \(error)")
+                Logger.app.error("Failed to delete log: \(error.localizedDescription)")
             }
         }
     }
@@ -181,26 +189,12 @@ struct WhiskyApp: App {
         getconf.standardOutput = pipe
         do {
             try getconf.run()
-        } catch {
-            return
-        }
-        getconf.waitUntilExit()
-        let getconfOutput = {() -> Data in
-            if #available(macOS 10.15, *) {
-                do {
-                    return try pipe.fileHandleForReading.readToEnd() ?? Data()
-                } catch {
-                    return Data()
-                }
-            } else {
-                return pipe.fileHandleForReading.readDataToEndOfFile()
-            }
-        }()
-        guard let getconfOutputString = String(data: getconfOutput, encoding: .utf8) else {return}
-        let d3dmPath = URL(fileURLWithPath: getconfOutputString.trimmingCharacters(in: .whitespacesAndNewlines))
-            .appending(path: "d3dm").path
-        do {
-            try FileManager.default.removeItem(atPath: d3dmPath)
+            getconf.waitUntilExit()
+            let getconfOutput = try pipe.fileHandleForReading.readToEnd() ?? Data()
+            guard let getconfOutputString = String(data: getconfOutput, encoding: .utf8) else { return }
+            let d3dmPath = URL(fileURLWithPath: getconfOutputString.trimmingCharacters(in: .whitespacesAndNewlines))
+                .appending(path: "d3dm")
+            try? FileManager.default.removeItem(at: d3dmPath)
         } catch {
             return
         }

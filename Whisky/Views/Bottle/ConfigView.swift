@@ -17,7 +17,9 @@
 //
 
 import SwiftUI
+import Metal
 import WhiskyKit
+import os.log
 
 enum LoadingState {
     case loading
@@ -27,7 +29,16 @@ enum LoadingState {
 }
 
 struct ConfigView: View {
-    @ObservedObject var bottle: Bottle
+    private var bottleEngineSelection: Binding<String> {
+        Binding(
+            get: { bottle.settings.engineID ?? LaunchEnginePolicy.autoEngineToken },
+            set: { newValue in
+                bottle.settings.engineID = (newValue == LaunchEnginePolicy.autoEngineToken) ? nil : newValue
+            }
+        )
+    }
+
+    @Bindable var bottle: Bottle
     @State private var buildVersion: Int = 0
     @State private var retinaMode: Bool = false
     @State private var dpiConfig: Int = 96
@@ -39,6 +50,8 @@ struct ConfigView: View {
     @AppStorage("wineSectionExpanded") private var wineSectionExpanded: Bool = true
     @AppStorage("dxvkSectionExpanded") private var dxvkSectionExpanded: Bool = true
     @AppStorage("metalSectionExpanded") private var metalSectionExpanded: Bool = true
+    @State private var d3dMetalStatus = D3DMetalCapability.probe()
+    @State private var d3dMetalBusy = false
 
     var body: some View {
         Form {
@@ -61,7 +74,7 @@ struct ConfigView: View {
                                     try await Wine.changeBuildVersion(bottle: bottle, version: buildVersion)
                                     buildVersionLoadingState = .success
                                 } catch {
-                                    print("Failed to change build version")
+                                    Logger.uiLogger.error("Failed to change build version")
                                     buildVersionLoadingState = .failed
                                 }
                             }
@@ -73,10 +86,16 @@ struct ConfigView: View {
                             Task(priority: .userInitiated) {
                                 retinaModeLoadingState = .modifying
                                 do {
+                                    try WineRegistryFile.setStringValue(
+                                        bottle: bottle,
+                                        keyPath: DisplayPolicy.macDriverKey,
+                                        name: "RetinaMode",
+                                        value: newValue ? "y" : "n"
+                                    )
                                     try await Wine.changeRetinaMode(bottle: bottle, retinaMode: newValue)
                                     retinaModeLoadingState = .success
                                 } catch {
-                                    print("Failed to change build version")
+                                    Logger.uiLogger.error("Failed to change retina mode")
                                     retinaModeLoadingState = .failed
                                 }
                             }
@@ -87,6 +106,16 @@ struct ConfigView: View {
                     Text("config.enhacnedSync.esync").tag(EnhancedSync.esync)
                     Text("config.enhacnedSync.msync").tag(EnhancedSync.msync)
                 }
+                Picker("Wine 引擎绑定", selection: bottleEngineSelection) {
+                    Text("自动（配方 / PE）").tag(LaunchEnginePolicy.autoEngineToken)
+                    Text(WineEngineCatalog.describe(WineEngineCatalog.modernEngine()))
+                        .tag(WineEngineCatalog.modernIdentifier)
+                    Text(WineEngineCatalog.describe(WineEngineCatalog.d3dMetalEngine()))
+                        .tag(WineEngineCatalog.d3dMetalIdentifier)
+                }
+                Text("仅对本容器生效。选「自动」时遵循全局自动策略；固定引擎会覆盖配方/PE 建议。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 SettingItemView(title: "config.dpi", loadingState: dpiConfigLoadingState) {
                     Button("config.inspect") {
                         dpiSheetPresented = true
@@ -142,7 +171,6 @@ struct ConfigView: View {
                     Text("config.metalTrace.info")
                 }
                 if let device = MTLCreateSystemDefaultDevice() {
-                    // Represents the Apple family 9 GPU features that correspond to the Apple A17, M3, and M4 GPUs.
                     if device.supportsFamily(.apple9) {
                         Toggle(isOn: $bottle.settings.dxrEnabled) {
                             Text("config.dxr")
@@ -150,6 +178,37 @@ struct ConfigView: View {
                         }
                     }
                 }
+            }
+            Section("D3DMetal / GPTK") {
+                LabeledContent("状态") {
+                    Text(d3dMetalStatus.summary)
+                        .foregroundStyle(d3dMetalStatus.available ? .green : .secondary)
+                }
+                if d3dMetalStatus.linkedUnixModules {
+                    Text("Unix d3d 模块已桥接，64 位 D3D11/12 可走 D3DMetal。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if d3dMetalStatus.available {
+                    Text("已找到 D3DMetal，但当前 Wine 未链接 d3d11.so 桥。老 2D 游戏不受影响。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("未检测到 D3DMetal。可从历史 WhiskyWine 备份恢复框架文件。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Button(d3dMetalBusy ? "处理中…" : "探测 / 恢复 D3DMetal") {
+                    d3dMetalBusy = true
+                    Task.detached(priority: .userInitiated) {
+                        _ = try? D3DMetalCapability.restoreBundledIfPossible()
+                        let status = D3DMetalCapability.probe()
+                        await MainActor.run {
+                            d3dMetalStatus = status
+                            d3dMetalBusy = false
+                        }
+                    }
+                }
+                .disabled(d3dMetalBusy)
             }
         }
         .formStyle(.grouped)
@@ -164,7 +223,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.control(bottle: bottle)
                         } catch {
-                            print("Failed to launch control")
+                            Logger.uiLogger.error("Failed to launch control")
                         }
                     }
                 }
@@ -173,7 +232,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.regedit(bottle: bottle)
                         } catch {
-                            print("Failed to launch regedit")
+                            Logger.uiLogger.error("Failed to launch regedit")
                         }
                     }
                 }
@@ -182,7 +241,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.cfg(bottle: bottle)
                         } catch {
-                            print("Failed to launch winecfg")
+                            Logger.uiLogger.error("Failed to launch winecfg")
                         }
                     }
                 }
@@ -195,21 +254,34 @@ struct ConfigView: View {
 
             loadBuildName()
 
-            Task(priority: .userInitiated) {
-                do {
-                    retinaMode = try await Wine.retinaMode(bottle: bottle)
-                    retinaModeLoadingState = .success
-                } catch {
-                    print(error)
-                    retinaModeLoadingState = .failed
+            if DisplayPolicy.isRetinaEnabled(bottle: bottle) {
+                retinaMode = true
+                retinaModeLoadingState = .success
+            } else if WineRegistryFile.stringValue(
+                bottle: bottle,
+                keyPath: DisplayPolicy.macDriverKey,
+                name: "RetinaMode"
+            ) == "n" {
+                retinaMode = false
+                retinaModeLoadingState = .success
+            } else {
+                Task(priority: .userInitiated) {
+                    do {
+                        retinaMode = try await Wine.retinaMode(bottle: bottle)
+                        retinaModeLoadingState = .success
+                    } catch {
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
+                        retinaModeLoadingState = .failed
+                    }
                 }
             }
+            d3dMetalStatus = D3DMetalCapability.probe()
             Task(priority: .userInitiated) {
                 do {
                     dpiConfig = try await Wine.dpiResolution(bottle: bottle) ?? 0
                     dpiConfigLoadingState = .success
                 } catch {
-                    print(error)
+                    Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                     // If DPI has not yet been edited, there will be no registry entry
                     dpiConfigLoadingState = .success
                 }
@@ -226,7 +298,7 @@ struct ConfigView: View {
                         bottle.settings.windowsVersion = newValue
                         loadBuildName()
                     } catch {
-                        print(error)
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                         winVersionLoadingState = .failed
                     }
                 }
@@ -240,7 +312,7 @@ struct ConfigView: View {
                         try await Wine.changeDpiResolution(bottle: bottle, dpi: dpiConfig)
                         dpiConfigLoadingState = .success
                     } catch {
-                        print(error)
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                         dpiConfigLoadingState = .failed
                     }
                 }
@@ -259,7 +331,7 @@ struct ConfigView: View {
 
                 buildVersionLoadingState = .success
             } catch {
-                print(error)
+                Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                 buildVersionLoadingState = .failed
             }
         }

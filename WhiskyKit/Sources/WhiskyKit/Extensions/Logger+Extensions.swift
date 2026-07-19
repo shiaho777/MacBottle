@@ -20,8 +20,15 @@ import Foundation
 import os.log
 
 public extension Logger {
-  /// A global logger for WineKit
-  static let wineKit = Logger(
-      subsystem: Bundle.whiskyBundleIdentifier, category: "WineKit"
-  )
+    static let wineKit = Logger(
+        subsystem: Bundle.whiskyBundleIdentifier, category: "WineKit"
+    )
+
+    static let app = Logger(
+        subsystem: Bundle.whiskyBundleIdentifier, category: "App"
+    )
+
+    static let uiLogger = Logger(
+        subsystem: Bundle.whiskyBundleIdentifier, category: "UI"
+    )
 }

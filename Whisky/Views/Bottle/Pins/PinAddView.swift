@@ -24,23 +24,31 @@ struct PinAddView: View {
     @State private var showingSheet = false
 
     var body: some View {
-        VStack {
-            Button {
-                showingSheet = true
-            } label: {
-                Image(systemName: "plus.circle")
-                    .resizable()
+        Button {
+            showingSheet = true
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(.secondary.opacity(0.35), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                        .frame(width: 52, height: 52)
+                    Image(systemName: "plus")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                Text("添加固定")
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
+                    .lineLimit(2, reservesSpace: true)
             }
-            .buttonStyle(.plain)
-            .frame(width: 45, height: 45)
-            Spacer()
-            Text("pin.help")
-                .multilineTextAlignment(.center)
-                .lineLimit(2, reservesSpace: true)
+            .frame(width: 104, height: 110)
+            .padding(10)
+            .background {
+                RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                    .fill(.background.secondary.opacity(0.55))
+            }
         }
-        .frame(width: 90, height: 90)
-        .padding(10)
+        .buttonStyle(.plain)
         .sheet(isPresented: $showingSheet) {
             PinCreationView(bottle: bottle)
         }

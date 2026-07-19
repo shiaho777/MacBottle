@@ -20,6 +20,7 @@ import Foundation
 import AppKit
 import QuickLookThumbnailing
 import WhiskyKit
+import os.log
 
 class ProgramShortcut {
     public static func createShortcut(_ program: Program, app: URL, name: String) async {
@@ -77,7 +78,7 @@ class ProgramShortcut {
                                        options: NSWorkspace.IconCreationOptions())
             NSWorkspace.shared.activateFileViewerSelecting([app])
         } catch {
-            print(error)
+            Logger.app.error("ProgramShortcut error: \(error.localizedDescription)")
         }
     }
 }

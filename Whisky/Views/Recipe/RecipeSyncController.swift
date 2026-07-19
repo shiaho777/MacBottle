@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import Observation
 import SwiftUI
 import WhiskyKit
 import os.log
@@ -27,7 +28,8 @@ import os.log
 /// orchestrates applying the user's selection. All state mutations happen
 /// on the main actor so SwiftUI can observe them without extra hops.
 @MainActor
-final class RecipeSyncController: ObservableObject {
+@Observable
+final class RecipeSyncController {
     enum Phase: Equatable {
         case idle
         case checking
@@ -46,13 +48,13 @@ final class RecipeSyncController: ObservableObject {
         let result: RecipeSyncService.CheckResult
     }
 
-    @Published var phase: Phase = .idle
-    @Published var pending: Pending?
-    @Published var selectedIDs: Set<String> = []
-    @Published var applyProgress: (completed: Int, total: Int) = (0, 0)
+    var phase: Phase = .idle
+    var pending: Pending?
+    var selectedIDs: Set<String> = []
+    var applyProgress: (completed: Int, total: Int) = (0, 0)
     /// Last time `check()` completed, successfully or not. The toolbar
     /// uses this to show "Last checked X ago" in its tooltip.
-    @Published var lastCheckedAt: Date?
+    var lastCheckedAt: Date?
 
     private let service: RecipeSyncService
     private let store: RecipeStore

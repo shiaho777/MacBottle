@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import os.log
 import AppKit
 
 public struct PEError: Error {
@@ -25,7 +26,7 @@ public struct PEError: Error {
     static let invalidPEFile = PEError(message: "Invalid PE file")
 }
 
-public enum Architecture: Hashable {
+public enum Architecture: Hashable, Sendable {
     case x32
     case x64
     case unknown
@@ -169,7 +170,7 @@ public struct PEFile: Hashable, Equatable, Sendable {
                             }
                         }
                     } catch {
-                        print("Failed to get icon")
+                        Logger.wineKit.debug("Failed to get icon")
                     }
                 } else if bitmapInfo.colorFormat != .unknown {
                     return bitmapInfo.renderBitmap(handle: handle, offset: UInt64(offset + bitmapInfo.size))

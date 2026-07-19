@@ -18,6 +18,7 @@
 
 import Foundation
 import SwiftUI
+import os.log
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     @AppStorage("hasShownMoveToApplicationsAlert") private var hasShownMoveToApplicationsAlert = false
@@ -34,7 +35,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if !hasShownMoveToApplicationsAlert && !AppDelegate.insideAppsFolder {
-            DispatchQueue.main.asyncAfter(deadline: .now()) {
+            Task { @MainActor in
                 NSApp.activate(ignoringOtherApps: true)
                 self.showAlertOnFirstLaunch()
                 self.hasShownMoveToApplicationsAlert = true
@@ -82,7 +83,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 _ = try FileManager.default.replaceItemAt(AppDelegate.expectedUrl, withItemAt: appURL)
                 NSWorkspace.shared.open(AppDelegate.expectedUrl)
             } catch {
-                print("Failed to move the app: \(error)")
+                Logger.app.error("Failed to move the app: \(error.localizedDescription)")
             }
         }
     }

@@ -17,12 +17,14 @@
 //
 
 import Foundation
+import Observation
 import SwiftUI
 import os.log
 
 // swiftlint:disable:next todo
 // TODO: Should not be unchecked!
-public final class Program: ObservableObject, Equatable, Hashable, Identifiable, @unchecked Sendable {
+@Observable
+public final class Program: Equatable, Hashable, Identifiable, @unchecked Sendable {
     public let bottle: Bottle
     public let url: URL
     public let settingsURL: URL
@@ -31,11 +33,11 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
         url.lastPathComponent
     }
 
-    @Published public var settings: ProgramSettings {
+    public var settings: ProgramSettings {
         didSet { saveSettings() }
     }
 
-    @Published public var pinned: Bool {
+    public var pinned: Bool {
         didSet {
             if pinned {
                 bottle.settings.pins.append(PinnedProgram(
@@ -48,7 +50,24 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
         }
     }
 
-    public let peFile: PEFile?
+    private var cachedPEFile: PEFile?
+    private var didLoadPEFile = false
+    private let peFileLock = NSLock()
+
+    public var peFile: PEFile? {
+        peFileLock.lock()
+        defer { peFileLock.unlock() }
+        if didLoadPEFile {
+            return cachedPEFile
+        }
+        didLoadPEFile = true
+        do {
+            cachedPEFile = try PEFile(url: url)
+        } catch {
+            cachedPEFile = nil
+        }
+        return cachedPEFile
+    }
 
     public init(url: URL, bottle: Bottle) {
         let name = url.lastPathComponent
@@ -56,8 +75,6 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
         self.url = url
         self.pinned = bottle.settings.pins.contains(where: { $0.url == url })
 
-        // Warning: This will break if two programs share the same name such as "Launch.exe"
-        // Best to add some sort of UUID in the path or file
         let settingsFolder = bottle.url.appending(path: "Program Settings")
         let settingsUrl = settingsFolder.appending(path: name).appendingPathExtension("plist")
         self.settingsURL = settingsUrl
@@ -72,12 +89,10 @@ public final class Program: ObservableObject, Equatable, Hashable, Identifiable,
             Logger.wineKit.error("Failed to load settings for `\(name)`: \(error)")
             self.settings = ProgramSettings()
         }
+    }
 
-        do {
-            self.peFile = try PEFile(url: url)
-        } catch {
-            self.peFile = nil
-        }
+    public func markLaunched(at date: Date = Date()) {
+        settings.lastLaunchedAt = date
     }
 
     public func generateEnvironment() -> [String: String] {

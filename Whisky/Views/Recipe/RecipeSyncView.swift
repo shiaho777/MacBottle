@@ -26,7 +26,7 @@ import WhiskyKit
 /// user sync every selected change in one click; empty selection disables
 /// the primary action. The sheet dismisses itself on success.
 struct RecipeSyncView: View {
-    @ObservedObject var controller: RecipeSyncController
+    var controller: RecipeSyncController
     let pending: RecipeSyncController.Pending
 
     var body: some View {

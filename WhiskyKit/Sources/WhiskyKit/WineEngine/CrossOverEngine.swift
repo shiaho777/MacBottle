@@ -75,7 +75,11 @@ public struct CrossOverEngine: WineEngine {
     }
 
     public var wineBinary: URL {
-        binFolder.appending(path: "wine64")
+        let wine64 = binFolder.appending(path: "wine64")
+        if FileManager.default.fileExists(atPath: wine64.path(percentEncoded: false)) {
+            return wine64
+        }
+        return binFolder.appending(path: "wine")
     }
 
     public var wineserverBinary: URL {
@@ -110,10 +114,10 @@ public struct CrossOverEngine: WineEngine {
         let fileManager = FileManager.default
         let appFolder = Self.applicationFolder
 
-        if fileManager.fileExists(atPath: appFolder.path) {
-            try fileManager.removeItem(at: appFolder)
-        }
         try fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true)
+        if fileManager.fileExists(atPath: libraryRoot.path) {
+            try fileManager.removeItem(at: libraryRoot)
+        }
 
         try Tar.untar(tarBall: tarball, toURL: appFolder)
         try fileManager.removeItem(at: tarball)

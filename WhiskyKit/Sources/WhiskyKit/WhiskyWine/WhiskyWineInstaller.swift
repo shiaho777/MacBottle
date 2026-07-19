@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import os.log
 import SemanticVersion
 
 /// MacBottle: kept as a thin compatibility layer.
@@ -54,7 +55,7 @@ public class WhiskyWineInstaller {
         do {
             try engine.install(from: from)
         } catch {
-            print("Failed to install Wine engine: \(error)")
+            Logger.wineKit.error("Failed to install Wine engine: \(error.localizedDescription)")
         }
     }
 
@@ -62,7 +63,7 @@ public class WhiskyWineInstaller {
         do {
             try engine.uninstall()
         } catch {
-            print("Failed to uninstall Wine engine: \(error)")
+            Logger.wineKit.error("Failed to uninstall Wine engine: \(error.localizedDescription)")
         }
     }
 

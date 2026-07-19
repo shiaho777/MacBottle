@@ -23,7 +23,7 @@ import SemanticVersion
 
 struct ContentView: View {
     @AppStorage("selectedBottleURL") private var selectedBottleURL: URL?
-    @EnvironmentObject var bottleVM: BottleVM
+    @Environment(BottleVM.self) private var bottleVM
     @Binding var showSetup: Bool
 
     @State private var selected: URL?
@@ -53,13 +53,21 @@ struct ContentView: View {
             detail
         }
         .toolbar {
+            ToolbarItem(placement: .automatic) {
+                StatusPill(
+                    title: MacBottleTheme.engineLabel(for: WineEngineRegistry.shared.current.identifier),
+                    systemImage: "cpu",
+                    color: MacBottleTheme.engineColor(for: WineEngineRegistry.shared.current.identifier)
+                )
+                .help("当前全局 Wine 引擎")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showBottleCreation.toggle()
                 } label: {
-                    Image(systemName: "plus")
-                        .help("button.createBottle")
+                    Label("新建", systemImage: "plus")
                 }
+                .help("button.createBottle")
             }
             ToolbarItem(placement: .primaryAction) {
                 RecipeSyncToolbarButton()
@@ -152,15 +160,17 @@ struct ContentView: View {
     var sidebar: some View {
         ScrollViewReader { proxy in
             List(selection: $selected) {
-                Section {
-                    Label("Game Library", systemImage: "square.grid.2x2")
+                Section("发现") {
+                    Label("游戏库", systemImage: "square.grid.2x2.fill")
                         .tag(Self.libraryMarker)
                 }
-                Section("进阶 · 容器") {
+                Section("容器") {
                     ForEach(filteredBottles) { bottle in
                         Group {
                             if bottle.inFlight {
-                                HStack {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "shippingbox")
+                                        .foregroundStyle(.secondary)
                                     Text(bottle.settings.name)
                                     Spacer()
                                     ProgressView().controlSize(.small)
@@ -178,9 +188,11 @@ struct ContentView: View {
             .animation(.default, value: bottleVM.bottles)
             .animation(.default, value: bottleFilter)
             .listStyle(.sidebar)
-            .searchable(text: $bottleFilter, placement: .sidebar)
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
+            .searchable(text: $bottleFilter, placement: .sidebar, prompt: "搜索容器")
             .onChange(of: newlyCreatedBottleURL) { _, url in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(200))
                     selected = url
                     withAnimation {
                         proxy.scrollTo(url, anchor: .center)
@@ -194,28 +206,34 @@ struct ContentView: View {
     var detail: some View {
         if selected == Self.libraryMarker {
             RecipeLibraryView()
-        } else if let bottle = selected {
-            if let bottle = bottleVM.bottles.first(where: { $0.url == bottle }) {
+        } else if let selectedURL = selected {
+            if let bottle = bottleVM.bottles.first(where: { $0.url == selectedURL }) {
                 BottleView(bottle: bottle)
                     .disabled(bottle.inFlight)
                     .id(bottle.url)
+            } else {
+                EmptyStateCard(
+                    systemImage: "questionmark.folder",
+                    title: "容器不可用",
+                    message: "所选容器可能已被移除或移动。"
+                )
             }
         } else {
             if (bottleVM.bottles.isEmpty || bottleVM.countActive() == 0) && bottlesLoaded {
-                VStack {
-                    Text("main.createFirst")
-                    Button {
-                        showBottleCreation.toggle()
-                    } label: {
-                        HStack {
-                            Image(systemName: "plus")
-                            Text("button.createBottle")
-                        }
-                        .padding(6)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.accentColor)
+                EmptyStateCard(
+                    systemImage: "shippingbox.and.arrow.backward",
+                    title: "创建你的第一个容器",
+                    message: "容器是隔离的 Windows 环境。先建一个，再安装或导入游戏。",
+                    actionTitle: "新建容器"
+                ) {
+                    showBottleCreation.toggle()
                 }
+            } else {
+                EmptyStateCard(
+                    systemImage: "sidebar.left",
+                    title: "选择左侧项目",
+                    message: "从游戏库浏览可玩配方，或打开一个容器管理已安装程序。"
+                )
             }
         }
     }
@@ -234,5 +252,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView(showSetup: .constant(false))
-        .environmentObject(BottleVM.shared)
+        .environment(BottleVM.shared)
 }

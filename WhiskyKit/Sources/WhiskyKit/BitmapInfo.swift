@@ -64,7 +64,6 @@ public struct BitmapInfoHeader: Hashable {
         self.colorFormat = ColorFormat(rawValue: bitCount) ?? .unknown
     }
 
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
     func renderBitmap(handle: FileHandle, offset: UInt64) -> NSImage? {
         var offset = offset
         let colorTable = buildColorTable(offset: &offset, handle: handle)

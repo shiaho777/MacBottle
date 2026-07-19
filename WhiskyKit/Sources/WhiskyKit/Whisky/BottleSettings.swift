@@ -95,6 +95,7 @@ public struct BottleWineConfig: Codable, Equatable {
     var windowsVersion: WinVersion = .win10
     var enhancedSync: EnhancedSync = .msync
     var avxEnabled: Bool = false
+    var engineID: String?
 
     public init() {}
 
@@ -105,6 +106,7 @@ public struct BottleWineConfig: Codable, Equatable {
         self.windowsVersion = try container.decodeIfPresent(WinVersion.self, forKey: .windowsVersion) ?? .win10
         self.enhancedSync = try container.decodeIfPresent(EnhancedSync.self, forKey: .enhancedSync) ?? .msync
         self.avxEnabled = try container.decodeIfPresent(Bool.self, forKey: .avxEnabled) ?? false
+        self.engineID = try container.decodeIfPresent(String.self, forKey: .engineID)
     }
     // swiftlint:enable line_length
 }
@@ -193,6 +195,11 @@ public struct BottleSettings: Codable, Equatable {
         set { wineConfig.avxEnabled = newValue }
     }
 
+    public var engineID: String? {
+        get { return wineConfig.engineID }
+        set { wineConfig.engineID = newValue }
+    }
+
     /// The pinned programs on this bottle
     public var pins: [PinnedProgram] {
         get { return info.pins }
@@ -243,8 +250,7 @@ public struct BottleSettings: Codable, Equatable {
     @discardableResult
     public static func decode(from metadataURL: URL) throws -> BottleSettings {
         guard FileManager.default.fileExists(atPath: metadataURL.path(percentEncoded: false)) else {
-            let decoder = PropertyListDecoder()
-            let settings = try decoder.decode(BottleSettings.self, from: Data(contentsOf: metadataURL))
+            let settings = BottleSettings()
             try settings.encode(to: metadataURL)
             return settings
         }
@@ -260,13 +266,6 @@ public struct BottleSettings: Codable, Equatable {
             return settings
         }
 
-        if settings.wineConfig.wineVersion != BottleWineConfig().wineVersion {
-            Logger.wineKit.warning("Bottle has a different wine version `\(settings.wineConfig.wineVersion)`")
-            settings.wineConfig.wineVersion = BottleWineConfig().wineVersion
-            try settings.encode(to: metadataURL)
-            return settings
-        }
-
         return settings
     }
 
@@ -277,7 +276,6 @@ public struct BottleSettings: Codable, Equatable {
         try data.write(to: metadataUrl)
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
     public func environmentVariables(wineEnv: inout [String: String]) {
         if dxvk {
             wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")

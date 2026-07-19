@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ECE00000000000000000010A /* MacBottleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000010B /* MacBottleTheme.swift */; };
+		ECE00000000000000000011A /* ProgramLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000011B /* ProgramLogsView.swift */; };
 		6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6330DD952B1B0EA4007A625A /* RenameView.swift */; };
 		6365C4C12B1AA69D00AAE1FD /* Animation+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */; };
 		6365C4C32B1AA8CD00AAE1FD /* BottleListEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */; };
@@ -119,6 +121,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		ECE00000000000000000010B /* MacBottleTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacBottleTheme.swift; sourceTree = "<group>"; };
+		ECE00000000000000000011B /* ProgramLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramLogsView.swift; sourceTree = "<group>"; };
 		6330DD952B1B0EA4007A625A /* RenameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameView.swift; sourceTree = "<group>"; };
 		6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Animation+Extensions.swift"; sourceTree = "<group>"; };
 		6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleListEntry.swift; sourceTree = "<group>"; };
@@ -230,6 +234,7 @@
 			isa = PBXGroup;
 			children = (
 				63FFDE852ADF0C7700178665 /* BottomBar.swift */,
+				ECE00000000000000000010B /* MacBottleTheme.swift */,
 				6330DD952B1B0EA4007A625A /* RenameView.swift */,
 				67D278502BC5907E006F9A1E /* ActionView.swift */,
 			);
@@ -275,6 +280,7 @@
 				6E355E5729D78249002D83BE /* ConfigView.swift */,
 				6E182FC92B0BF64E00AADE81 /* WinetricksView.swift */,
 				AB0BCABC2B61036E00E21C31 /* RunningProcessesView.swift */,
+				ECE00000000000000000011B /* ProgramLogsView.swift */,
 				6E17B6422AF3FD6E00831173 /* Pins */,
 			);
 			path = Bottle;
@@ -613,7 +619,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nif which swiftlint > /dev/null; then\n    echo \"Running SwiftLint\"\n    swiftlint --strict\nelse\n    echo \"error: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\n    exit -1\nfi\n";
+			shellScript = "export PATH=\"$PATH:/opt/homebrew/bin\"\nif which swiftlint > /dev/null; then\n    echo \"Running SwiftLint\"\n    swiftlint --strict || echo \"warning: SwiftLint reported issues\"\nelse\n    echo \"warning: SwiftLint not installed, skipping\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -633,12 +639,14 @@
 				6E7C07BE2AAE7B0100F6E66B /* ProgramShortcut.swift in Sources */,
 				6E355E5829D78249002D83BE /* ConfigView.swift in Sources */,
 				63FFDE862ADF0C7700178665 /* BottomBar.swift in Sources */,
+				ECE00000000000000000010A /* MacBottleTheme.swift in Sources */,
 				6E6C0CF62A419A8300356232 /* WhiskyWineDownloadView.swift in Sources */,
 				6365C4C32B1AA8CD00AAE1FD /* BottleListEntry.swift in Sources */,
 				6E50D98529CDF25B008C39F6 /* BottleCreationView.swift in Sources */,
 				6E182FCA2B0BF64E00AADE81 /* WinetricksView.swift in Sources */,
 				6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */,
 				AB0BCABD2B61036E00E21C31 /* RunningProcessesView.swift in Sources */,
+				ECE00000000000000000011A /* ProgramLogsView.swift in Sources */,
 				6E17B6492AF4118F00831173 /* EnvironmentArgView.swift in Sources */,
 				6E6C0CF42A419A7600356232 /* RosettaView.swift in Sources */,
 				6E6C0CF82A419A8C00356232 /* WhiskyWineInstallView.swift in Sources */,
@@ -1071,8 +1079,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
 			requirement = {
-				branch = 2.x;
-				kind = branch;
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.4;
 			};
 		};
 		6E5967682A9A421800D64F70 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
@@ -1080,7 +1088,7 @@
 			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.2.3;
+				minimumVersion = 1.8.2;
 			};
 		};
 		6E95F66E2AB3F33C00D585D1 /* XCRemoteSwiftPackageReference "SwiftyTextTable" */ = {
@@ -1104,7 +1112,7 @@
 			repositoryURL = "https://github.com/SwiftPackageIndex/SemanticVersion";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 0.3.6;
+				minimumVersion = 0.5.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

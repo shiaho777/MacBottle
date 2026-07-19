@@ -33,7 +33,6 @@ public enum Locales: String, Codable, CaseIterable {
     case chineseSimplified = "zh_CN.UTF-8"
     case chineseTraditional = "zh_TW.UTF-8"
 
-    // swiftlint:disable:next cyclomatic_complexity
     public func pretty() -> String {
         switch self {
         case .auto:
@@ -70,17 +69,13 @@ public struct ProgramSettings: Codable {
     public var locale: Locales = .auto
     public var environment: [String: String] = [:]
     public var arguments: String = ""
-
-    /// MacBottle: optional recipe id attached to this program. When set and
-    /// the recipe resolves, `RecipeApplier` merges its environment overrides
-    /// on top of `environment` at launch time. Uses `decodeIfPresent` so
-    /// older plists without this field keep working.
     public var recipeID: String?
+    public var lastLaunchedAt: Date?
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case locale, environment, arguments, recipeID
+        case locale, environment, arguments, recipeID, lastLaunchedAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -89,6 +84,7 @@ public struct ProgramSettings: Codable {
         self.environment = try container.decodeIfPresent([String: String].self, forKey: .environment) ?? [:]
         self.arguments = try container.decodeIfPresent(String.self, forKey: .arguments) ?? ""
         self.recipeID = try container.decodeIfPresent(String.self, forKey: .recipeID)
+        self.lastLaunchedAt = try container.decodeIfPresent(Date.self, forKey: .lastLaunchedAt)
     }
 
     static func decode(from settingsURL: URL) throws -> ProgramSettings {

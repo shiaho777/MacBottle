@@ -29,11 +29,22 @@ struct BottleListEntry: View {
     @State private var name: String = ""
 
     var body: some View {
-        Text(name)
-            .opacity(bottle.isAvailable ? 1.0 : 0.5)
-            .onChange(of: refresh, initial: true) {
-                name = bottle.settings.name
+        Label {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .lineLimit(1)
+                Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID))
+                    .font(.caption2)
+                    .foregroundStyle(MacBottleTheme.engineColor(for: bottle.settings.engineID))
             }
+        } icon: {
+            Image(systemName: bottle.isAvailable ? "shippingbox.fill" : "shippingbox")
+                .foregroundStyle(bottle.isAvailable ? Color.accentColor : .secondary)
+        }
+        .opacity(bottle.isAvailable ? 1.0 : 0.5)
+        .onChange(of: refresh, initial: true) {
+            name = bottle.settings.name
+        }
             .sheet(isPresented: $showBottleRename) {
                 RenameView("rename.bottle.title", name: name) { newName in
                     name = newName

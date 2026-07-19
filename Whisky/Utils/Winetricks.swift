@@ -48,34 +48,23 @@ class Winetricks {
     static func runCommand(command: String, bottle: Bottle) async {
         guard let resourcesURL = Bundle.main.url(forResource: "cabextract", withExtension: nil)?
             .deletingLastPathComponent() else { return }
-        // swiftlint:disable:next line_length
-        let winetricksCmd = #"PATH=\"\#(WhiskyWineInstaller.binFolder.path):\#(resourcesURL.path(percentEncoded: false)):$PATH\" WINE=wine64 WINEPREFIX=\"\#(bottle.url.path)\" \"\#(winetricksURL.path(percentEncoded: false))\" \#(command)"#
+        let pathPrefix = "\(WhiskyWineInstaller.binFolder.path):\(resourcesURL.path(percentEncoded: false)):$PATH"
+        let winetricksCmd =
+            "PATH=\"\(pathPrefix)\" WINE=wine64 WINEPREFIX=\"\(bottle.url.path)\" " +
+            "\"\(winetricksURL.path(percentEncoded: false))\" \(command)"
 
-        let script = """
-        tell application "Terminal"
-            activate
-            do script "\(winetricksCmd)"
-        end tell
-        """
-
-        var error: NSDictionary?
-        if let appleScript = NSAppleScript(source: script) {
-            appleScript.executeAndReturnError(&error)
-
-            if let error = error {
-                print(error)
-                if let description = error["NSAppleScriptErrorMessage"] as? String {
-                    await MainActor.run {
-                        let alert = NSAlert()
-                        alert.messageText = String(localized: "alert.message")
-                        alert.informativeText = String(localized: "alert.info")
-                            + " \(command): "
-                            + description
-                        alert.alertStyle = .critical
-                        alert.addButton(withTitle: String(localized: "button.ok"))
-                        alert.runModal()
-                    }
-                }
+        do {
+            try await TerminalLauncher.run(command: winetricksCmd)
+        } catch {
+            await MainActor.run {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "alert.message")
+                alert.informativeText = String(localized: "alert.info")
+                    + " \(command): "
+                    + error.localizedDescription
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: String(localized: "button.ok"))
+                alert.runModal()
             }
         }
     }

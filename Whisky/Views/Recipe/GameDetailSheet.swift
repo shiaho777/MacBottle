@@ -21,22 +21,22 @@ import AppKit
 import UniformTypeIdentifiers
 import WhiskyKit
 
-/// Detail sheet shown when the user clicks a Library card.
-///
-/// Presents recipe metadata, install/play state, and drives the
-/// `GameInstaller` flow for Steam/GOG/custom recipes.
-struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
+struct GameDetailSheet: View {
     let recipe: Recipe
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var bottleVM: BottleVM
+    @Environment(BottleVM.self) private var bottleVM
 
-    @StateObject private var installer: GameInstaller
+    @State private var installer: GameInstaller
     @State private var installedGame: InstalledGame?
     @State private var showUninstallConfirm = false
+    @State private var steamUsername: String = ""
+    @State private var steamPassword: String = ""
+    @State private var steamGuardCode: String = ""
+    @State private var useAnonymousSteam: Bool = false
 
     init(recipe: Recipe) {
         self.recipe = recipe
-        _installer = StateObject(wrappedValue: GameInstaller(recipe: recipe))
+        _installer = State(initialValue: GameInstaller(recipe: recipe))
     }
 
     var body: some View {
@@ -54,6 +54,9 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
                                 .foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                    }
+                    if recipe.installer == .steam && installedGame == nil {
+                        steamCredentialsSection
                     }
                     phaseSection
                 }
@@ -78,8 +81,6 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
             Text(verbatim: "The bottle and its files are kept on disk. Only the MacBottle record is removed.")
         }
     }
-
-    // MARK: - Sections
 
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -132,14 +133,20 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
                 )
             }
             if !recipe.env.isEmpty {
-                metadataRow("Environment", value: "\(recipe.env.count) variable(s)")
+                metadataRow(
+                    "Environment",
+                    value: recipe.env.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "\n"),
+                    monospaced: true
+                )
             }
         }
     }
 
-    @ViewBuilder
     private func metadataRow(
-        _ label: String, value: String, tint: Color? = nil, monospaced: Bool = false
+        _ label: String,
+        value: String,
+        tint: Color? = nil,
+        monospaced: Bool = false
     ) -> some View {
         GridRow {
             Text(verbatim: label)
@@ -147,6 +154,7 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
                 .gridColumnAlignment(.trailing)
             Text(verbatim: value)
                 .foregroundStyle(tint ?? .primary)
+                .textSelection(.enabled)
                 .font(monospaced ? .system(.body, design: .monospaced) : .body)
         }
     }
@@ -167,18 +175,69 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
         case .idle:
             EmptyView()
         case .creatingBottle:
-            phaseRow(systemImage: "hourglass", text: "Creating bottle…")
-        case .downloadingSteamSetup:
-            phaseRow(systemImage: "arrow.down.circle", text: "Downloading SteamSetup.exe…")
-        case .runningInstaller:
-            phaseRow(
-                systemImage: "gearshape.2",
-                // swiftlint:disable:next line_length
-                text: "Installer is running. Complete the installation in the window that just opened, then come back here."
+            activePhaseCard(
+                title: "Creating bottle",
+                systemImage: "shippingbox"
             )
+        case .configuringBottle:
+            activePhaseCard(
+                title: "Configuring bottle",
+                systemImage: "gearshape.2"
+            )
+        case .downloadingSteamSetup:
+            activePhaseCard(
+                title: "Downloading SteamSetup.exe",
+                systemImage: "arrow.down.circle",
+                showsLinearProgress: true
+            )
+        case .nativeSeedingSteam:
+            activePhaseCard(
+                title: "Native Download Bridge · Steam client",
+                systemImage: "bolt.horizontal.circle",
+                showsLinearProgress: true
+            )
+        case .downloadingDepot:
+            activePhaseCard(
+                title: "Native steamcmd · game depot",
+                systemImage: "externaldrive.badge.wifi",
+                showsLinearProgress: true
+            )
+        case .materializingDepot:
+            activePhaseCard(
+                title: "Cloning depot into bottle",
+                systemImage: "internaldrive",
+                showsLinearProgress: true
+            )
+        case .runningInstaller:
+            VStack(alignment: .leading, spacing: 12) {
+                activePhaseCard(
+                    title: recipe.installer == .steam ? "Steam is updating (slow under Wine)" : "Installer running",
+                    systemImage: "gearshape.2",
+                    indeterminateOnly: true
+                )
+                if recipe.installer == .steam {
+                    Text(
+                        "Client files were seeded via Native Download Bridge "
+                        + "(macOS network stack). Wine only runs Steam UI. "
+                        + "Close steam service.exe crash dialogs if they appear — usually harmless."
+                    )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Button("I finished installing — continue") {
+                    installer.markInstallerFinished()
+                }
+                .buttonStyle(.borderedProminent)
+            }
         case .awaitingMainExe:
             VStack(alignment: .leading, spacing: 8) {
                 phaseRow(systemImage: "checkmark.seal", text: "Installer finished. Pick the main game executable.")
+                if !installer.statusDetail.isEmpty {
+                    Text(verbatim: installer.statusDetail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Button("Locate main .exe") {
                     pickMainExe()
                 }
@@ -189,6 +248,46 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
         case .failed(let message):
             phaseRow(systemImage: "exclamationmark.triangle.fill", text: message, tint: .orange)
         }
+    }
+
+    private func activePhaseCard(
+        title: String,
+        systemImage: String,
+        showsLinearProgress: Bool = false,
+        indeterminateOnly: Bool = false
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                Image(systemName: systemImage)
+                    .foregroundStyle(.secondary)
+                Text(verbatim: title)
+                    .font(.headline)
+                Spacer()
+                if let progress = installer.progress, showsLinearProgress {
+                    Text(verbatim: "\(Int(progress * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            if showsLinearProgress {
+                ProgressView(value: installer.progress ?? 0)
+                    .progressViewStyle(.linear)
+            } else if !indeterminateOnly {
+                ProgressView()
+                    .progressViewStyle(.linear)
+            }
+            if !installer.statusDetail.isEmpty {
+                Text(verbatim: installer.statusDetail)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
     }
 
     @ViewBuilder
@@ -207,6 +306,7 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
             Spacer()
             Button("Close") { dismiss() }
                 .keyboardShortcut(.cancelAction)
+                .disabled(installer.phase.isActive && installer.phase != .runningInstaller)
 
             if installedGame != nil {
                 Button("Uninstall", role: .destructive) { showUninstallConfirm = true }
@@ -219,17 +319,44 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             } else {
+                if installer.phase.isActive {
+                    Button("Cancel") {
+                        installer.cancelNativeDownload()
+                    }
+                    .buttonStyle(.bordered)
+                }
                 Button {
-                    installer.begin()
+                    installer.begin(credentials: makeSteamCredentials())
                 } label: {
-                    Label(installButtonLabel, systemImage: "arrow.down.to.line")
+                    if installer.phase.isActive {
+                        Label(activeButtonLabel, systemImage: "arrow.down.to.line")
+                    } else {
+                        Label(installButtonLabel, systemImage: "arrow.down.to.line")
+                    }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(installer.phase != .idle && !isTerminal)
+                .disabled(
+                    installer.phase.isActive
+                        || (!isTerminal && installer.phase != .idle)
+                        || !canStartSteamInstall
+                )
                 .keyboardShortcut(.defaultAction)
             }
         }
         .padding(20)
+    }
+
+    private var activeButtonLabel: String {
+        switch installer.phase {
+        case .creatingBottle: return "Creating bottle…"
+        case .configuringBottle: return "Configuring…"
+        case .downloadingSteamSetup: return "Downloading…"
+        case .nativeSeedingSteam: return "Seeding Steam…"
+        case .downloadingDepot: return "Depot download…"
+        case .materializingDepot: return "Cloning depot…"
+        case .runningInstaller: return "Starting Steam…"
+        default: return installButtonLabel
+        }
     }
 
     private var isTerminal: Bool {
@@ -241,14 +368,12 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
 
     private var installButtonLabel: String {
         switch recipe.installer {
-        case .steam: return "Install via Steam"
+        case .steam: return "Install (native depot)"
         case .gog: return "Install from GOG installer"
         case .custom: return "Install from .exe"
         case .none: return "Install"
         }
     }
-
-    // MARK: - Actions
 
     private func refreshInstalled() {
         installedGame = InstalledGameRegistry.shared.game(forRecipe: recipe.id)
@@ -267,8 +392,14 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
             return
         }
         if let winPath = installed.mainExe, let exeURL = resolveMacURL(forWinPath: winPath, bottle: bottle) {
+            let recipe = self.recipe
             Task.detached(priority: .userInitiated) {
-                try? await Wine.runProgram(at: exeURL, bottle: bottle)
+                try? await Wine.runProgram(
+                    at: exeURL,
+                    bottle: bottle,
+                    recipe: recipe,
+                    autoSelectEngine: true
+                )
             }
         } else {
             installer.phase = .failed(message: "Main executable path is invalid.")
@@ -278,28 +409,92 @@ struct GameDetailSheet: View { // swiftlint:disable:this type_body_length
     private func pickMainExe() {
         guard let bottleURL = installer.bottleURL,
               let bottle = bottleVM.bottles.first(where: { $0.url == bottleURL }) else {
+            installer.phase = .failed(message: "Bottle is no longer available.")
             return
         }
+
         let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType.exe]
         panel.directoryURL = bottle.url.appending(path: "drive_c")
-        panel.prompt = "Select"
-        panel.message = "Choose the main game executable"
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
+        if let mainExe = recipe.mainExe {
+            let hint = bottle.url
+                .appending(path: "drive_c")
+                .appending(path: mainExe.replacingOccurrences(of: "\\", with: "/"))
+            if FileManager.default.fileExists(atPath: hint.deletingLastPathComponent().path) {
+                panel.directoryURL = hint.deletingLastPathComponent()
+            }
+        }
+        panel.prompt = "Select main executable"
+        panel.message = "Choose the game's main .exe for \(recipe.title)."
+        if panel.runModal() == .OK, let url = panel.url {
             installer.registerMainExecutable(url, bottle: bottle)
+            refreshInstalled()
         }
     }
 
     private func resolveMacURL(forWinPath winPath: String, bottle: Bottle) -> URL? {
-        guard winPath.hasPrefix("C:") else {
-            return URL(fileURLWithPath: winPath)
+        var path = winPath
+        if path.hasPrefix("C:\\") || path.hasPrefix("C:/") {
+            path = String(path.dropFirst(3))
         }
-        let relative = String(winPath.dropFirst(2))
-            .replacingOccurrences(of: "\\", with: "/")
-        return bottle.url.appending(path: "drive_c").appending(path: relative)
+        path = path.replacingOccurrences(of: "\\", with: "/")
+        let url = bottle.url.appending(path: "drive_c").appending(path: path)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    }
+
+    private var steamCredentialsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Native Depot Plane")
+                .font(.headline)
+            Text(
+                "Game files download through steamcmd on macOS (windows platform), "
+                + "then clone into the bottle. Wine only launches Steam/game."
+            )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Toggle("Anonymous (free / tools only)", isOn: $useAnonymousSteam)
+                .toggleStyle(.checkbox)
+
+            if !useAnonymousSteam {
+                TextField("Steam username", text: $steamUsername)
+                    .textFieldStyle(.roundedBorder)
+                SecureField("Steam password", text: $steamPassword)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Steam Guard code (if asked)", text: $steamGuardCode)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
+                Text(verbatim: "AppID \(appID)")
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var canStartSteamInstall: Bool {
+        guard recipe.installer == .steam else { return true }
+        if useAnonymousSteam { return true }
+        return !steamUsername.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !steamPassword.isEmpty
+    }
+
+    private func makeSteamCredentials() -> SteamCredentials? {
+        guard recipe.installer == .steam else { return nil }
+        if useAnonymousSteam { return .anonymous }
+        let guardCode = steamGuardCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SteamCredentials(
+            username: steamUsername.trimmingCharacters(in: .whitespacesAndNewlines),
+            password: steamPassword,
+            steamGuardCode: guardCode.isEmpty ? nil : guardCode
+        )
     }
 }

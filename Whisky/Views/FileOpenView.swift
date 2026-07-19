@@ -18,6 +18,7 @@
 
 import SwiftUI
 import WhiskyKit
+import os.log
 
 struct FileOpenView: View {
     var fileURL: URL
@@ -86,7 +87,7 @@ struct FileOpenView: View {
                         try await Wine.runProgram(at: fileURL, bottle: bottle)
                     }
                 } catch {
-                    print(error)
+                    Logger.uiLogger.error("FileOpenView error: \(error.localizedDescription)")
                 }
             }
             dismiss()

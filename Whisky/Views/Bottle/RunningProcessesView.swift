@@ -18,6 +18,7 @@
 
 import SwiftUI
 import WhiskyKit
+import os.log
 
 struct BottleProcess: Identifiable {
     var id = UUID()
@@ -26,7 +27,7 @@ struct BottleProcess: Identifiable {
 }
 
 struct RunningProcessesView: View {
-    @ObservedObject var bottle: Bottle
+    @Bindable var bottle: Bottle
 
     @State private var processes = [BottleProcess]()
     @State private var processSortOrder = [KeyPathComparator(\BottleProcess.pid)]
@@ -83,7 +84,7 @@ struct RunningProcessesView: View {
         do {
             output = try await Wine.runWine(["tasklist.exe"], bottle: bottle)
         } catch {
-            print("Error running tasklist.exe: \(error)")
+            Logger.uiLogger.error("Error running tasklist.exe: \(error.localizedDescription)")
             output = ""
         }
 
@@ -103,9 +104,9 @@ struct RunningProcessesView: View {
         if let thisProcess = processes.first(where: { $0.id == selectedProcess }) {
             do {
                 try await Wine.runWine(["taskkill.exe", "/PID", thisProcess.pid, "/F"], bottle: bottle)
-                try await Task.sleep(nanoseconds: 2000)
+                try await Task.sleep(for: .milliseconds(500))
             } catch {
-                print("Error running taskkill.exe: \(error)")
+                Logger.uiLogger.error("Error running taskkill.exe: \(error.localizedDescription)")
             }
             await fetchProcesses()
         }

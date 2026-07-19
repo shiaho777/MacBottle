@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import Observation
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -24,35 +25,42 @@ import WhiskyKit
 import SemanticVersion
 import os.log
 
-/// Phase reported back to the UI during an install flow.
 enum InstallPhase: Equatable {
     case idle
     case creatingBottle
+    case configuringBottle
     case downloadingSteamSetup
+    case nativeSeedingSteam
+    case downloadingDepot
+    case materializingDepot
     case runningInstaller
     case awaitingMainExe(bottleURL: URL)
     case done(InstalledGame)
     case failed(message: String)
+
+    var isActive: Bool {
+        switch self {
+        case .creatingBottle, .configuringBottle, .downloadingSteamSetup,
+                .nativeSeedingSteam, .downloadingDepot, .materializingDepot, .runningInstaller:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
-/// Coordinates the end-to-end install flow for a recipe: bottle
-/// creation, recipe env application, installer launch, and pairing the
-/// resulting main executable with an `InstalledGame` record.
-///
-/// Kept as a `@MainActor` observable object so SwiftUI can drive a
-/// progress UI against its `phase` property without cross-actor hops.
 @MainActor
-final class GameInstaller: ObservableObject {
-    @Published var phase: InstallPhase = .idle
-
-    /// The bottle directory created for this install. Non-nil once the
-    /// creatingBottle step has succeeded; UI uses this to show "Open
-    /// bottle in advanced view" even before the user finishes installing.
-    @Published var bottleURL: URL?
+@Observable
+final class GameInstaller {
+    var phase: InstallPhase = .idle
+    var bottleURL: URL?
+    var statusDetail: String = ""
+    var progress: Double?
 
     private let recipe: Recipe
     private let bottleVM: BottleVM
     private let registry: InstalledGameRegistry
+    private var workTask: Task<Void, Never>?
 
     init(
         recipe: Recipe,
@@ -64,54 +72,70 @@ final class GameInstaller: ObservableObject {
         self.registry = registry
     }
 
-    // MARK: - Entry point
+    private var pendingCredentials: SteamCredentials?
 
-    /// Full install flow. Each step may surface back to the UI: the
-    /// Steam flow will call `installerSucceeded()` when the user has
-    /// finished inside Steam and is ready to pick the main .exe; the
-    /// GOG and custom flows wait for a file pick before even launching
-    /// the installer.
-    func begin() {
-        Task { [weak self] in
+    func begin(credentials: SteamCredentials? = nil) {
+        guard !phase.isActive else { return }
+        workTask?.cancel()
+        progress = nil
+        statusDetail = ""
+        pendingCredentials = credentials
+        workTask = Task { [weak self] in
             await self?.run()
         }
     }
 
+    func cancelNativeDownload() {
+        DownloadBridge.cancelDepotDownload()
+        workTask?.cancel()
+        if phase.isActive {
+            fail("Cancelled.")
+        }
+    }
+
+    func markInstallerFinished() {
+        guard let url = bottleURL else { return }
+        phase = .awaitingMainExe(bottleURL: url)
+        statusDetail = "Pick the main game executable to finish."
+        progress = nil
+    }
+
     private func run() async {
         guard recipe.installer != nil else {
-            phase = .failed(message: "Recipe has no installer configured.")
+            fail("Recipe has no installer configured.")
             return
         }
 
         phase = .creatingBottle
+        statusDetail = "Creating a new bottle…"
+        progress = nil
+
         let url = bottleVM.createNewBottle(
             bottleName: recipe.title,
             winVersion: .win10,
-            // Always create new bottles under the default parent. Using
-            // an existing bottle path as the parent (which was happening
-            // when we took `paths.first`) produced nested bottles like
-            // `Bottles/<existing-UUID>/<new-UUID>`.
             bottleURL: BottleData.defaultBottleDir
         )
         bottleURL = url
 
-        // Wait until the bottle is registered and wine has initialised
-        // its prefix. BottleVM does this asynchronously; we poll rather
-        // than add a new callback API to keep the change surface small.
         let bottle = await waitForBottle(url: url)
+        if Task.isCancelled { return }
         guard let bottle else {
-            phase = .failed(message: "Bottle creation timed out.")
+            fail("Bottle creation failed or timed out. Check that Wine is installed and try again.")
             return
         }
 
-        // Wait for drive_c/windows to exist (Wine prefix init is async)
+        phase = .configuringBottle
+        statusDetail = "Waiting for Wine prefix…"
         let windowsDir = bottle.url.appending(path: "drive_c").appending(path: "windows")
-        let windowsReady = await waitForPath(windowsDir, timeout: 30)
+        let windowsReady = await waitForPath(windowsDir, timeout: 45)
+        if Task.isCancelled { return }
         if !windowsReady {
-            Logger.wineKit.warning("GameInstaller: drive_c/windows not found after 30s, skipping font install")
+            Logger.wineKit.warning("GameInstaller: drive_c/windows not found after timeout")
         }
 
+        statusDetail = "Applying recipe settings…"
         await applyRecipeSettings(to: bottle)
+        if Task.isCancelled { return }
 
         switch recipe.installer {
         case .steam:
@@ -121,10 +145,6 @@ final class GameInstaller: ObservableObject {
         }
     }
 
-    // MARK: - Post-install pairing
-
-    /// Called by the UI after the user clicks "I installed it, pick the
-    /// main .exe" to associate an executable with the install record.
     func registerMainExecutable(_ exeURL: URL, bottle: Bottle) {
         do {
             let winPath = wineStylePath(for: exeURL, inBottle: bottle)
@@ -135,13 +155,13 @@ final class GameInstaller: ObservableObject {
             )
             try registry.record(game)
             phase = .done(game)
+            statusDetail = "Installed."
+            progress = nil
             NotificationCenter.default.post(name: .macbottleInstalledGamesChanged, object: nil)
         } catch {
-            phase = .failed(message: "Failed to register game: \(error.localizedDescription)")
+            fail("Could not save install record: \(error.localizedDescription)")
         }
     }
-
-    // MARK: - Steam flow
 
     private static let steamSetupURL: URL = {
         guard let url = URL(string: "https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe") else {
@@ -151,66 +171,239 @@ final class GameInstaller: ObservableObject {
     }()
 
     private func runSteamInstaller(bottle: Bottle) async {
+        phase = .configuringBottle
+        statusDetail = "Preparing Wine for Steam…"
+        progress = nil
+        await prepareWineForSteam(bottle: bottle)
+        if Task.isCancelled { return }
+
+        phase = .nativeSeedingSteam
+        statusDetail = "Native Download Bridge: seeding Windows Steam client at macOS speed…"
+        progress = 0
+
+        do {
+            let result = try await DownloadBridge.seedSteamClient(bottleURL: bottle.url) { prog, detail in
+                Task { @MainActor in
+                    self.progress = prog.fraction
+                    self.statusDetail = detail
+                }
+            }
+            statusDetail = "Seeded Steam \(result.version) · \(result.packageCount) packages · "
+                + "\(Self.formatBytes(result.totalBytes)) via native CDN"
+            progress = 1
+        } catch {
+            Logger.wineKit.error("Native seed failed, falling back to SteamSetup: \(error.localizedDescription)")
+            statusDetail = "Native seed failed (\(error.localizedDescription)). Falling back to SteamSetup…"
+            if Task.isCancelled { return }
+            await runSteamSetupFallback(bottle: bottle)
+            return
+        }
+        if Task.isCancelled { return }
+
+        if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
+            let credentials = pendingCredentials ?? .anonymous
+            phase = .downloadingDepot
+            progress = 0
+            statusDetail = "Native steamcmd: app_update \(appID) (windows platform)…"
+            do {
+                try await DownloadBridge.downloadGameDepot(
+                    appID: appID,
+                    credentials: credentials,
+                    intoBottle: bottle.url
+                ) { prog in
+                    Task { @MainActor in
+                        self.progress = prog.fraction
+                        self.statusDetail = prog.detail
+                        if prog.detail.lowercased().contains("clone")
+                            || prog.detail.lowercased().contains("material") {
+                            self.phase = .materializingDepot
+                        } else {
+                            self.phase = .downloadingDepot
+                        }
+                    }
+                }
+                phase = .materializingDepot
+                progress = 1
+                statusDetail = "Depot ready — launching Steam control plane…"
+            } catch is CancellationError {
+                return
+            } catch SteamCMDError.needsSteamGuard {
+                fail("Steam Guard code required. Enter the code and install again.")
+                return
+            } catch {
+                Logger.wineKit.error("Depot download failed: \(error.localizedDescription)")
+                statusDetail = "Native depot download failed (\(error.localizedDescription)). "
+                    + "You can still install via Steam UI."
+            }
+        }
+        if Task.isCancelled { return }
+
+        phase = .runningInstaller
+        progress = nil
+        statusDetail = "Launching Steam (control plane only)…"
+
+        let steamExe = bottle.url
+            .appending(path: "drive_c")
+            .appending(path: "Program Files (x86)")
+            .appending(path: "Steam")
+            .appending(path: "Steam.exe")
+        let steamExeAlt = steamExe.deletingLastPathComponent().appending(path: "steam.exe")
+        let launchURL = FileManager.default.fileExists(atPath: steamExe.path) ? steamExe : steamExeAlt
+
+        var launchArgs: [String] = []
+        if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
+            launchArgs = ["-applaunch", String(appID)]
+        }
+
+        Task.detached(priority: .userInitiated) {
+            do {
+                try await Wine.runProgram(
+                    at: launchURL,
+                    args: launchArgs,
+                    bottle: bottle,
+                    environment: ["WINEDEBUG": "-all"],
+                    autoSelectEngine: false
+                )
+            } catch {
+                Logger.wineKit.error(
+                    "GameInstaller: Steam process ended with error: \(error.localizedDescription)"
+                )
+            }
+        }
+
+        if SteamAppID.parse(fromRecipeID: recipe.id) != nil {
+            statusDetail = (
+                "Game depot was downloaded at native speed via steamcmd and "
+                + "cloned into the bottle. Steam is only the control plane "
+                + "(DRM / launch). If the game does not auto-start, open Library "
+                + "in Steam, then continue and pick the main .exe."
+            )
+        } else {
+            statusDetail = """
+            Steam client was seeded natively. Log in, install the game, then continue.
+            """
+        }
+    }
+
+    private func runSteamSetupFallback(bottle: Bottle) async {
         phase = .downloadingSteamSetup
+        statusDetail = "Connecting to Steam CDN…"
+        progress = 0
+
         let tempSetup: URL
         do {
             tempSetup = try await downloadSteamSetup()
         } catch {
-            phase = .failed(message: "Could not download SteamSetup.exe: \(error.localizedDescription)")
+            if Task.isCancelled { return }
+            fail("Could not download SteamSetup.exe: \(error.localizedDescription)")
             return
         }
+        if Task.isCancelled { return }
 
         phase = .runningInstaller
-        do {
-            try await Wine.runProgram(at: tempSetup, bottle: bottle)
-        } catch {
-            phase = .failed(message: "Steam installer failed: \(error.localizedDescription)")
-            try? FileManager.default.removeItem(at: tempSetup)
-            return
-        }
-        try? FileManager.default.removeItem(at: tempSetup)
+        statusDetail = "Launching Steam installer (fallback)…"
+        progress = nil
 
-        phase = .awaitingMainExe(bottleURL: bottle.url)
+        let setupURL = tempSetup
+        Task.detached(priority: .userInitiated) {
+            defer { try? FileManager.default.removeItem(at: setupURL) }
+            do {
+                try await Wine.runProgram(
+                    at: setupURL,
+                    bottle: bottle,
+                    environment: ["WINEDEBUG": "-all"],
+                    autoSelectEngine: false
+                )
+            } catch {
+                Logger.wineKit.error(
+                    "GameInstaller: Steam installer process ended with error: \(error.localizedDescription)"
+                )
+            }
+        }
+
+        statusDetail = "SteamSetup fallback launched. Finish setup in the Steam window, then continue."
+    }
+
+    private func prepareWineForSteam(bottle: Bottle) async {
+        let reg = """
+        REGEDIT4
+
+        [HKEY_CURRENT_USER\\Software\\Wine\\WineDbg]
+        "ShowCrashDialog"=dword:00000000
+        """
+        let regURL = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-steam-prep-\(UUID().uuidString).reg")
+        do {
+            try reg.write(to: regURL, atomically: true, encoding: .utf8)
+            defer { try? FileManager.default.removeItem(at: regURL) }
+            try await Wine.runWine(
+                ["regedit", "/s", regURL.path(percentEncoded: false)],
+                bottle: bottle,
+                environment: ["WINEDEBUG": "-all"]
+            )
+        } catch {
+            Logger.wineKit.debug("GameInstaller: steam prep failed: \(error.localizedDescription)")
+        }
     }
 
     private func downloadSteamSetup() async throws -> URL {
-        let session = URLSession(configuration: .ephemeral)
-        let (temp, _) = try await session.download(from: Self.steamSetupURL)
-        let dest = FileManager.default.temporaryDirectory
-            .appending(path: "SteamSetup-\(UUID().uuidString).exe")
-        try FileManager.default.moveItem(at: temp, to: dest)
-        return dest
+        let downloader = SteamSetupDownloader()
+        downloader.onProgress = { [weak self] written, expected in
+            Task { @MainActor in
+                guard let self else { return }
+                if expected > 0 {
+                    self.progress = min(1, Double(written) / Double(expected))
+                    self.statusDetail = "Downloading SteamSetup.exe… "
+                        + "\(Self.formatBytes(written)) / \(Self.formatBytes(expected))"
+                } else {
+                    self.progress = nil
+                    self.statusDetail = "Downloading SteamSetup.exe… \(Self.formatBytes(written))"
+                }
+            }
+        }
+        let url = try await downloader.download(from: Self.steamSetupURL)
+        progress = 1
+        statusDetail = "Download complete."
+        return url
     }
 
-    // MARK: - GOG / custom flow
-
     private func runPickedInstaller(bottle: Bottle) async {
+        statusDetail = "Select the Windows installer…"
+        progress = nil
         let picked = await pickInstallerExe()
         guard let picked else {
-            phase = .failed(message: "Installer selection cancelled.")
+            fail("Installer selection cancelled.")
             return
         }
 
         phase = .runningInstaller
-        do {
-            try await Wine.runProgram(at: picked, bottle: bottle)
-        } catch {
-            phase = .failed(message: "Installer failed: \(error.localizedDescription)")
-            return
+        statusDetail = "Launching installer…"
+
+        let installerURL = picked
+        Task.detached(priority: .userInitiated) {
+            do {
+                try await Wine.runProgram(at: installerURL, bottle: bottle, autoSelectEngine: false)
+            } catch {
+                Logger.wineKit.error(
+                    "GameInstaller: installer process ended with error: \(error.localizedDescription)"
+                )
+            }
         }
-        phase = .awaitingMainExe(bottleURL: bottle.url)
+
+        statusDetail = "Installer launched. Complete installation in the window that opened, then continue."
     }
 
     @MainActor
     private func pickInstallerExe() async -> URL? {
         let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType.exe, UTType(exportedAs: "com.microsoft.msi-installer")]
         panel.prompt = "Select installer"
         panel.message = "Choose the Windows installer for \(recipe.title)."
-        let response = await withCheckedContinuation { continuation in
+        typealias ModalContinuation = CheckedContinuation<NSApplication.ModalResponse, Never>
+        let response = await withCheckedContinuation { (continuation: ModalContinuation) in
             panel.begin { result in
                 continuation.resume(returning: result)
             }
@@ -219,23 +412,16 @@ final class GameInstaller: ObservableObject {
         return panel.url
     }
 
-    // MARK: - Helpers
-
     private func applyRecipeSettings(to bottle: Bottle) async {
         bottle.settings.dxvk = (recipe.renderer == .dxvk)
 
-        // Register CJK font substitutions so Windows apps that request
-        // SimSun / MS Song / Microsoft YaHei get rendered with macOS
-        // system fonts instead of showing □□□□ boxes.
+        statusDetail = "Installing CJK fonts…"
         await installCJKFontSubstitutions(bottle: bottle)
 
         Logger.wineKit.info("GameInstaller: applied recipe \(self.recipe.id) to bottle \(bottle.url.lastPathComponent)")
     }
 
-    // swiftlint:disable:next function_body_length
     private func installCJKFontSubstitutions(bottle: Bottle) async {
-        // Step 1: Copy the bundled WenQuanYi Micro Hei font into the
-        // bottle's Fonts directory for Chromium-based apps (Steam UI).
         let fontsDir = bottle.url
             .appending(path: "drive_c")
             .appending(path: "windows")
@@ -252,12 +438,7 @@ final class GameInstaller: ObservableObject {
             }
         }
 
-        // Step 2: Register font substitutions pointing to BOTH STHeiti
-        // (macOS system font, works immediately for GDI apps) AND
-        // WenQuanYi (for apps that enumerate Fonts/ directory).
-        // STHeiti is the primary because Wine already knows about it
-        // via the Z: drive mapping — no font cache rebuild needed.
-        let substitutions: [(windows: String, replacement: String)] = [
+        let substitutions: [(String, String)] = [
             ("SimSun", "STHeiti"),
             ("NSimSun", "STHeiti"),
             ("Microsoft YaHei", "STHeiti"),
@@ -270,30 +451,21 @@ final class GameInstaller: ObservableObject {
             ("Batang", "STHeiti")
         ]
 
-        for sub in substitutions {
-            do {
-                try await Wine.runWine(
-                    ["reg", "add",
-                     #"HKCU\Software\Wine\Fonts\Replacements"#,
-                     "-v", sub.windows, "-t", "REG_SZ",
-                     "-d", sub.replacement, "-f"],
-                    bottle: bottle
-                )
-            } catch {
-                Logger.wineKit.debug(
-                    "GameInstaller: font sub \(sub.windows) failed: \(error.localizedDescription)"
-                )
-            }
+        var reg = "REGEDIT4\n\n[HKEY_CURRENT_USER\\Software\\Wine\\Fonts\\Replacements]\n"
+        for (windows, replacement) in substitutions {
+            reg += "\"\(windows)\"=\"\(replacement)\"\n"
         }
+        reg += "\n[HKEY_CURRENT_USER\\Software\\Wine\\Fonts]\n"
+        reg += "\"WenQuanYi Micro Hei\"=\"wqy-microhei.ttc\"\n"
 
-        // Step 3: Register WenQuanYi in the Windows Fonts registry so
-        // Chromium/CEF can find it when scanning installed fonts.
+        let regURL = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-fonts-\(UUID().uuidString).reg")
         do {
+            try reg.write(to: regURL, atomically: true, encoding: .utf8)
+            defer { try? FileManager.default.removeItem(at: regURL) }
+            statusDetail = "Registering font substitutions…"
             try await Wine.runWine(
-                ["reg", "add",
-                 #"HKLM\Software\Microsoft\Windows NT\CurrentVersion\Fonts"#,
-                 "-v", "WenQuanYi Micro Hei (TrueType)",
-                 "-t", "REG_SZ", "-d", "wqy-microhei.ttc", "-f"],
+                ["regedit", "/s", regURL.path(percentEncoded: false)],
                 bottle: bottle
             )
         } catch {
@@ -301,20 +473,34 @@ final class GameInstaller: ObservableObject {
         }
     }
 
-    private func waitForBottle(url: URL, timeout: TimeInterval = 30) async -> Bottle? {
+    private func waitForBottle(url: URL, timeout: TimeInterval = 180) async -> Bottle? {
         let deadline = Date().addingTimeInterval(timeout)
+        var sawInFlight = false
+        var ticks = 0
         while Date() < deadline {
-            if let bottle = bottleVM.bottles.first(where: { $0.url == url && $0.isAvailable }) {
-                return bottle
+            if Task.isCancelled { return nil }
+            if let bottle = bottleVM.bottles.first(where: { $0.url == url }) {
+                if bottle.inFlight {
+                    sawInFlight = true
+                    ticks += 1
+                    if ticks % 4 == 0 {
+                        statusDetail = "Initializing Wine prefix… (\(ticks / 4)s)"
+                    }
+                } else {
+                    return bottle
+                }
+            } else if sawInFlight {
+                return nil
             }
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            try? await Task.sleep(nanoseconds: 250_000_000)
         }
         return nil
     }
 
-    private func waitForPath(_ url: URL, timeout: TimeInterval = 30) async -> Bool {
+    private func waitForPath(_ url: URL, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
+            if Task.isCancelled { return false }
             if FileManager.default.fileExists(atPath: url.path(percentEncoded: false)) {
                 return true
             }
@@ -323,22 +509,96 @@ final class GameInstaller: ObservableObject {
         return false
     }
 
-    /// Convert a macOS file URL living under a bottle's drive_c to the
-    /// `C:\...` form wine expects. Returns the macOS path as-is if the
-    /// file is outside drive_c (which would be unusual).
-    private func wineStylePath(for url: URL, inBottle bottle: Bottle) -> String {
-        let driveC = bottle.url.appending(path: "drive_c").path(percentEncoded: false)
-        let absolute = url.path(percentEncoded: false)
-        guard absolute.hasPrefix(driveC) else {
-            return absolute
+    private func wineStylePath(for fileURL: URL, inBottle bottle: Bottle) -> String {
+        let driveC = bottle.url.appending(path: "drive_c").path
+        let full = fileURL.path
+        if full.hasPrefix(driveC) {
+            let relative = String(full.dropFirst(driveC.count))
+                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return "C:\\" + relative.replacingOccurrences(of: "/", with: "\\")
         }
-        let relative = String(absolute.dropFirst(driveC.count))
-            .replacingOccurrences(of: "/", with: "\\")
-        return "C:" + relative
+        return full.replacingOccurrences(of: "/", with: "\\")
+    }
+
+    private func fail(_ message: String) {
+        phase = .failed(message: message)
+        statusDetail = message
+        progress = nil
+    }
+
+    private static func formatBytes(_ value: Int64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB, .useGB]
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: value)
     }
 }
 
-// MARK: - Notifications
+private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    var onProgress: ((Int64, Int64) -> Void)?
+    private var continuation: CheckedContinuation<URL, Error>?
+    private var session: URLSession?
+    private var destinationURL: URL?
+
+    func download(from url: URL) async throws -> URL {
+        try await withCheckedThrowingContinuation { cont in
+            self.continuation = cont
+            let config = URLSessionConfiguration.ephemeral
+            config.timeoutIntervalForRequest = 60
+            config.timeoutIntervalForResource = 600
+            let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+            self.session = session
+            session.downloadTask(with: url).resume()
+        }
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        onProgress?(totalBytesWritten, totalBytesExpectedToWrite)
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didFinishDownloadingTo location: URL
+    ) {
+        let dest = FileManager.default.temporaryDirectory
+            .appending(path: "SteamSetup-\(UUID().uuidString).exe")
+        do {
+            if FileManager.default.fileExists(atPath: dest.path) {
+                try FileManager.default.removeItem(at: dest)
+            }
+            try FileManager.default.copyItem(at: location, to: dest)
+            destinationURL = dest
+        } catch {
+            continuation?.resume(throwing: error)
+            continuation = nil
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        defer {
+            session.finishTasksAndInvalidate()
+            self.session = nil
+        }
+        if let error {
+            continuation?.resume(throwing: error)
+            continuation = nil
+            return
+        }
+        if let destinationURL {
+            continuation?.resume(returning: destinationURL)
+        } else {
+            continuation?.resume(throwing: URLError(.cannotCreateFile))
+        }
+        continuation = nil
+    }
+}
 
 extension Notification.Name {
     static let macbottleInstalledGamesChanged = Notification.Name("app.macbottle.installedGamesChanged")

@@ -27,7 +27,7 @@ import WhiskyKit
 /// overrides are merged into the program's launch env by
 /// `Program.generateEnvironment()`. See `docs/ARCHITECTURE.md`.
 struct RecipeSection: View {
-    @ObservedObject var program: Program
+    @Bindable var program: Program
     @Binding var isExpanded: Bool
 
     /// Recipes are bundle resources and never change at runtime, so we

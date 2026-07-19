@@ -17,10 +17,11 @@
 //
 
 import SwiftUI
+import Observation
 import Sparkle
 
 struct SparkleView: View {
-    @ObservedObject private var checkForUpdatesViewModel: CheckForUpdatesViewModel
+    @State private var checkForUpdatesViewModel: CheckForUpdatesViewModel
     private let updater: SPUUpdater
 
     init(updater: SPUUpdater) {
@@ -34,12 +35,24 @@ struct SparkleView: View {
     }
 }
 
-// This view model class publishes when new updates can be checked by the user
-final class CheckForUpdatesViewModel: ObservableObject {
-    @Published var canCheckForUpdates = false
+@MainActor
+@Observable
+final class CheckForUpdatesViewModel {
+    var canCheckForUpdates = false
+    @ObservationIgnored private var pollTask: Task<Void, Never>?
 
     init(updater: SPUUpdater) {
-        updater.publisher(for: \.canCheckForUpdates)
-            .assign(to: &$canCheckForUpdates)
+        canCheckForUpdates = updater.canCheckForUpdates
+        pollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard let self else { return }
+                self.canCheckForUpdates = updater.canCheckForUpdates
+            }
+        }
+    }
+
+    deinit {
+        pollTask?.cancel()
     }
 }
