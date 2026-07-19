@@ -216,7 +216,11 @@ struct GameDetailSheet: View {
                     indeterminateOnly: true
                 )
                 if recipe.installer == .steam {
-                    Text("Client files were seeded via Native Download Bridge (macOS network stack). Wine only runs Steam UI. Close steam service.exe crash dialogs if they appear — usually harmless.")
+                    Text(
+                        "Client files were seeded via Native Download Bridge "
+                        + "(macOS network stack). Wine only runs Steam UI. "
+                        + "Close steam service.exe crash dialogs if they appear — usually harmless."
+                    )
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -445,7 +449,10 @@ struct GameDetailSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Native Depot Plane")
                 .font(.headline)
-            Text("Game files download through steamcmd on macOS (windows platform), then clone into the bottle. Wine only launches Steam/game.")
+            Text(
+                "Game files download through steamcmd on macOS (windows platform), "
+                + "then clone into the bottle. Wine only launches Steam/game."
+            )
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

@@ -101,8 +101,11 @@ final class LaunchEnginePolicyTests: XCTestCase {
 
     func testScanKnownSystemBinaryDoesNotCrash() {
         let candidates = [
-            URL(fileURLWithPath: "/Users/shiaho/Library/Application Support/app.macbottle.MacBottle/Libraries/Wine/lib/wine/x86_64-windows/notepad.exe"),
-            URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
+            URL(fileURLWithPath: "/Users/shiaho/Library/Application Support/"
+                + "app.macbottle.MacBottle/Libraries/Wine/lib/wine/x86_64-windows/notepad.exe"),
+            URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/"
+                + "Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/"
+                + "Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
         ]
         for url in candidates where FileManager.default.fileExists(atPath: url.path) {
             let profile = PEImportScanner.scan(url: url)
@@ -116,7 +119,9 @@ final class LaunchEnginePolicyTests: XCTestCase {
     }
 
     func testClassic32DecisionUsesModern() {
-        let url = URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
+        let url = URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/"
+            + "Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/"
+            + "Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         let decision = LaunchEnginePolicy.decide(
             executable: url,

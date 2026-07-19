@@ -179,7 +179,7 @@ public final class SteamCMDEngine: @unchecked Sendable {
             "+@sSteamCmdForcePlatformBitness", "64",
             "+@ShutdownOnFailedCommand", "1",
             "+@NoPromptForPassword", "1",
-            "+force_install_dir", installDir.path,
+            "+force_install_dir", installDir.path
         ]
 
         if let code = credentials.steamGuardCode, !code.isEmpty, !credentials.isAnonymous {
@@ -445,8 +445,8 @@ private extension String {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         let range = NSRange(startIndex..<endIndex, in: self)
         return regex.matches(in: self, range: range).compactMap { match in
-            guard let r = Range(match.range(at: 1), in: self) else { return nil }
-            return Double(self[r])
+            guard let matchRange = Range(match.range(at: 1), in: self) else { return nil }
+            return Double(self[matchRange])
         }
     }
 }

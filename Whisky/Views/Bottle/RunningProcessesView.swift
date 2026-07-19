@@ -84,7 +84,7 @@ struct RunningProcessesView: View {
         do {
             output = try await Wine.runWine(["tasklist.exe"], bottle: bottle)
         } catch {
-            Logger.ui.error("Error running tasklist.exe: \(error.localizedDescription)")
+            Logger.uiLogger.error("Error running tasklist.exe: \(error.localizedDescription)")
             output = ""
         }
 
@@ -106,7 +106,7 @@ struct RunningProcessesView: View {
                 try await Wine.runWine(["taskkill.exe", "/PID", thisProcess.pid, "/F"], bottle: bottle)
                 try await Task.sleep(for: .milliseconds(500))
             } catch {
-                Logger.ui.error("Error running taskkill.exe: \(error.localizedDescription)")
+                Logger.uiLogger.error("Error running taskkill.exe: \(error.localizedDescription)")
             }
             await fetchProcesses()
         }

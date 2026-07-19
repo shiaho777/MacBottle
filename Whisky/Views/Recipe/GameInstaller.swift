@@ -188,7 +188,8 @@ final class GameInstaller {
                     self.statusDetail = detail
                 }
             }
-            statusDetail = "Seeded Steam \(result.version) · \(result.packageCount) packages · \(Self.formatBytes(result.totalBytes)) via native CDN"
+            statusDetail = "Seeded Steam \(result.version) · \(result.packageCount) packages · "
+                + "\(Self.formatBytes(result.totalBytes)) via native CDN"
             progress = 1
         } catch {
             Logger.wineKit.error("Native seed failed, falling back to SteamSetup: \(error.localizedDescription)")
@@ -231,7 +232,8 @@ final class GameInstaller {
                 return
             } catch {
                 Logger.wineKit.error("Depot download failed: \(error.localizedDescription)")
-                statusDetail = "Native depot download failed (\(error.localizedDescription)). You can still install via Steam UI."
+                statusDetail = "Native depot download failed (\(error.localizedDescription)). "
+                    + "You can still install via Steam UI."
             }
         }
         if Task.isCancelled { return }
@@ -270,9 +272,12 @@ final class GameInstaller {
         }
 
         if SteamAppID.parse(fromRecipeID: recipe.id) != nil {
-            statusDetail = """
-            Game depot was downloaded at native speed via steamcmd and cloned into the bottle. Steam is only the control plane (DRM / launch). If the game does not auto-start, open Library in Steam, then continue and pick the main .exe.
-            """
+            statusDetail = (
+                "Game depot was downloaded at native speed via steamcmd and "
+                + "cloned into the bottle. Steam is only the control plane "
+                + "(DRM / launch). If the game does not auto-start, open Library "
+                + "in Steam, then continue and pick the main .exe."
+            )
         } else {
             statusDetail = """
             Steam client was seeded natively. Log in, install the game, then continue.
@@ -348,7 +353,8 @@ final class GameInstaller {
                 guard let self else { return }
                 if expected > 0 {
                     self.progress = min(1, Double(written) / Double(expected))
-                    self.statusDetail = "Downloading SteamSetup.exe… \(Self.formatBytes(written)) / \(Self.formatBytes(expected))"
+                    self.statusDetail = "Downloading SteamSetup.exe… "
+                        + "\(Self.formatBytes(written)) / \(Self.formatBytes(expected))"
                 } else {
                     self.progress = nil
                     self.statusDetail = "Downloading SteamSetup.exe… \(Self.formatBytes(written))"
@@ -396,7 +402,8 @@ final class GameInstaller {
         panel.allowedContentTypes = [UTType.exe, UTType(exportedAs: "com.microsoft.msi-installer")]
         panel.prompt = "Select installer"
         panel.message = "Choose the Windows installer for \(recipe.title)."
-        let response = await withCheckedContinuation { (continuation: CheckedContinuation<NSApplication.ModalResponse, Never>) in
+        typealias ModalContinuation = CheckedContinuation<NSApplication.ModalResponse, Never>
+        let response = await withCheckedContinuation { (continuation: ModalContinuation) in
             panel.begin { result in
                 continuation.resume(returning: result)
             }

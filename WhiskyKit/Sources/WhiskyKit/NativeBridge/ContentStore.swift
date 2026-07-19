@@ -42,21 +42,21 @@ public struct ContentStore: Sendable {
     }
 
     public func materialize(from source: URL, to destination: URL) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if fm.fileExists(atPath: destination.path) {
-            try fm.removeItem(at: destination)
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if fileManager.fileExists(atPath: destination.path) {
+            try fileManager.removeItem(at: destination)
         }
         if clone(from: source, to: destination) {
             return
         }
-        try fm.copyItem(at: source, to: destination)
+        try fileManager.copyItem(at: source, to: destination)
     }
 
     public func materializeTree(from sourceRoot: URL, to destinationRoot: URL) throws {
-        let fm = FileManager.default
-        try fm.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
-        guard let enumerator = fm.enumerator(
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
+        guard let enumerator = fileManager.enumerator(
             at: sourceRoot,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
@@ -69,16 +69,16 @@ public struct ContentStore: Sendable {
             let dest = destinationRoot.appending(path: rel)
             let values = try fileURL.resourceValues(forKeys: [.isDirectoryKey])
             if values.isDirectory == true {
-                try fm.createDirectory(at: dest, withIntermediateDirectories: true)
+                try fileManager.createDirectory(at: dest, withIntermediateDirectories: true)
             } else {
                 try materialize(from: fileURL, to: dest)
             }
         }
     }
 
-    private func clone(from: URL, to: URL) -> Bool {
-        from.path.withCString { src in
-            to.path.withCString { dst in
+    private func clone(from source: URL, to destination: URL) -> Bool {
+        source.path.withCString { src in
+            destination.path.withCString { dst in
                 clonefile(src, dst, 0) == 0
             }
         }

@@ -61,7 +61,10 @@ public enum DisplayPolicy {
                 }
             }
             if changed {
-                Logger.wineKit.info("DisplayPolicy: classic32 applied RetinaMode=n LogPixels<=96 for \(bottle.settings.name)")
+                let bottleName = bottle.settings.name
+                Logger.wineKit.info(
+                    "DisplayPolicy: classic32 applied RetinaMode=n LogPixels<=96 for \(bottleName)"
+                )
             }
         } catch {
             Logger.wineKit.error("DisplayPolicy failed: \(error.localizedDescription)")

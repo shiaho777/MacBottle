@@ -25,13 +25,19 @@ public enum RuntimeProfile: String, Sendable, Hashable {
     case generic
 }
 
+private struct RuntimeProfileCacheEntry {
+    let modificationDate: Date
+    let size: UInt64
+    let profile: RuntimeProfile
+}
+
 public enum RuntimeLaunchOptimizer {
     private static let profileCacheLock = NSLock()
-    nonisolated(unsafe) private static var profileCache: [String: (mod: Date, size: UInt64, profile: RuntimeProfile)] = [:]
+    nonisolated(unsafe) private static var profileCache: [String: RuntimeProfileCacheEntry] = [:]
 
-    public static func profile(for pe: PEFile?) -> RuntimeProfile {
-        guard let pe else { return .generic }
-        switch pe.architecture {
+    public static func profile(for peFile: PEFile?) -> RuntimeProfile {
+        guard let peFile else { return .generic }
+        switch peFile.architecture {
         case .x32:
             return .classic32
         case .x64:
@@ -57,7 +63,7 @@ public enum RuntimeLaunchOptimizer {
         let size = (attrs?[.size] as? NSNumber)?.uint64Value ?? 0
 
         profileCacheLock.lock()
-        if let cached = profileCache[path], cached.mod == mod, cached.size == size {
+        if let cached = profileCache[path], cached.modificationDate == mod, cached.size == size {
             let value = cached.profile
             profileCacheLock.unlock()
             return value
@@ -66,14 +72,14 @@ public enum RuntimeLaunchOptimizer {
 
         let resolved: RuntimeProfile
         do {
-            let pe = try PEFile(url: url)
-            resolved = profile(for: pe)
+            let peFile = try PEFile(url: url)
+            resolved = profile(for: peFile)
         } catch {
             resolved = .generic
         }
 
         profileCacheLock.lock()
-        profileCache[path] = (mod, size, resolved)
+        profileCache[path] = RuntimeProfileCacheEntry(modificationDate: mod, size: size, profile: resolved)
         profileCacheLock.unlock()
         return resolved
     }
@@ -104,10 +110,8 @@ public enum RuntimeLaunchOptimizer {
             profile: profile,
             bottleDXVKEnabled: bottleDXVKEnabled
         )
-        for (key, value) in d3dm {
-            if env[key] == nil {
-                env[key] = value
-            }
+        for (key, value) in d3dm where env[key] == nil {
+            env[key] = value
         }
 
         return env

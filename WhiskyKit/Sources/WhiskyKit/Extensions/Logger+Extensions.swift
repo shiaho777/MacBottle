@@ -28,7 +28,7 @@ public extension Logger {
         subsystem: Bundle.whiskyBundleIdentifier, category: "App"
     )
 
-    static let ui = Logger(
+    static let uiLogger = Logger(
         subsystem: Bundle.whiskyBundleIdentifier, category: "UI"
     )
 }

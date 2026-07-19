@@ -33,7 +33,6 @@ public enum Locales: String, Codable, CaseIterable {
     case chineseSimplified = "zh_CN.UTF-8"
     case chineseTraditional = "zh_TW.UTF-8"
 
-    // swiftlint:disable:next cyclomatic_complexity
     public func pretty() -> String {
         switch self {
         case .auto:

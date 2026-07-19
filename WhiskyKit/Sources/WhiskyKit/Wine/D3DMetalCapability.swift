@@ -106,12 +106,12 @@ public enum D3DMetalCapability {
         let items = ["D3DMetal.framework", "libd3dshared.dylib"]
         for item in items {
             let from = source.appending(path: item)
-            let to = destination.appending(path: item)
+            let destinationItem = destination.appending(path: item)
             guard FileManager.default.fileExists(atPath: from.path) else { continue }
-            if FileManager.default.fileExists(atPath: to.path) {
-                try FileManager.default.removeItem(at: to)
+            if FileManager.default.fileExists(atPath: destinationItem.path) {
+                try FileManager.default.removeItem(at: destinationItem)
             }
-            try FileManager.default.copyItem(at: from, to: to)
+            try FileManager.default.copyItem(at: from, to: destinationItem)
             Logger.wineKit.info("D3DMetalCapability restored \(item) from \(source.path)")
         }
         probeLock.lock()

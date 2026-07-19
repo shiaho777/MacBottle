@@ -59,7 +59,6 @@ extension PEFile {
         public let loaderFlags: UInt32
         public let numberOfRvaAndSizes: UInt32
 
-        // swiftlint:disable:next function_body_length
         init?(handle: FileHandle, offset: UInt64) {
             var offset = offset
             let rawMagic = handle.extract(UInt16.self, offset: offset) ?? 0

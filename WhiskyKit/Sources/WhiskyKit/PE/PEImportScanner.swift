@@ -58,10 +58,9 @@ public struct PEImportProfile: Sendable, Hashable {
     }
 
     public var primaryGraphicsAPI: GraphicsAPI {
-        for api: GraphicsAPI in [.d3d12, .d3d11, .vulkan, .d3d10, .d3d9, .d3d8, .opengl] {
-            if graphicsAPIs.contains(api) {
-                return api
-            }
+        let order: [GraphicsAPI] = [.d3d12, .d3d11, .vulkan, .d3d10, .d3d9, .d3d8, .opengl]
+        for api in order where graphicsAPIs.contains(api) {
+            return api
         }
         return .unknown
     }
@@ -139,17 +138,17 @@ public enum PEImportScanner {
 
     private static func scanUncached(url: URL) -> PEImportProfile? {
         do {
-            let pe = try PEFile(url: url)
+            let peFile = try PEFile(url: url)
             let handle = try FileHandle(forReadingFrom: url)
             defer { try? handle.close() }
 
             var origins: [String: PEImportOrigin] = [:]
-            let importDLLs = scanImportDirectory(pe: pe, handle: handle)
+            let importDLLs = scanImportDirectory(peFile: peFile, handle: handle)
             for dll in importDLLs {
                 origins[dll.lowercased()] = .importTable
             }
 
-            let delayDLLs = scanDelayLoadDirectory(pe: pe, handle: handle)
+            let delayDLLs = scanDelayLoadDirectory(peFile: peFile, handle: handle)
             for dll in delayDLLs {
                 let key = dll.lowercased()
                 if origins[key] == nil {
@@ -181,7 +180,7 @@ public enum PEImportScanner {
             }
 
             return PEImportProfile(
-                architecture: pe.architecture,
+                architecture: peFile.architecture,
                 importedDLLs: importDLLs.map { $0.lowercased() }.sorted(),
                 delayLoadedDLLs: delayDLLs.map { $0.lowercased() }.sorted(),
                 graphicsAPIs: apis,
@@ -192,13 +191,13 @@ public enum PEImportScanner {
         }
     }
 
-    private static func scanImportDirectory(pe: PEFile, handle: FileHandle) -> [String] {
-        guard pe.optionalHeader != nil else { return [] }
+    private static func scanImportDirectory(peFile: PEFile, handle: FileHandle) -> [String] {
+        guard peFile.optionalHeader != nil else { return [] }
         guard let importRVA = dataDirectoryRVA(handle: handle, index: importDirectoryIndex),
               importRVA > 0 else {
             return []
         }
-        guard let fileOffset = rvaToFileOffset(rva: importRVA, sections: pe.sections) else {
+        guard let fileOffset = rvaToFileOffset(rva: importRVA, sections: peFile.sections) else {
             return []
         }
 
@@ -211,7 +210,7 @@ public enum PEImportScanner {
             if nameRVA == 0 && firstThunk == 0 && originalFirstThunk == 0 {
                 break
             }
-            if let nameOffset = rvaToFileOffset(rva: nameRVA, sections: pe.sections),
+            if let nameOffset = rvaToFileOffset(rva: nameRVA, sections: peFile.sections),
                let name = readCString(handle: handle, offset: UInt64(nameOffset)) {
                 dlls.append(name)
             }
@@ -220,13 +219,13 @@ public enum PEImportScanner {
         return dlls
     }
 
-    private static func scanDelayLoadDirectory(pe: PEFile, handle: FileHandle) -> [String] {
-        guard pe.optionalHeader != nil else { return [] }
+    private static func scanDelayLoadDirectory(peFile: PEFile, handle: FileHandle) -> [String] {
+        guard peFile.optionalHeader != nil else { return [] }
         guard let delayRVA = dataDirectoryRVA(handle: handle, index: delayImportDirectoryIndex),
               delayRVA > 0 else {
             return []
         }
-        guard let fileOffset = rvaToFileOffset(rva: delayRVA, sections: pe.sections) else {
+        guard let fileOffset = rvaToFileOffset(rva: delayRVA, sections: peFile.sections) else {
             return []
         }
 
@@ -242,7 +241,7 @@ public enum PEImportScanner {
                 break
             }
             if nameRVA != 0,
-               let nameOffset = rvaToFileOffset(rva: nameRVA, sections: pe.sections),
+               let nameOffset = rvaToFileOffset(rva: nameRVA, sections: peFile.sections),
                let name = readCString(handle: handle, offset: UInt64(nameOffset)) {
                 dlls.append(name)
             }

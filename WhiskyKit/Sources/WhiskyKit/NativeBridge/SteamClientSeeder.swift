@@ -239,22 +239,22 @@ public final class SteamClientSeeder: @unchecked Sendable {
     }
 
     private func extractSteamZip(_ archive: URL, to destination: URL) async throws {
-        let fm = FileManager.default
+        let fileManager = FileManager.default
         let data = try Data(contentsOf: archive)
-        guard let pk = data.range(of: Data([0x50, 0x4b, 0x03, 0x04])) else {
+        guard let zipSignature = data.range(of: Data([0x50, 0x4b, 0x03, 0x04])) else {
             return
         }
 
-        let tempZip = fm.temporaryDirectory.appending(path: "macbottle-\(UUID().uuidString).zip")
+        let tempZip = fileManager.temporaryDirectory.appending(path: "macbottle-\(UUID().uuidString).zip")
         do {
             try data.write(to: tempZip)
             try await runUnzip(tempZip, destination: destination)
         } catch {
-            let stripped = Data(data[pk.lowerBound...])
+            let stripped = Data(data[zipSignature.lowerBound...])
             try stripped.write(to: tempZip)
             try await runUnzip(tempZip, destination: destination)
         }
-        try? fm.removeItem(at: tempZip)
+        try? fileManager.removeItem(at: tempZip)
     }
 
     private func runUnzip(_ zipURL: URL, destination: URL) async throws {

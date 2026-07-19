@@ -182,7 +182,6 @@ struct BottleView: View {
         }
     }
 
-
     @ViewBuilder
     private var bottleBottomBar: some View {
         HStack(spacing: 10) {
@@ -352,8 +351,6 @@ struct BottleView: View {
         }
     }
 
-
-
     private func prepareLaunchURL(_ url: URL) throws -> URL {
         let bottlePath = bottle.url.path
         let selectedPath = url.path
@@ -390,7 +387,6 @@ struct BottleView: View {
         alert.runModal()
     }
 }
-
 
 private struct RecentProgramRow: View {
     @Bindable var program: Program
@@ -439,5 +435,3 @@ private struct RecentProgramRow: View {
         }
     }
 }
-
-

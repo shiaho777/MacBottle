@@ -276,7 +276,6 @@ public struct BottleSettings: Codable, Equatable {
         try data.write(to: metadataUrl)
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
     public func environmentVariables(wineEnv: inout [String: String]) {
         if dxvk {
             wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")

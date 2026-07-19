@@ -87,7 +87,7 @@ struct FileOpenView: View {
                         try await Wine.runProgram(at: fileURL, bottle: bottle)
                     }
                 } catch {
-                    Logger.ui.error("FileOpenView error: \(error.localizedDescription)")
+                    Logger.uiLogger.error("FileOpenView error: \(error.localizedDescription)")
                 }
             }
             dismiss()

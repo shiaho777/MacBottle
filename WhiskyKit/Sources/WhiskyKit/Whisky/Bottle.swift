@@ -35,7 +35,7 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
     public var isAvailable: Bool = false
 
     /// All pins with their associated programs
-    public var pinnedPrograms: [(pin: PinnedProgram, program: Program, // swiftlint:disable:this large_tuple
+    public var pinnedPrograms: [(pin: PinnedProgram, program: Program,
                                  id: String)] {
         return settings.pins.compactMap { pin in
             let exists = FileManager.default.fileExists(atPath: pin.url?.path(percentEncoded: false) ?? "")
@@ -43,7 +43,6 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
             return (pin, program, "\(pin.name)//\(program.url)")
         }
     }
-
 
     private func pinIndex(for url: URL) -> Int? {
         let target = url.standardizedFileURL.path(percentEncoded: false)

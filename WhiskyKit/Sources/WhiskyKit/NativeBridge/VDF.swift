@@ -28,12 +28,12 @@ public enum VDFNode: Sendable, Equatable {
     }
 
     public var stringValue: String? {
-        if case .value(let s) = self { return s }
+        if case .value(let string) = self { return string }
         return nil
     }
 
     public var objectValue: [String: VDFNode]? {
-        if case .object(let d) = self { return d }
+        if case .object(let dictionary) = self { return dictionary }
         return nil
     }
 }
@@ -113,15 +113,15 @@ private struct Lexer {
         }
         advance()
         var out = ""
-        while let ch = current(), ch != "\"" {
-            if ch == "\\" {
+        while let character = current(), character != "\"" {
+            if character == "\\" {
                 advance()
                 if let escaped = current() {
                     out.append(escaped)
                     advance()
                 }
             } else {
-                out.append(ch)
+                out.append(character)
                 advance()
             }
         }
@@ -159,14 +159,14 @@ private struct Lexer {
     }
 
     private mutating func skipWhitespaceAndComments() {
-        while let ch = current() {
-            if ch.isWhitespace {
+        while let character = current() {
+            if character.isWhitespace {
                 advance()
                 continue
             }
-            if ch == "/" && peekNext() == "/" {
+            if character == "/" && peekNext() == "/" {
                 advance(); advance()
-                while let c = current(), c != "\n" { advance() }
+                while let commentChar = current(), commentChar != "\n" { advance() }
                 continue
             }
             break

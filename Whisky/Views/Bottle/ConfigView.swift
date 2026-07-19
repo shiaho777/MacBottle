@@ -74,7 +74,7 @@ struct ConfigView: View {
                                     try await Wine.changeBuildVersion(bottle: bottle, version: buildVersion)
                                     buildVersionLoadingState = .success
                                 } catch {
-                                    Logger.ui.error("Failed to change build version")
+                                    Logger.uiLogger.error("Failed to change build version")
                                     buildVersionLoadingState = .failed
                                 }
                             }
@@ -95,7 +95,7 @@ struct ConfigView: View {
                                     try await Wine.changeRetinaMode(bottle: bottle, retinaMode: newValue)
                                     retinaModeLoadingState = .success
                                 } catch {
-                                    Logger.ui.error("Failed to change retina mode")
+                                    Logger.uiLogger.error("Failed to change retina mode")
                                     retinaModeLoadingState = .failed
                                 }
                             }
@@ -108,8 +108,10 @@ struct ConfigView: View {
                 }
                 Picker("Wine 引擎绑定", selection: bottleEngineSelection) {
                     Text("自动（配方 / PE）").tag(LaunchEnginePolicy.autoEngineToken)
-                    Text(WineEngineCatalog.describe(WineEngineCatalog.modernEngine())).tag(WineEngineCatalog.modernIdentifier)
-                    Text(WineEngineCatalog.describe(WineEngineCatalog.d3dMetalEngine())).tag(WineEngineCatalog.d3dMetalIdentifier)
+                    Text(WineEngineCatalog.describe(WineEngineCatalog.modernEngine()))
+                        .tag(WineEngineCatalog.modernIdentifier)
+                    Text(WineEngineCatalog.describe(WineEngineCatalog.d3dMetalEngine()))
+                        .tag(WineEngineCatalog.d3dMetalIdentifier)
                 }
                 Text("仅对本容器生效。选「自动」时遵循全局自动策略；固定引擎会覆盖配方/PE 建议。")
                     .font(.caption)
@@ -221,7 +223,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.control(bottle: bottle)
                         } catch {
-                            Logger.ui.error("Failed to launch control")
+                            Logger.uiLogger.error("Failed to launch control")
                         }
                     }
                 }
@@ -230,7 +232,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.regedit(bottle: bottle)
                         } catch {
-                            Logger.ui.error("Failed to launch regedit")
+                            Logger.uiLogger.error("Failed to launch regedit")
                         }
                     }
                 }
@@ -239,7 +241,7 @@ struct ConfigView: View {
                         do {
                             try await Wine.cfg(bottle: bottle)
                         } catch {
-                            Logger.ui.error("Failed to launch winecfg")
+                            Logger.uiLogger.error("Failed to launch winecfg")
                         }
                     }
                 }
@@ -268,7 +270,7 @@ struct ConfigView: View {
                         retinaMode = try await Wine.retinaMode(bottle: bottle)
                         retinaModeLoadingState = .success
                     } catch {
-                        Logger.ui.error("ConfigView error: \(error.localizedDescription)")
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                         retinaModeLoadingState = .failed
                     }
                 }
@@ -279,7 +281,7 @@ struct ConfigView: View {
                     dpiConfig = try await Wine.dpiResolution(bottle: bottle) ?? 0
                     dpiConfigLoadingState = .success
                 } catch {
-                    Logger.ui.error("ConfigView error: \(error.localizedDescription)")
+                    Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                     // If DPI has not yet been edited, there will be no registry entry
                     dpiConfigLoadingState = .success
                 }
@@ -296,7 +298,7 @@ struct ConfigView: View {
                         bottle.settings.windowsVersion = newValue
                         loadBuildName()
                     } catch {
-                        Logger.ui.error("ConfigView error: \(error.localizedDescription)")
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                         winVersionLoadingState = .failed
                     }
                 }
@@ -310,7 +312,7 @@ struct ConfigView: View {
                         try await Wine.changeDpiResolution(bottle: bottle, dpi: dpiConfig)
                         dpiConfigLoadingState = .success
                     } catch {
-                        Logger.ui.error("ConfigView error: \(error.localizedDescription)")
+                        Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                         dpiConfigLoadingState = .failed
                     }
                 }
@@ -329,7 +331,7 @@ struct ConfigView: View {
 
                 buildVersionLoadingState = .success
             } catch {
-                Logger.ui.error("ConfigView error: \(error.localizedDescription)")
+                Logger.uiLogger.error("ConfigView error: \(error.localizedDescription)")
                 buildVersionLoadingState = .failed
             }
         }

@@ -308,7 +308,6 @@ struct ProgramLogsView: View {
         .padding()
     }
 
-
     private func focusLatestActivity() {
         let programList = programs
         if let running = programList.first(where: { $0.hasRunning }) {
@@ -392,11 +391,10 @@ struct ProgramLogsView: View {
 
     private func durationText(_ run: ProgramRunRecord) -> String {
         let seconds = Int(run.duration.rounded())
-        let h = seconds / 3600
-        let m = (seconds % 3600) / 60
-        let s = seconds % 60
-        if h > 0 { return String(format: "%d:%02d:%02d", h, m, s) }
-        return String(format: "%d:%02d", m, s)
+        let hours = seconds / 3600
+        let minutes = (seconds % 3600) / 60
+        let secs = seconds % 60
+        if hours > 0 { return String(format: "%d:%02d:%02d", hours, minutes, secs) }
+        return String(format: "%d:%02d", minutes, secs)
     }
 }
-
