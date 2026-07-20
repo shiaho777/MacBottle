@@ -55,6 +55,13 @@ struct RunningProcessesView: View {
                                 await killProcess()
                             }
                         }
+                        Button("强制结束运行时", role: .destructive) {
+                            BottleForceStop.forceStop(bottle: bottle, reason: "processes-view")
+                            Task.detached(priority: .userInitiated) {
+                                try? await Task.sleep(for: .milliseconds(300))
+                                await fetchProcesses()
+                            }
+                        }
                     }
                     .padding()
                 }

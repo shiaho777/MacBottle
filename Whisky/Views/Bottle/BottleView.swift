@@ -318,6 +318,12 @@ struct BottleView: View {
             } label: {
                 Label("运行日志", systemImage: "doc.text")
             }
+            Button(role: .destructive) {
+                BottleForceStop.forceStop(bottle: bottle, reason: "bottle-bar")
+            } label: {
+                Label("强制结束运行时", systemImage: "xmark.octagon.fill")
+            }
+            .help("立即结束本容器的 Wine/wineserver（卡死时使用）")
             Spacer()
             if programLoading {
                 ProgressView()

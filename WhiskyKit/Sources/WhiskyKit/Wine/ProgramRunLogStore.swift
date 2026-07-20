@@ -530,6 +530,50 @@ public final class ProgramRunLogStore {
         return nil
     }
 
+    public func markBottleRunsInterrupted(bottle: Bottle) {
+        let bottleKey = Self.bottleKey(for: bottle)
+        let root = Self.bottleDirectory(bottleKey: bottleKey)
+        guard let programDirs = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            for session in sessions.values where session.record.bottleKey == bottleKey && session.isLive {
+                finishRun(runID: session.id, exitCode: 137)
+            }
+            bump()
+            return
+        }
+
+        for dir in programDirs {
+            var isDir: ObjCBool = false
+            guard fileManager.fileExists(atPath: dir.path(percentEncoded: false), isDirectory: &isDir),
+                  isDir.boolValue else { continue }
+            let programKey = dir.lastPathComponent
+            var index = loadIndex(bottleKey: bottleKey, programKey: programKey)
+            var changed = false
+            for idx in index.runs.indices where index.runs[idx].status == .running {
+                var record = index.runs[idx]
+                record.endedAt = Date()
+                record.exitCode = 137
+                record.status = .failed
+                index.runs[idx] = record
+                if let session = sessions[record.id] {
+                    session.update(record: record)
+                    session.append(line: "\n---- force stopped (runtime interrupted) ----\n")
+                }
+                changed = true
+            }
+            if changed {
+                try? saveIndex(index, bottleKey: bottleKey, programKey: programKey)
+            }
+        }
+        for session in sessions.values where session.record.bottleKey == bottleKey && session.isLive {
+            finishRun(runID: session.id, exitCode: 137)
+        }
+        bump()
+    }
+
     public func reconcileStaleRunningRuns(for bottle: Bottle) {
         let bottleKey = Self.bottleKey(for: bottle)
         let root = Self.bottleDirectory(bottleKey: bottleKey)

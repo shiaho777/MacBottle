@@ -265,6 +265,13 @@ struct ProgramLogsView: View {
                 Toggle("跟随底部", isOn: $autoScroll)
                     .toggleStyle(.checkbox)
                     .font(.caption)
+                if selectedRun?.status == .running {
+                    Button("强制结束", role: .destructive) {
+                        BottleForceStop.forceStop(bottle: bottle, reason: "run-log")
+                        store.reconcileStaleRunningRuns(for: bottle)
+                        refreshDetail()
+                    }
+                }
                 Button("在 Finder 中显示") {
                     revealSelected()
                 }
