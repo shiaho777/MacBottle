@@ -96,6 +96,17 @@ public final class ProgramLaunchCoordinator {
         warmingBottleKeys.remove(Self.bottleKey(bottle))
     }
 
+    public func clearWarm(bottle: Bottle) {
+        let key = Self.bottleKey(bottle)
+        warmBottleKeys.remove(key)
+        warmingBottleKeys.remove(key)
+    }
+
+    public func clearAllWarm() {
+        warmBottleKeys.removeAll()
+        warmingBottleKeys.removeAll()
+    }
+
     @discardableResult
     public func beginLaunch(programURL: URL, programName: String, bottle: Bottle) -> Bool {
         let key = Self.programKey(programURL)
@@ -106,6 +117,7 @@ public final class ProgramLaunchCoordinator {
         activeBottleURL = bottle.url
         lastErrorMessage = nil
         phase = .launching(programName: programName, bottleName: bottle.settings.name)
+        scheduleLaunchWatchdog(programURL: programURL, programName: programName)
         return true
     }
 
@@ -120,6 +132,19 @@ public final class ProgramLaunchCoordinator {
         lastErrorMessage = message
         phase = .failed(programName: programName, message: message)
         scheduleClear(after: 6)
+    }
+
+    private func scheduleLaunchWatchdog(programURL: URL, programName: String) {
+        let key = Self.programKey(programURL)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(8))
+            guard launchingKeys.contains(key) else { return }
+            launchingKeys.remove(key)
+            if case .launching = phase {
+                phase = .launched(programName: programName)
+                scheduleClear(after: 2.0)
+            }
+        }
     }
 
     public func dismiss() {

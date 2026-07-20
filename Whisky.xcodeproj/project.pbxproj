@@ -67,7 +67,6 @@
 		8C2AEFC82AED79B700CB568F /* WhiskyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8C2AEFC72AED79B700CB568F /* WhiskyKit */; };
 		8C2AEFCA2AED79CD00CB568F /* WhiskyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8C2AEFC92AED79CD00CB568F /* WhiskyKit */; };
 		8C73E1342AF472FC00B6FB45 /* ProgramMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C73E1332AF472FC00B6FB45 /* ProgramMenuView.swift */; };
-		8CB681E52AED7C6F0018D319 /* WhiskyKit in Resources */ = {isa = PBXBuildFile; fileRef = 8CB681E42AED7C6F0018D319 /* WhiskyKit */; };
 		8CB681E72AED7CD00018D319 /* WhiskyKit in Frameworks */ = {isa = PBXBuildFile; productRef = 8CB681E62AED7CD00018D319 /* WhiskyKit */; };
 		AB0BCABD2B61036E00E21C31 /* RunningProcessesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0BCABC2B61036E00E21C31 /* RunningProcessesView.swift */; };
 		DB696FC82AFAE5DA0037EB2F /* PinCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB696FC72AFAE5DA0037EB2F /* PinCreationView.swift */; };
@@ -583,7 +582,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8CB681E52AED7C6F0018D319 /* WhiskyKit in Resources */,
 				6E40495D29CCA19C006E3F1B /* Preview Assets.xcassets in Resources */,
 				6EB58AC92AEACE5E00B1ED3F /* Localizable.xcstrings in Resources */,
 				6E40495A29CCA19C006E3F1B /* Assets.xcassets in Resources */,
