@@ -40,7 +40,8 @@ public class Wine {
         fileHandle: FileHandle?,
         qualityOfService: QualityOfService = .userInitiated,
         quiet: Bool = false,
-        systemLog: Bool = true
+        systemLog: Bool = true,
+        fileCaptureOnly: Bool = false
     ) throws -> AsyncStream<ProcessOutput> {
         let process = Process()
         process.executableURL = executableURL
@@ -53,7 +54,8 @@ public class Wine {
             name: name ?? args.joined(separator: " "),
             fileHandle: fileHandle,
             quiet: quiet,
-            systemLog: systemLog
+            systemLog: systemLog,
+            fileCaptureOnly: fileCaptureOnly
         )
     }
 
@@ -63,14 +65,16 @@ public class Wine {
         fileHandle: FileHandle?,
         qualityOfService: QualityOfService = .userInitiated,
         quiet: Bool = false,
-        systemLog: Bool = true
+        systemLog: Bool = true,
+        fileCaptureOnly: Bool = false
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
             name: name, args: args, environment: environment, executableURL: wineBinary,
             fileHandle: fileHandle,
             qualityOfService: qualityOfService,
             quiet: quiet,
-            systemLog: systemLog
+            systemLog: systemLog,
+            fileCaptureOnly: fileCaptureOnly
         )
     }
 
@@ -92,12 +96,13 @@ public class Wine {
         qualityOfService: QualityOfService = .userInitiated,
         quiet: Bool = false,
         logFileHandle: FileHandle? = nil,
-        systemLog: Bool = true
+        systemLog: Bool = true,
+        fileCaptureOnly: Bool = false
     ) throws -> AsyncStream<ProcessOutput> {
         let fileHandle: FileHandle?
         if let logFileHandle {
             fileHandle = logFileHandle
-        } else if quiet {
+        } else if quiet || fileCaptureOnly {
             fileHandle = nil
         } else {
             fileHandle = try makeFileHandle()
@@ -117,7 +122,8 @@ public class Wine {
             fileHandle: fileHandle,
             qualityOfService: qualityOfService,
             quiet: quiet,
-            systemLog: systemLog
+            systemLog: systemLog,
+            fileCaptureOnly: fileCaptureOnly && logFileHandle != nil
         )
     }
 
@@ -137,24 +143,49 @@ public class Wine {
     }
 
     public static func prewarmBottle(_ bottle: Bottle) async throws {
-        let alreadyWarm = await MainActor.run {
-            ProgramLaunchCoordinator.shared.isWarm(bottle: bottle)
-        }
-        if alreadyWarm { return }
-
-        await MainActor.run {
+        let gate = await MainActor.run { () -> String in
+            if ProgramLaunchCoordinator.shared.isWarm(bottle: bottle) {
+                return "warm"
+            }
+            if ProgramLaunchCoordinator.shared.isWarming(bottle: bottle) {
+                return "warming"
+            }
             ProgramLaunchCoordinator.shared.beginWarmup(bottle: bottle)
+            return "start"
         }
+
+        if gate == "warm" {
+            return
+        }
+        if gate == "warming" {
+            for _ in 0..<50 {
+                try await Task.sleep(for: .milliseconds(40))
+                let done = await MainActor.run {
+                    ProgramLaunchCoordinator.shared.isWarm(bottle: bottle)
+                        || !ProgramLaunchCoordinator.shared.isWarming(bottle: bottle)
+                }
+                if done {
+                    return
+                }
+            }
+            return
+        }
+
         do {
-            let stream = try runWineserverProcess(
-                name: "wineserver-prewarm",
-                args: ["-p"],
-                environment: constructWineServerEnvironment(for: bottle),
-                fileHandle: nil
-            )
-            for await _ in stream { }
+            let process = Process()
+            process.executableURL = wineserverBinary
+            process.arguments = ["-p"]
+            process.environment = constructWineServerEnvironment(for: bottle)
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            process.qualityOfService = .utility
+            try process.run()
+            BottleProcessRegistry.shared.register(process, bottle: bottle)
+
+            try await Task.sleep(for: .milliseconds(150))
+            let success = process.isRunning || process.terminationStatus == 0
             await MainActor.run {
-                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: true)
+                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: success)
             }
         } catch {
             await MainActor.run {
@@ -174,7 +205,7 @@ public class Wine {
         }
     }
 
-    // swiftlint:disable:next cyclomatic_complexity function_body_length
+    // swiftlint:disable:next function_body_length
     public static func runProgram(
         at url: URL,
         args: [String] = [],
@@ -186,7 +217,9 @@ public class Wine {
         autoSelectEngine: Bool = true,
         captureRunLog: Bool = true
     ) async throws {
-        await ensureBottleReady(bottle)
+        Task(priority: .utility) {
+            await ensureBottleReady(bottle)
+        }
 
         let engineDecision: LaunchEnginePolicy.Decision?
         if autoSelectEngine {
@@ -261,7 +294,8 @@ public class Wine {
             capture = nil
         }
 
-        let quiet = capture == nil && RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
+        let fileCaptureOnly = capture != nil
+        let quiet = !fileCaptureOnly && RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
         let stream = try Self.runWineProcess(
             name: url.lastPathComponent,
             args: launchArgs,
@@ -271,29 +305,15 @@ public class Wine {
             qualityOfService: qos,
             quiet: quiet,
             logFileHandle: capture?.fileHandle,
-            systemLog: capture == nil
+            systemLog: false,
+            fileCaptureOnly: fileCaptureOnly
         )
 
         let runID = capture?.record.id
+        let logFileURL = capture?.fileURL
         let consume: () async -> Void = {
             var exitCode: Int32?
-            var pending: [(String, Bool)] = []
-            pending.reserveCapacity(64)
             var heartbeatTask: Task<Void, Never>?
-
-            let flush: () async -> Void = {
-                guard let runID, !pending.isEmpty else {
-                    pending.removeAll(keepingCapacity: true)
-                    return
-                }
-                let batch = pending
-                pending.removeAll(keepingCapacity: true)
-                await MainActor.run {
-                    for item in batch {
-                        ProgramRunLogStore.shared.appendLine(runID: runID, line: item.0, isError: item.1)
-                    }
-                }
-            }
 
             for await output in stream {
                 switch output {
@@ -309,45 +329,45 @@ public class Wine {
                         }
                         let trackedPID = pid
                         let trackedRunID = runID
+                        let trackedLogURL = logFileURL
                         heartbeatTask = Task.detached {
                             var tick = 0
                             while !Task.isCancelled {
-                                try? await Task.sleep(for: .seconds(3))
+                                try? await Task.sleep(for: .seconds(10))
                                 guard !Task.isCancelled else { return }
                                 if kill(trackedPID, 0) != 0 {
                                     return
                                 }
                                 tick += 1
-                                let line = "[heartbeat] still running (tick \(tick), pid \(trackedPID))"
-                                await MainActor.run {
-                                    ProgramRunLogStore.shared.appendLine(
-                                        runID: trackedRunID,
-                                        line: line
-                                    )
+                                let line = "[heartbeat] still running (tick \(tick), pid \(trackedPID))\n"
+                                if let trackedLogURL {
+                                    if let handle = try? FileHandle(forWritingTo: trackedLogURL) {
+                                        defer { try? handle.close() }
+                                        _ = try? handle.seekToEnd()
+                                        if let data = line.data(using: .utf8) {
+                                            try? handle.write(contentsOf: data)
+                                        }
+                                    }
+                                }
+                                if tick == 1 || tick % 3 == 0 {
+                                    await MainActor.run {
+                                        ProgramRunLogStore.shared.noteHeartbeat(
+                                            runID: trackedRunID,
+                                            tick: tick,
+                                            processID: trackedPID
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                case .message(let line):
-                    if runID != nil {
-                        pending.append((line, false))
-                        if pending.count >= 32 {
-                            await flush()
-                        }
-                    }
-                case .error(let line):
-                    if runID != nil {
-                        pending.append((line, true))
-                        if pending.count >= 32 {
-                            await flush()
-                        }
-                    }
+                case .message, .error:
+                    break
                 case .terminated(let process):
                     exitCode = process.terminationStatus
                 }
             }
             heartbeatTask?.cancel()
-            await flush()
             if let runID {
                 await MainActor.run {
                     ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: exitCode)

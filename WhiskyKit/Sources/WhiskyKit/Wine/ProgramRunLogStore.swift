@@ -240,6 +240,15 @@ public final class ProgramRunLogStore {
         let prefix = isError ? "[stderr] " : ""
         let entry = line.hasSuffix("\n") ? "\(prefix)\(line)" : "\(prefix)\(line)\n"
         session.append(line: entry)
+        if session.lines.count % 24 == 0 {
+            bump()
+        }
+    }
+
+    public func noteHeartbeat(runID: UUID, tick: Int, processID: Int32) {
+        guard let session = sessions[runID] else { return }
+        let line = "[heartbeat] still running (tick \(tick), pid \(processID))\n"
+        session.append(line: line)
         bump()
     }
 
@@ -296,7 +305,7 @@ public final class ProgramRunLogStore {
 
         if let session = sessions[runID] {
             session.update(record: record)
-            if let content = try? String(contentsOf: fileURL, encoding: .utf8), !content.isEmpty {
+            if let content = Self.readTailText(url: fileURL, maxBytes: 400_000), !content.isEmpty {
                 session.replaceText(content)
             }
         }
@@ -729,6 +738,19 @@ public final class ProgramRunLogStore {
         let result = String(scalars)
         if result.isEmpty { return "program" }
         return String(result.prefix(48))
+    }
+
+    private static func readTailText(url: URL, maxBytes: Int) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        if size <= maxBytes {
+            try? handle.seek(toOffset: 0)
+        } else {
+            try? handle.seek(toOffset: size - UInt64(maxBytes))
+        }
+        guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
+        return String(bytes: data, encoding: .utf8)
     }
 
     private func bump() {

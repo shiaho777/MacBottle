@@ -31,10 +31,17 @@ public extension Process {
         name: String,
         fileHandle: FileHandle?,
         quiet: Bool = false,
-        systemLog: Bool = true
+        systemLog: Bool = true,
+        fileCaptureOnly: Bool = false
     ) throws -> AsyncStream<ProcessOutput> {
         let stream: AsyncStream<ProcessOutput>
-        if quiet {
+        if fileCaptureOnly, let fileHandle {
+            stream = makeFileCaptureStream(name: name, fileHandle: fileHandle)
+            if systemLog {
+                Logger.wineKit.info("Running process \(name) (file-capture)")
+            }
+            fileHandle.writeInfo(for: self)
+        } else if quiet {
             stream = makeQuietStream(name: name, fileHandle: fileHandle)
             if systemLog {
                 Logger.wineKit.info("Running process \(name) (quiet)")
@@ -111,6 +118,46 @@ public extension Process {
         }
     }
 
+    private func makeFileCaptureStream(name: String, fileHandle: FileHandle) -> AsyncStream<ProcessOutput> {
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        standardOutput = outPipe
+        standardError = errPipe
+
+        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+            continuation.onTermination = { @Sendable termination in
+                if case .cancelled = termination, self.isRunning {
+                    self.terminate()
+                }
+            }
+
+            continuation.yield(.started(self))
+
+            let box = FileWriteBox(handle: fileHandle)
+            outPipe.fileHandleForReading.readabilityHandler = { handle in
+                box.write(handle.availableData)
+            }
+            errPipe.fileHandleForReading.readabilityHandler = { handle in
+                box.write(handle.availableData)
+            }
+
+            self.terminationHandler = { (process: Process) in
+                outPipe.fileHandleForReading.readabilityHandler = nil
+                errPipe.fileHandleForReading.readabilityHandler = nil
+                if let data = try? outPipe.fileHandleForReading.readToEnd() {
+                    box.write(data)
+                }
+                if let data = try? errPipe.fileHandleForReading.readToEnd() {
+                    box.write(data)
+                }
+                box.close()
+                process.logTermination(name: name)
+                continuation.yield(.terminated(process))
+                continuation.finish()
+            }
+        }
+    }
+
     private func makeQuietStream(name: String, fileHandle: FileHandle?) -> AsyncStream<ProcessOutput> {
         standardOutput = FileHandle.nullDevice
         standardError = FileHandle.nullDevice
@@ -156,6 +203,29 @@ public extension Process {
         if let environment = environment {
             Logger.wineKit.info("Environment: \(environment)")
         }
+    }
+}
+
+private final class FileWriteBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var handle: FileHandle?
+
+    init(handle: FileHandle) {
+        self.handle = handle
+    }
+
+    func write(_ data: Data) {
+        guard !data.isEmpty else { return }
+        lock.lock()
+        handle?.write(data)
+        lock.unlock()
+    }
+
+    func close() {
+        lock.lock()
+        try? handle?.close()
+        handle = nil
+        lock.unlock()
     }
 }
 

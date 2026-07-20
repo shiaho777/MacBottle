@@ -159,9 +159,9 @@ public enum RuntimeLaunchOptimizer {
     public static func processQualityOfService(for profile: RuntimeProfile) -> QualityOfService {
         switch profile {
         case .classic32, .modern64, .generic:
-            return .userInteractive
-        case .installer:
             return .userInitiated
+        case .installer:
+            return .utility
         }
     }
 

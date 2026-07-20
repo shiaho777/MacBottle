@@ -85,6 +85,7 @@ public enum BottleForceStop {
 
         BottleProcessRegistry.shared.unregisterFinished(for: bottle)
         Task { @MainActor in
+            ProgramLaunchCoordinator.shared.clearWarm(bottle: bottle)
             ProgramRunLogStore.shared.markBottleRunsInterrupted(bottle: bottle)
         }
     }
@@ -95,6 +96,9 @@ public enum BottleForceStop {
         }
         for process in BottleProcessRegistry.shared.allRegisteredProcesses() {
             hardKill(process: process)
+        }
+        Task { @MainActor in
+            ProgramLaunchCoordinator.shared.clearAllWarm()
         }
     }
 
