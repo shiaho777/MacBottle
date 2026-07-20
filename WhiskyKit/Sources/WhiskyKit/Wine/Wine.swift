@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import Darwin
 import os.log
 
 public class Wine {
@@ -173,6 +174,7 @@ public class Wine {
         }
     }
 
+    // swiftlint:disable:next cyclomatic_complexity function_body_length
     public static func runProgram(
         at url: URL,
         args: [String] = [],
@@ -277,6 +279,7 @@ public class Wine {
             var exitCode: Int32?
             var pending: [(String, Bool)] = []
             pending.reserveCapacity(64)
+            var heartbeatTask: Task<Void, Never>?
 
             let flush: () async -> Void = {
                 guard let runID, !pending.isEmpty else {
@@ -295,6 +298,7 @@ public class Wine {
             for await output in stream {
                 switch output {
                 case .started(let process):
+                    BottleProcessRegistry.shared.register(process, bottle: bottle)
                     if let runID {
                         let pid = process.processIdentifier
                         await MainActor.run {
@@ -302,6 +306,26 @@ public class Wine {
                                 runID: runID,
                                 processID: pid
                             )
+                        }
+                        let trackedPID = pid
+                        let trackedRunID = runID
+                        heartbeatTask = Task.detached {
+                            var tick = 0
+                            while !Task.isCancelled {
+                                try? await Task.sleep(for: .seconds(3))
+                                guard !Task.isCancelled else { return }
+                                if kill(trackedPID, 0) != 0 {
+                                    return
+                                }
+                                tick += 1
+                                let line = "[heartbeat] still running (tick \(tick), pid \(trackedPID))"
+                                await MainActor.run {
+                                    ProgramRunLogStore.shared.appendLine(
+                                        runID: trackedRunID,
+                                        line: line
+                                    )
+                                }
+                            }
                         }
                     }
                 case .message(let line):
@@ -322,12 +346,14 @@ public class Wine {
                     exitCode = process.terminationStatus
                 }
             }
+            heartbeatTask?.cancel()
             await flush()
             if let runID {
                 await MainActor.run {
                     ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: exitCode)
                 }
             }
+            BottleProcessRegistry.shared.unregisterFinished(for: bottle)
         }
 
         if wait {
@@ -454,7 +480,7 @@ public class Wine {
     }
 
     public static func killBottle(bottle: Bottle) async throws {
-        try await runWineserver(["-k"], bottle: bottle)
+        BottleForceStop.forceStop(bottle: bottle, reason: "killBottle")
     }
 
     public static func enableDXVK(bottle: Bottle) throws {

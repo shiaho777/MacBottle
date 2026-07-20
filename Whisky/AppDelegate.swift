@@ -44,9 +44,29 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if UserDefaults.standard.bool(forKey: "killOnTerminate") {
-            WhiskyApp.killBottles()
+        let defaults = UserDefaults.standard
+        let killOnTerminate: Bool
+        if defaults.object(forKey: "killOnTerminate") == nil {
+            killOnTerminate = true
+        } else {
+            killOnTerminate = defaults.bool(forKey: "killOnTerminate")
         }
+        if killOnTerminate {
+            WhiskyApp.killBottles(force: true)
+        }
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let defaults = UserDefaults.standard
+        let killOnTerminate: Bool
+        if defaults.object(forKey: "killOnTerminate") == nil {
+            killOnTerminate = true
+        } else {
+            killOnTerminate = defaults.bool(forKey: "killOnTerminate")
+        }
+        guard killOnTerminate else { return .terminateNow }
+        WhiskyApp.killBottles(force: true)
+        return .terminateNow
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

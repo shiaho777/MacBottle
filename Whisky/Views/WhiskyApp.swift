@@ -128,8 +128,12 @@ struct WhiskyApp: App {
         }
     }
 
-    static func killBottles() {
+    static func killBottles(force: Bool = true) {
         let bottles = BottleVM.shared.bottles
+        if force {
+            BottleForceStop.forceStopAllBottles(bottles: bottles)
+            return
+        }
         Task {
             await withTaskGroup(of: Void.self) { group in
                 for bottle in bottles {
