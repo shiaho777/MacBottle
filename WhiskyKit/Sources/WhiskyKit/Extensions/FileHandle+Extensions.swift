@@ -63,7 +63,23 @@ extension FileHandle {
         }
 
         if let environment = process.environment, !environment.isEmpty {
-            header += "Environment:\n\(environment as AnyObject)\n\n"
+            let keepExact: Set<String> = [
+                "PATH", "HOME", "TMPDIR", "USER", "LOGNAME", "SHELL",
+                "WINEPREFIX", "WINEDEBUG", "WINEDLLOVERRIDES", "WINEESYNC", "WINEMSYNC",
+                "WINE_DISABLE_KERNEL_WRITEWATCH", "WINEDLLPATH", "GST_DEBUG",
+                "DXVK_LOG_LEVEL", "DXVK_LOG_PATH", "DXVK_STATE_CACHE", "DXVK_HUD", "DXVK_ASYNC",
+                "DXVK_FRAME_RATE", "D3DMETAL_FORCE_METAL", "ROSETTA_ADVERTISE_AVX",
+                "DYLD_FALLBACK_LIBRARY_PATH"
+            ]
+            let filtered = environment.filter { key, _ in
+                keepExact.contains(key)
+                    || key.hasPrefix("WINE")
+                    || key.hasPrefix("DXVK")
+                    || key.hasPrefix("MVK_")
+                    || key.hasPrefix("MTL_")
+            }
+            let sorted = filtered.keys.sorted().map { "\($0)=\(filtered[$0] ?? "")" }.joined(separator: "\n")
+            header += "Environment:\n\(sorted)\n\n"
         }
 
         write(line: header)

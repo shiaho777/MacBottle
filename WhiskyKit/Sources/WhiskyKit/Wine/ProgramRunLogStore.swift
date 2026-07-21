@@ -164,39 +164,41 @@ public final class ProgramRunLogStore {
         return decoder
     }()
 
-    public static var rootFolder: URL {
+    nonisolated public static var rootFolder: URL {
         Wine.logsFolder.appending(path: "ProgramRuns", directoryHint: .isDirectory)
     }
 
+    nonisolated public static let previewMaxBytes = 128 * 1024
+    nonisolated public static let captureMaxBytes = 12 * 1024 * 1024
+
     private init() {}
 
-    public static func bottleKey(for bottle: Bottle) -> String {
+    nonisolated public static func bottleKey(for bottle: Bottle) -> String {
         stableKey(for: bottle.url.standardizedFileURL.path(percentEncoded: false))
     }
 
-    public static func programKey(for url: URL) -> String {
+    nonisolated public static func programKey(for url: URL) -> String {
         let path = url.standardizedFileURL.path(percentEncoded: false)
         let base = url.deletingPathExtension().lastPathComponent
         let safe = sanitize(base)
         return "\(safe)-\(stableKey(for: path))"
     }
-
-    public func beginRun(
+    nonisolated public static func prepareRunCapture(
         programURL: URL,
         bottle: Bottle
     ) throws -> ProgramRunCapture {
-        let bottleKey = Self.bottleKey(for: bottle)
-        let programKey = Self.programKey(for: programURL)
+        let bottleKey = bottleKey(for: bottle)
+        let programKey = programKey(for: programURL)
         let runID = UUID()
         let fileName = "\(runID.uuidString).log"
-        let directory = Self.programDirectory(bottleKey: bottleKey, programKey: programKey)
-        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = programDirectory(bottleKey: bottleKey, programKey: programKey)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let fileURL = directory.appending(path: fileName)
         try "".write(to: fileURL, atomically: true, encoding: .utf8)
         let handle = try FileHandle(forWritingTo: fileURL)
 
-        var record = ProgramRunRecord(
+        let record = ProgramRunRecord(
             id: runID,
             programKey: programKey,
             programName: programURL.lastPathComponent,
@@ -218,23 +220,31 @@ public final class ProgramRunLogStore {
         handle.write(line: "Program: \(record.programName)\n")
         handle.write(line: "Program Path: \(record.programPath)\n")
         handle.write(line: "Run ID: \(runID.uuidString)\n")
-        let debugMode = Self.verboseWineDebugEnabled
-            ? "verbose (\(Self.verboseWineDebugChannels))"
+        let debugMode = verboseWineDebugEnabled
+            ? "verbose (\(verboseWineDebugChannels))"
             : "performance (WINEDEBUG=-all)"
         handle.write(line: "Capture Mode: \(debugMode)\n")
         handle.write(line: "---- begin process output ----\n\n")
 
-        var index = loadIndex(bottleKey: bottleKey, programKey: programKey)
+        var index = loadIndexStatic(bottleKey: bottleKey, programKey: programKey)
         index.runs.insert(record, at: 0)
-        try saveIndex(index, bottleKey: bottleKey, programKey: programKey)
-
-        let session = ProgramRunLogSession(record: record)
-        sessions[runID] = session
-        bump()
+        try saveIndexStatic(index, bottleKey: bottleKey, programKey: programKey)
 
         return ProgramRunCapture(record: record, fileHandle: handle, fileURL: fileURL)
     }
-
+    public func beginRun(
+        programURL: URL,
+        bottle: Bottle
+    ) throws -> ProgramRunCapture {
+        let capture = try Self.prepareRunCapture(programURL: programURL, bottle: bottle)
+        adoptPreparedCapture(capture)
+        return capture
+    }
+    public func adoptPreparedCapture(_ capture: ProgramRunCapture) {
+        guard sessions[capture.record.id] == nil else { return }
+        sessions[capture.record.id] = ProgramRunLogSession(record: capture.record)
+        bump()
+    }
     public func appendLine(runID: UUID, line: String, isError: Bool = false) {
         guard let session = sessions[runID] else { return }
         let prefix = isError ? "[stderr] " : ""
@@ -244,14 +254,12 @@ public final class ProgramRunLogStore {
             bump()
         }
     }
-
     public func noteHeartbeat(runID: UUID, tick: Int, processID: Int32) {
         guard let session = sessions[runID] else { return }
         let line = "[heartbeat] still running (tick \(tick), pid \(processID))\n"
         session.append(line: line)
         bump()
     }
-
     public func attachHostProcess(runID: UUID, processID: Int32) {
         if let session = sessions[runID] {
             var record = session.record
@@ -319,7 +327,6 @@ public final class ProgramRunLogStore {
     }
 
     public func programs(for bottle: Bottle, sort: ProgramRunLogSort = .newest) -> [ProgramRunProgramSummary] {
-        reconcileStaleRunningRuns(for: bottle)
         let bottleKey = Self.bottleKey(for: bottle)
         let root = Self.bottleDirectory(bottleKey: bottleKey)
         guard let programDirs = try? fileManager.contentsOfDirectory(
@@ -368,7 +375,6 @@ public final class ProgramRunLogStore {
         programKey: String,
         sort: ProgramRunLogSort = .newest
     ) -> [ProgramRunRecord] {
-        reconcileStaleRunningRuns(for: bottle)
         let bottleKey = Self.bottleKey(for: bottle)
         var runs = loadIndex(bottleKey: bottleKey, programKey: programKey).runs
         for session in sessions.values where session.record.programKey == programKey
@@ -397,25 +403,31 @@ public final class ProgramRunLogStore {
     }
 
     public func readLogText(for record: ProgramRunRecord) -> String {
-        if let session = sessions[record.id] {
-            if !session.text.isEmpty {
-                return session.text
-            }
+        if let session = sessions[record.id], !session.text.isEmpty {
+            return session.text
         }
-        let url = logFileURL(for: record)
-        return (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        return Self.readTailText(url: logFileURL(for: record), maxBytes: Self.previewMaxBytes) ?? ""
+    }
+
+    nonisolated public static func readPreviewText(url: URL, maxBytes: Int = 128 * 1024) -> String {
+        let body = readTailText(url: url, maxBytes: maxBytes) ?? ""
+        if body.isEmpty { return body }
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false)),
+           let size = attrs[.size] as? NSNumber,
+           size.intValue > maxBytes {
+            return "[showing last \(maxBytes) bytes of \(size.intValue)-byte log]\n\n" + body
+        }
+        return body
     }
 
     public func loadSessionText(for record: ProgramRunRecord) -> ProgramRunLogSession {
+        let preview = Self.readPreviewText(url: logFileURL(for: record), maxBytes: Self.previewMaxBytes)
         if let existing = sessions[record.id] {
-            if existing.text.isEmpty {
-                let text = readLogText(for: record)
-                existing.replaceText(text)
-            }
+            existing.replaceText(preview)
             return existing
         }
         let session = ProgramRunLogSession(record: record)
-        session.replaceText(readLogText(for: record))
+        session.replaceText(preview)
         sessions[record.id] = session
         return session
     }
@@ -698,41 +710,60 @@ public final class ProgramRunLogStore {
         }
         return nil
     }
-
     private func loadIndex(bottleKey: String, programKey: String) -> ProgramRunIndexFile {
-        let url = Self.indexURL(bottleKey: bottleKey, programKey: programKey)
+        Self.loadIndexStatic(bottleKey: bottleKey, programKey: programKey)
+    }
+    private func saveIndex(_ index: ProgramRunIndexFile, bottleKey: String, programKey: String) throws {
+        try Self.saveIndexStatic(index, bottleKey: bottleKey, programKey: programKey)
+    }
+    nonisolated private static func makeEncoder() -> JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }
+    nonisolated private static func makeDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+    nonisolated private static func loadIndexStatic(bottleKey: String, programKey: String) -> ProgramRunIndexFile {
+        let url = indexURL(bottleKey: bottleKey, programKey: programKey)
         guard let data = try? Data(contentsOf: url),
-              let index = try? decoder.decode(ProgramRunIndexFile.self, from: data) else {
+              let index = try? makeDecoder().decode(ProgramRunIndexFile.self, from: data) else {
             return ProgramRunIndexFile(runs: [])
         }
         return index
     }
-
-    private func saveIndex(_ index: ProgramRunIndexFile, bottleKey: String, programKey: String) throws {
-        let directory = Self.programDirectory(bottleKey: bottleKey, programKey: programKey)
-        try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
-        let data = try encoder.encode(index)
-        try data.write(to: Self.indexURL(bottleKey: bottleKey, programKey: programKey), options: .atomic)
+    nonisolated private static func saveIndexStatic(
+        _ index: ProgramRunIndexFile,
+        bottleKey: String,
+        programKey: String
+    ) throws {
+        let directory = programDirectory(bottleKey: bottleKey, programKey: programKey)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let data = try makeEncoder().encode(index)
+        try data.write(to: indexURL(bottleKey: bottleKey, programKey: programKey), options: .atomic)
     }
 
-    private static func bottleDirectory(bottleKey: String) -> URL {
+    nonisolated private static func bottleDirectory(bottleKey: String) -> URL {
         rootFolder.appending(path: bottleKey, directoryHint: .isDirectory)
     }
 
-    private static func programDirectory(bottleKey: String, programKey: String) -> URL {
+    nonisolated private static func programDirectory(bottleKey: String, programKey: String) -> URL {
         bottleDirectory(bottleKey: bottleKey).appending(path: programKey, directoryHint: .isDirectory)
     }
 
-    private static func indexURL(bottleKey: String, programKey: String) -> URL {
+    nonisolated private static func indexURL(bottleKey: String, programKey: String) -> URL {
         programDirectory(bottleKey: bottleKey, programKey: programKey).appending(path: "index.json")
     }
 
-    private static func stableKey(for path: String) -> String {
+    nonisolated private static func stableKey(for path: String) -> String {
         let digest = SHA256.hash(data: Data(path.utf8))
         return digest.prefix(10).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func sanitize(_ value: String) -> String {
+    nonisolated private static func sanitize(_ value: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
         let scalars = value.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
         let result = String(scalars)
@@ -740,7 +771,7 @@ public final class ProgramRunLogStore {
         return String(result.prefix(48))
     }
 
-    private static func readTailText(url: URL, maxBytes: Int) -> String? {
+    nonisolated public static func readTailText(url: URL, maxBytes: Int) -> String? {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }
         let size = (try? handle.seekToEnd()) ?? 0

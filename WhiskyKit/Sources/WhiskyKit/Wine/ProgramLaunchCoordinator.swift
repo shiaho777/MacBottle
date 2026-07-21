@@ -65,6 +65,12 @@ public final class ProgramLaunchCoordinator {
         launchingKeys.contains(Self.programKey(programURL))
     }
 
+    public func noteAlreadyLaunching(programName: String) {
+        lastErrorMessage = "「\(programName)」正在启动中，请稍候"
+        phase = .failed(programName: programName, message: lastErrorMessage ?? "")
+        scheduleClear(after: 2.5)
+    }
+
     public func canStart(programURL: URL) -> Bool {
         !launchingKeys.contains(Self.programKey(programURL))
     }

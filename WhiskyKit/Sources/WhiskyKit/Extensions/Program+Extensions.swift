@@ -49,6 +49,7 @@ extension Program {
                 programName: programName,
                 bottle: bottle
             ) else {
+                ProgramLaunchCoordinator.shared.noteAlreadyLaunching(programName: programName)
                 return
             }
 

@@ -280,8 +280,10 @@ public class Wine {
 
         let capture: ProgramRunCapture?
         if captureRunLog {
-            capture = try await MainActor.run {
-                try ProgramRunLogStore.shared.beginRun(programURL: url, bottle: bottle)
+            let prepared = try ProgramRunLogStore.prepareRunCapture(programURL: url, bottle: bottle)
+            capture = prepared
+            Task { @MainActor in
+                ProgramRunLogStore.shared.adoptPreparedCapture(prepared)
             }
             if environment["WINEDEBUG"] == nil {
                 if ProgramRunLogStore.verboseWineDebugEnabled {
@@ -294,8 +296,11 @@ public class Wine {
             capture = nil
         }
 
-        let fileCaptureOnly = capture != nil
-        let quiet = !fileCaptureOnly && RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
+        let verboseCapture = capture != nil && ProgramRunLogStore.verboseWineDebugEnabled
+        let fileCaptureOnly = verboseCapture
+        let quiet = !fileCaptureOnly && (
+            capture != nil || RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
+        )
         let stream = try Self.runWineProcess(
             name: url.lastPathComponent,
             args: launchArgs,
@@ -514,17 +519,66 @@ public class Wine {
         )
     }
 
+    private static func baseHostEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        let stripKeys = [
+            "DYLD_INSERT_LIBRARIES",
+            "DYLD_LIBRARY_PATH",
+            "DYLD_FRAMEWORK_PATH",
+            "DYLD_FALLBACK_LIBRARY_PATH",
+            "DYLD_VERSIONED_LIBRARY_PATH",
+            "DYLD_VERSIONED_FRAMEWORK_PATH",
+            "LD_LIBRARY_PATH",
+            "LD_PRELOAD"
+        ]
+        for key in stripKeys {
+            env.removeValue(forKey: key)
+        }
+        for key in Array(env.keys) where key.hasPrefix("DYLD_") {
+            env.removeValue(forKey: key)
+        }
+
+        let wineBin = WhiskyWineInstaller.binFolder.path
+        let pathParts = (env["PATH"] ?? "")
+            .split(separator: ":")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+        if pathParts.contains(wineBin) {
+            env["PATH"] = pathParts.joined(separator: ":")
+        } else if pathParts.isEmpty {
+            env["PATH"] = "\(wineBin):/usr/bin:/bin:/usr/sbin:/sbin"
+        } else {
+            env["PATH"] = ([wineBin] + pathParts).joined(separator: ":")
+        }
+
+        if env["HOME"]?.isEmpty != false {
+            env["HOME"] = NSHomeDirectory()
+        }
+        if env["TMPDIR"]?.isEmpty != false {
+            env["TMPDIR"] = FileManager.default.temporaryDirectory.path
+        }
+        if env["USER"]?.isEmpty != false {
+            env["USER"] = NSUserName()
+        }
+        if env["LOGNAME"]?.isEmpty != false {
+            env["LOGNAME"] = NSUserName()
+        }
+        if env["SHELL"]?.isEmpty != false {
+            env["SHELL"] = "/bin/zsh"
+        }
+        return env
+    }
+
     /// Construct an environment merging the bottle values with the given values
     private static func constructWineEnvironment(
         for bottle: Bottle,
         environment: [String: String] = [:],
         executableURL: URL? = nil
     ) -> [String: String] {
-        var result: [String: String] = [
-            "WINEPREFIX": bottle.url.path,
-            "WINEDEBUG": "-all",
-            "GST_DEBUG": "0"
-        ]
+        var result = baseHostEnvironment()
+        result["WINEPREFIX"] = bottle.url.path
+        result["WINEDEBUG"] = "-all"
+        result["GST_DEBUG"] = "0"
         bottle.settings.environmentVariables(wineEnv: &result)
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: executableURL)
         result = RuntimeLaunchOptimizer.environment(
@@ -540,11 +594,10 @@ public class Wine {
     private static func constructWineServerEnvironment(
         for bottle: Bottle, environment: [String: String] = [:]
     ) -> [String: String] {
-        var result: [String: String] = [
-            "WINEPREFIX": bottle.url.path,
-            "WINEDEBUG": "-all",
-            "GST_DEBUG": "0"
-        ]
+        var result = baseHostEnvironment()
+        result["WINEPREFIX"] = bottle.url.path
+        result["WINEDEBUG"] = "-all"
+        result["GST_DEBUG"] = "0"
         guard !environment.isEmpty else { return result }
         result.merge(environment, uniquingKeysWith: { $1 })
         return result
