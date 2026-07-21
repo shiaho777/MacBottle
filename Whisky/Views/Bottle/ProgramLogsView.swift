@@ -28,26 +28,19 @@ struct ProgramLogsView: View {
     @State private var selectedRunIDs: Set<UUID> = []
     @State private var sort: ProgramRunLogSort = .newest
     @State private var detailText: String = ""
+    @State private var isLoadingDetail = false
+    @State private var detailToken = UUID()
     @State private var autoScroll = true
     @State private var verboseWineDebug = ProgramRunLogStore.verboseWineDebugEnabled
-
-    private var programs: [ProgramRunProgramSummary] {
-        _ = store.revision
-        return store.programs(for: bottle, sort: sort)
-    }
-
-    private var runs: [ProgramRunRecord] {
-        _ = store.revision
-        guard let selectedProgramKey else { return [] }
-        return store.runs(for: bottle, programKey: selectedProgramKey, sort: sort)
-    }
+    @State private var programsCache: [ProgramRunProgramSummary] = []
+    @State private var runsCache: [ProgramRunRecord] = []
 
     private var selectedRun: ProgramRunRecord? {
         if let selectedRunID,
-           let run = runs.first(where: { $0.id == selectedRunID }) {
+           let run = runsCache.first(where: { $0.id == selectedRunID }) {
             return run
         }
-        return runs.first
+        return runsCache.first
     }
 
     var body: some View {
@@ -74,7 +67,7 @@ struct ProgramLogsView: View {
 
                 Toggle("详细调试", isOn: $verboseWineDebug)
                     .toggleStyle(.checkbox)
-                    .help("开启后日志更详细，但启动会明显变慢")
+                    .help("开启后捕获 Wine 详细输出（最多约 12MB/次）；关闭时仅记录元数据与心跳")
                     .onChange(of: verboseWineDebug) { _, newValue in
                         ProgramRunLogStore.verboseWineDebugEnabled = newValue
                     }
@@ -101,6 +94,7 @@ struct ProgramLogsView: View {
                             self.selectedRunID = nil
                             selectedRunIDs = []
                             detailText = ""
+                            reloadCaches()
                         }
                     }
                     .disabled(selectedProgramKey == nil)
@@ -111,36 +105,45 @@ struct ProgramLogsView: View {
                         selectedRunID = nil
                         selectedRunIDs = []
                         detailText = ""
+                        reloadCaches()
                     }
                 }
             }
         }
         .onAppear {
             store.reconcileStaleRunningRuns(for: bottle)
+            reloadCaches()
             focusLatestActivity()
             refreshDetail()
         }
         .task(id: bottle.url) {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(3))
                 store.reconcileStaleRunningRuns(for: bottle)
+                reloadCaches()
+                if selectedRun?.status == .running {
+                    refreshDetail()
+                }
             }
         }
         .onChange(of: store.revision) { _, _ in
-            if selectedProgramKey == nil || !programs.contains(where: { $0.programKey == selectedProgramKey }) {
+            reloadCaches()
+            if selectedProgramKey == nil || !programsCache.contains(where: { $0.programKey == selectedProgramKey }) {
                 focusLatestActivity()
             }
             refreshDetail()
         }
         .onChange(of: selectedProgramKey) { _, _ in
-            selectedRunID = runs.first?.id
-            selectedRunIDs = []
+            reloadRunsOnly()
+            selectedRunID = runsCache.first?.id
+            selectedRunIDs = selectedRunID.map { [$0] } ?? []
             refreshDetail()
         }
         .onChange(of: selectedRunID) { _, _ in
             refreshDetail()
         }
         .onChange(of: sort) { _, _ in
+            reloadCaches()
             refreshDetail()
         }
     }
@@ -151,13 +154,13 @@ struct ProgramLogsView: View {
                 .font(.headline)
                 .padding(12)
             Divider()
-            if programs.isEmpty {
+            if programsCache.isEmpty {
                 emptyState(
                     title: "暂无程序日志",
                     subtitle: "运行程序后会按程序分类记录完整日志"
                 )
             } else {
-                List(programs, selection: $selectedProgramKey) { program in
+                List(programsCache, selection: $selectedProgramKey) { program in
                     HStack(spacing: 8) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(program.programName)
@@ -196,11 +199,11 @@ struct ProgramLogsView: View {
             }
             .padding(12)
             Divider()
-            if runs.isEmpty {
+            if runsCache.isEmpty {
                 emptyState(title: "无运行记录", subtitle: "选择左侧程序查看每次运行日志")
             } else {
                 List(selection: $selectedRunIDs) {
-                    ForEach(runs) { run in
+                    ForEach(runsCache) { run in
                         runRow(run)
                             .tag(run.id)
                             .contentShape(Rectangle())
@@ -262,6 +265,10 @@ struct ProgramLogsView: View {
                         .font(.headline)
                 }
                 Spacer()
+                if isLoadingDetail {
+                    ProgressView()
+                        .controlSize(.small)
+                }
                 Toggle("跟随底部", isOn: $autoScroll)
                     .toggleStyle(.checkbox)
                     .font(.caption)
@@ -269,6 +276,7 @@ struct ProgramLogsView: View {
                     Button("强制结束", role: .destructive) {
                         BottleForceStop.forceStop(bottle: bottle, reason: "run-log")
                         store.reconcileStaleRunningRuns(for: bottle)
+                        reloadCaches()
                         refreshDetail()
                     }
                 }
@@ -280,26 +288,15 @@ struct ProgramLogsView: View {
             .padding(12)
             Divider()
 
-            if detailText.isEmpty {
-                emptyState(title: "选择一条运行记录", subtitle: "可查看、复制、导出完整日志")
+            if selectedRun == nil {
+                emptyState(title: "选择一条运行记录", subtitle: "可查看、复制、导出日志预览（末尾片段）")
+            } else if isLoadingDetail && detailText.isEmpty {
+                emptyState(title: "正在加载…", subtitle: "仅读取日志末尾预览，避免卡顿")
+            } else if detailText.isEmpty {
+                emptyState(title: "暂无输出", subtitle: "该次运行尚未产生可显示日志")
             } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        Text(detailText)
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(12)
-                            .id("log-bottom")
-                    }
-                    .background(Color(nsColor: .textBackgroundColor))
-                    .onChange(of: detailText) { _, _ in
-                        guard autoScroll else { return }
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            proxy.scrollTo("log-bottom", anchor: .bottom)
-                        }
-                    }
-                }
+                LogTextView(text: detailText, autoScroll: autoScroll)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -322,33 +319,61 @@ struct ProgramLogsView: View {
         .padding()
     }
 
+    private func reloadCaches() {
+        programsCache = store.programs(for: bottle, sort: sort)
+        reloadRunsOnly()
+    }
+
+    private func reloadRunsOnly() {
+        guard let selectedProgramKey else {
+            runsCache = []
+            return
+        }
+        runsCache = store.runs(for: bottle, programKey: selectedProgramKey, sort: sort)
+    }
+
     private func focusLatestActivity() {
-        let programList = programs
-        if let running = programList.first(where: { $0.hasRunning }) {
+        if let running = programsCache.first(where: { $0.hasRunning }) {
             selectedProgramKey = running.programKey
         } else if selectedProgramKey == nil {
-            selectedProgramKey = programList.first?.programKey
+            selectedProgramKey = programsCache.first?.programKey
         }
-
-        let runList = runs
-        if let running = runList.first(where: { $0.status == .running }) {
+        reloadRunsOnly()
+        if let running = runsCache.first(where: { $0.status == .running }) {
             selectedRunID = running.id
             selectedRunIDs = [running.id]
         } else if selectedRunID == nil {
-            selectedRunID = runList.first?.id
+            selectedRunID = runsCache.first?.id
+            selectedRunIDs = selectedRunID.map { [$0] } ?? []
         }
     }
 
     private func refreshDetail() {
         guard let run = selectedRun else {
             detailText = ""
+            isLoadingDetail = false
             return
         }
         if selectedRunID != run.id {
             selectedRunID = run.id
         }
-        let session = store.loadSessionText(for: run)
-        detailText = session.text
+        let url = store.logFileURL(for: run)
+        let runID = run.id
+        let token = UUID()
+        detailToken = token
+        isLoadingDetail = true
+
+        Task.detached(priority: .utility) {
+            let text = ProgramRunLogStore.readPreviewText(
+                url: url,
+                maxBytes: ProgramRunLogStore.previewMaxBytes
+            )
+            await MainActor.run {
+                guard detailToken == token, selectedRunID == runID else { return }
+                detailText = text
+                isLoadingDetail = false
+            }
+        }
     }
 
     private func copySelected() {
@@ -378,14 +403,15 @@ struct ProgramLogsView: View {
     private func deleteSelected() {
         var targets: [ProgramRunRecord] = []
         if !selectedRunIDs.isEmpty {
-            targets = runs.filter { selectedRunIDs.contains($0.id) }
+            targets = runsCache.filter { selectedRunIDs.contains($0.id) }
         } else if let selectedRun {
             targets = [selectedRun]
         }
         guard !targets.isEmpty else { return }
         store.deleteRuns(targets)
         selectedRunIDs = []
-        selectedRunID = runs.first?.id
+        reloadCaches()
+        selectedRunID = runsCache.first?.id
         refreshDetail()
     }
 

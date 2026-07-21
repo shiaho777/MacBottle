@@ -46,6 +46,7 @@ public extension Process {
             if systemLog {
                 Logger.wineKit.info("Running process \(name) (quiet)")
             }
+            fileHandle?.writeInfo(for: self)
         } else {
             stream = makeVerboseStream(name: name, fileHandle: fileHandle, systemLog: systemLog)
             if systemLog {
@@ -133,7 +134,7 @@ public extension Process {
 
             continuation.yield(.started(self))
 
-            let box = FileWriteBox(handle: fileHandle)
+            let box = FileWriteBox(handle: fileHandle, maxBytes: 12 * 1024 * 1024)
             outPipe.fileHandleForReading.readabilityHandler = { handle in
                 box.write(handle.availableData)
             }
@@ -163,13 +164,17 @@ public extension Process {
         standardError = FileHandle.nullDevice
 
         return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
-            continuation.onTermination = { @Sendable _ in
+            continuation.onTermination = { @Sendable termination in
+                if case .cancelled = termination, self.isRunning {
+                    self.terminate()
+                }
             }
 
             continuation.yield(.started(self))
 
             self.terminationHandler = { (process: Process) in
                 try? fileHandle?.close()
+                process.logTermination(name: name)
                 continuation.yield(.terminated(process))
                 continuation.finish()
             }
@@ -209,16 +214,46 @@ public extension Process {
 private final class FileWriteBox: @unchecked Sendable {
     private let lock = NSLock()
     private var handle: FileHandle?
+    private let maxBytes: UInt64
+    private var written: UInt64 = 0
+    private var truncated = false
 
-    init(handle: FileHandle) {
+    init(handle: FileHandle, maxBytes: UInt64 = 12 * 1024 * 1024) {
         self.handle = handle
+        self.maxBytes = maxBytes
     }
 
     func write(_ data: Data) {
-        guard !data.isEmpty else { return }
+        guard !data.isEmpty, !truncated else { return }
         lock.lock()
-        handle?.write(data)
-        lock.unlock()
+        defer { lock.unlock() }
+        guard let handle else { return }
+        let remaining = maxBytes > written ? maxBytes - written : 0
+        if remaining == 0 {
+            markTruncatedLocked(handle: handle)
+            return
+        }
+        if UInt64(data.count) <= remaining {
+            handle.write(data)
+            written += UInt64(data.count)
+            return
+        }
+        let prefix = data.prefix(Int(remaining))
+        if !prefix.isEmpty {
+            handle.write(Data(prefix))
+            written += UInt64(prefix.count)
+        }
+        markTruncatedLocked(handle: handle)
+    }
+
+    private func markTruncatedLocked(handle: FileHandle) {
+        guard !truncated else { return }
+        truncated = true
+        let notice = "\n---- log truncated at \(maxBytes) bytes (capture size limit) ----\n"
+        if let noticeData = notice.data(using: .utf8) {
+            handle.write(noticeData)
+            written += UInt64(noticeData.count)
+        }
     }
 
     func close() {

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		ECE00000000000000000010A /* MacBottleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000010B /* MacBottleTheme.swift */; };
 		ECE00000000000000000011A /* ProgramLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000011B /* ProgramLogsView.swift */; };
+		ECE00000000000000000021A /* LogTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000021B /* LogTextView.swift */; };
 		6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6330DD952B1B0EA4007A625A /* RenameView.swift */; };
 		6365C4C12B1AA69D00AAE1FD /* Animation+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */; };
 		6365C4C32B1AA8CD00AAE1FD /* BottleListEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */; };
@@ -122,6 +123,7 @@
 /* Begin PBXFileReference section */
 		ECE00000000000000000010B /* MacBottleTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacBottleTheme.swift; sourceTree = "<group>"; };
 		ECE00000000000000000011B /* ProgramLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramLogsView.swift; sourceTree = "<group>"; };
+		ECE00000000000000000021B /* LogTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogTextView.swift; sourceTree = "<group>"; };
 		6330DD952B1B0EA4007A625A /* RenameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameView.swift; sourceTree = "<group>"; };
 		6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Animation+Extensions.swift"; sourceTree = "<group>"; };
 		6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleListEntry.swift; sourceTree = "<group>"; };
@@ -280,6 +282,7 @@
 				6E182FC92B0BF64E00AADE81 /* WinetricksView.swift */,
 				AB0BCABC2B61036E00E21C31 /* RunningProcessesView.swift */,
 				ECE00000000000000000011B /* ProgramLogsView.swift */,
+				ECE00000000000000000021B /* LogTextView.swift */,
 				6E17B6422AF3FD6E00831173 /* Pins */,
 			);
 			path = Bottle;
@@ -645,6 +648,7 @@
 				6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */,
 				AB0BCABD2B61036E00E21C31 /* RunningProcessesView.swift in Sources */,
 				ECE00000000000000000011A /* ProgramLogsView.swift in Sources */,
+				ECE00000000000000000021A /* LogTextView.swift in Sources */,
 				6E17B6492AF4118F00831173 /* EnvironmentArgView.swift in Sources */,
 				6E6C0CF42A419A7600356232 /* RosettaView.swift in Sources */,
 				6E6C0CF82A419A8C00356232 /* WhiskyWineInstallView.swift in Sources */,

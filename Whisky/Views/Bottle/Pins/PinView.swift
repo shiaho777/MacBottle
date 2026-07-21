@@ -193,7 +193,10 @@ struct PinView: View {
     }
 
     func runProgram() {
-        guard launchCoordinator.canStart(programURL: program.url) else { return }
+        guard launchCoordinator.canStart(programURL: program.url) else {
+            launchCoordinator.noteAlreadyLaunching(programName: program.name)
+            return
+        }
 
         withAnimation(.easeIn(duration: 0.25)) {
             opening = true
