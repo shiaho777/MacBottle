@@ -6,7 +6,7 @@
 
 ### Play Windows games on your Mac. Simply.
 
-**A modern, community-maintained Wine wrapper for Apple Silicon. Pick a bottle, add a Windows game, press play — no terminal, no manual wine prefixes, no guesswork. And when a game needs more than defaults, a community recipe applies the right environment, winetricks, and registry settings automatically.**
+**MacBottle is a modern Wine wrapper for Apple Silicon, maintained by its community. Pick a container, drop your Windows game in, hit play — no terminal, no hand-configured Wine prefixes, no guesswork. And when a game needs more than the defaults, a community recipe applies the right environment, winetricks, and registry settings for you.**
 
 **English** · [简体中文](.github/docs/README_CN.md)
 
