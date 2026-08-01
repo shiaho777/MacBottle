@@ -1,9 +1,18 @@
 # Writing a Recipe
 
 A recipe is a single JSON file describing how to run a specific Windows game
-on macOS via a MacBottle bottle. Each recipe lives under
-`WhiskyKit/Sources/WhiskyKit/Recipes/<platform>/<id>.json` and is shipped
-inside the WhiskyKit bundle at build time.
+on macOS via a MacBottle bottle. It is the smallest unit of contribution
+that makes MacBottle better for everyone: one game, one file, no Swift.
+
+## Why recipes exist
+
+Default Wine settings are a compromise that runs *most* games acceptably.
+Individual games are not most games — they need a specific renderer, a
+winetricks verb, an environment variable, or a registry tweak before they
+behave. A recipe captures exactly that delta, in a format any player can
+read and any developer can review. Attach a recipe to a bottle, and the
+launch pipeline (program defaults → bottle settings → **recipe overrides**)
+applies it automatically.
 
 ## Quick start
 
