@@ -32,14 +32,14 @@
 
 ## Why MacBottle
 
-Whisky was archived in May 2025, leaving 13k+ users of the best Wine wrapper on macOS without a maintainer. MacBottle picks up where it left off — and the hard parts are exactly where it diverges from everything else:
+In May 2025, [Whisky](https://github.com/Whisky-App/Whisky) — the best Wine wrapper on macOS — was archived, leaving more than 13,000 users without a maintainer. MacBottle is the community that picked it back up, and it pulls ahead exactly where a plain wrapper falls short:
 
-- **It is the continuation, not a clone.** MacBottle is a community-driven fork of [Whisky](https://github.com/Whisky-App/Whisky) (GPL-3.0, by Isaac Marovitz). All original authorship is preserved; maintenance, bug fixes, and new features are not.
-- **No command line, ever.** Other approaches make you hand-roll wine prefixes, fiddle with `WINEPREFIX`, and memorize environment variables. MacBottle creates, configures, and launches bottles from a native macOS UI — the terminal is optional, not required.
-- **It is free and open source.** CrossOver charges a license for the same convenience. MacBottle ships the same category of experience under GPL-3.0, paid for in contributions instead of subscriptions.
-- **Recipes are the moat.** A recipe is a one-file JSON description of "what it takes to run this specific game": environment variables, winetricks verbs, registry tweaks, and renderer choice. Community-verified, synced from a remote catalog, applied automatically at launch. Most wrappers stop at "the game might run"; MacBottle learns how to run each game properly.
-- **It picks the right engine for the job.** Every launch scans the executable (PE imports + runtime profile) and, combined with any attached recipe, decides between **D3DMetal**, **DXVK**, or **WineD3D** — then switches to the matching Wine engine without asking.
-- **Chinese and English are first-class citizens.** UI, recipes, and documentation are maintained bilingually from day one — not translated as an afterthought.
+- **Actively maintained.** MacBottle is the community continuation of Whisky (GPL-3.0, created by Isaac Marovitz). All original authorship is preserved; bugs, fixes, and new features now get ongoing attention.
+- **No terminal required.** There is no need to build wine prefixes by hand or memorize `WINEPREFIX`. MacBottle creates, configures, and launches every bottle from a native macOS window.
+- **Free and open source.** CrossOver charges a license fee for this kind of convenience. MacBottle delivers the same under GPL-3.0 — paid for in contributions, not subscriptions.
+- **Recipes that know each game.** A recipe is one JSON file describing what a single game needs: environment variables, winetricks verbs, registry tweaks, and the right renderer. Community-verified, synced from a shared catalog, and applied automatically at launch. Most wrappers leave you to guess; a recipe hands MacBottle the answer.
+- **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, or **WineD3D** — then runs the matching Wine engine without asking.
+- **Chinese and English, written together.** The UI, recipes, and documentation are authored in both languages from the first line, not translated in afterward.
 
 ---
 
