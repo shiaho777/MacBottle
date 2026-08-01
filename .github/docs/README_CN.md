@@ -4,9 +4,9 @@
 
 # MacBottle 🍾
 
-### 在 Mac 上玩 Windows 游戏,就是这么简单。
+### 在 Mac 上畅玩 Windows 游戏。就这么简单。
 
-**一款为 Apple Silicon 打造的现代化 Wine 图形化封装,由社区持续维护。选一个瓶子、添加 Windows 游戏、按下播放 —— 不需要命令行,不需要手动配置 wine prefix,不需要猜设置。当某个游戏需要默认配置之外的调整时,社区配方会自动应用正确的环境变量、winetricks 和注册表设置。**
+**MacBottle 是一款专为 Apple Silicon 打造的现代化 Wine 封装,由社区持续维护。选一个容器,把 Windows 游戏放进去,点击播放——不用碰终端,不用手动配置 Wine 前缀,也不用反复试错。当某款游戏需要默认设置之外的调整时,社区配方会自动应用正确的环境变量、Winetricks 和注册表设置。**
 
 [English](https://github.com/shiaho777/MacBottle/blob/main/README.md) · **简体中文**
 
