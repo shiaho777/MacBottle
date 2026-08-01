@@ -1,130 +1,224 @@
 <div align="center">
 
+<img src="Whisky/Assets.xcassets/AppIcon.appiconset/512@2x.png" width="96" alt="MacBottle icon" />
+
 # MacBottle 🍾
 
-**在 Mac 上玩 Windows 游戏，就是这么简单。**
-_Play Windows games on your Mac. Simply._
+### Play Windows games on your Mac. Simply.
 
-[简体中文](#简体中文) · [English](#english) · [路线图](./PROJECT_PLAN.md) · [贡献指南](./CONTRIBUTING.md) · [交付流程](./CONTRIBUTING.md#delivery-loop-issue--pr--main--ci--merge)
+**A modern, community-maintained Wine wrapper for Apple Silicon. Pick a bottle, add a Windows game, press play — no terminal, no manual wine prefixes, no guesswork. And when a game needs more than defaults, a community recipe applies the right environment, winetricks, and registry settings automatically.**
+
+**English** · [简体中文](.github/docs/README_CN.md)
+
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple&logoColor=white)](#system-requirements)
+[![Chip](https://img.shields.io/badge/Apple%20Silicon-Only-red?style=for-the-badge)](#system-requirements)
+[![Swift](https://img.shields.io/badge/Swift-6-orange?style=for-the-badge&logo=swift&logoColor=white)](#)
 
 </div>
 
----
-
-> **Fork 声明 / Fork Notice**
->
-> 本项目基于 [Whisky](https://github.com/Whisky-App/Whisky)（由 Isaac Marovitz 创建，GPL-3.0 授权，已于 2025-05-11 归档）衍生，并作出若干修改与扩展。MacBottle 的目标是接续 Whisky 停止维护后留下的空位，以社区驱动、持续维护、中英双语一等公民的方式，继续为 Mac 用户提供现代化的 Wine 图形化封装。
->
-> This project is a derivative of [Whisky](https://github.com/Whisky-App/Whisky) (created by Isaac Marovitz, licensed under GPL-3.0, archived on 2025-05-11) with modifications and extensions. MacBottle aims to fill the gap left by Whisky's end of maintenance, continuing to provide a modern graphical Wine wrapper for Mac users through community-driven, actively maintained, bilingual-first development.
->
-> MacBottle 保留 Whisky 原作者与贡献者的全部署名，并与 Whisky 一致采用 GPL-3.0 协议发布。/ MacBottle preserves all original Whisky authorship and contributor credits, and is released under GPL-3.0 consistent with Whisky.
-
----
-
-## 简体中文
-
-### MacBottle 是什么
-
-MacBottle 是一个为 Apple Silicon Mac 打造的 Wine 图形化封装工具。它让你不需要懂命令行、不需要配置 wine prefix，就能在 Mac 上运行 Windows 游戏和应用。
-
-MacBottle **不提供游戏本体**，游戏由你通过 Steam、Epic、GOG、Battle.net 等合法渠道获取。MacBottle 只负责让 Windows 游戏在你的 Mac 上跑起来。
-
-### 为什么做 MacBottle
-
-- **Whisky 停更了。** 2025 年 5 月，深受喜爱的 Whisky 项目宣布停止维护。留下了 13k+ star 的社区和无处安放的需求。
-- **中文用户没有好工具。** 现有方案界面全英文、文档全英文、兼容性数据库也以英文为主。
-- **Apple Silicon 值得更好的游戏体验。** M 系列芯片性能足以运行 AAA 游戏，瓶颈在生态和工具，不在硬件。
-
-### 系统要求
-
-- CPU：Apple Silicon（M1 / M2 / M3 / M4 系列）
-- OS：macOS Sonoma 14.0 或更高版本
-- 推荐：16 GB 以上内存，macOS 15 Sequoia 或更高版本
-
-### 当前状态
-
-**🚧 v0.1 开发中。** 详见 [路线图](./PROJECT_PLAN.md)。
-
-### 如何参与
-
-欢迎通过以下方式参与：
-
-- 提 Issue 反馈 bug 或建议
-- 提交 PR 贡献代码或游戏兼容性配方
-- 翻译界面到其他语言
-- 在 V2EX、小红书、B 站分享你的使用经验
-
-详见 [CONTRIBUTING.md](./CONTRIBUTING.md)。代码交付遵循 **Issue → PR → main → CI → merge**（Issue 仅在合并后通过 `Fixes #N` 关闭）。
+<p align="center">
+  <a href="#why-macbottle">Why MacBottle</a> ·
+  <a href="#capability-overview">Capability overview</a> ·
+  <a href="#what-you-can-build">What you can build</a> ·
+  <a href="#full-feature-map">Feature map</a> ·
+  <a href="#recipes">Recipes</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#roadmap">Roadmap</a> ·
+  <a href="#contributing">Contributing</a>
+</p>
 
 ---
 
-## English
+## Why MacBottle
 
-### What is MacBottle
+Whisky was archived in May 2025, leaving 13k+ users of the best Wine wrapper on macOS without a maintainer. MacBottle picks up where it left off — and the hard parts are exactly where it diverges from everything else:
 
-MacBottle is a graphical Wine wrapper for Apple Silicon Macs. It lets you run Windows games and applications on your Mac without touching the command line or configuring wine prefixes manually.
-
-MacBottle **does not ship any game content**. You obtain games through legitimate channels such as Steam, Epic, GOG, and Battle.net. MacBottle is only concerned with running them well on your Mac.
-
-### Why MacBottle
-
-- **Whisky is archived.** In May 2025, the beloved Whisky project stopped maintenance, leaving behind a 13k+ star community with nowhere to go.
-- **Chinese-speaking users deserve a first-class experience.** Existing solutions are English-only in UI, documentation, and compatibility databases.
-- **Apple Silicon deserves better gaming tooling.** M-series chips have the raw performance for AAA games. The bottleneck is ecosystem and tooling, not hardware.
-
-### System Requirements
-
-- CPU: Apple Silicon (M1 / M2 / M3 / M4 series)
-- OS: macOS Sonoma 14.0 or later
-- Recommended: 16 GB RAM or more, macOS 15 Sequoia or later
-
-### Current Status
-
-**🚧 v0.1 in development.** See [Project Plan](./PROJECT_PLAN.md) for the roadmap.
-
-### Contributing
-
-Contributions welcome:
-
-- File issues for bugs and feature requests
-- Submit PRs for code or game compatibility recipes
-- Translate the UI to more languages
-- Share your experience in your local Mac-gaming community
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md). Delivery loop: **Issue → PR → main → CI → merge** (Issues close on merge via `Fixes #N` only).
+- **It is the continuation, not a clone.** MacBottle is a community-driven fork of [Whisky](https://github.com/Whisky-App/Whisky) (GPL-3.0, by Isaac Marovitz). All original authorship is preserved; maintenance, bug fixes, and new features are not.
+- **No command line, ever.** Other approaches make you hand-roll wine prefixes, fiddle with `WINEPREFIX`, and memorize environment variables. MacBottle creates, configures, and launches bottles from a native macOS UI — the terminal is optional, not required.
+- **It is free and open source.** CrossOver charges a license for the same convenience. MacBottle ships the same category of experience under GPL-3.0, paid for in contributions instead of subscriptions.
+- **Recipes are the moat.** A recipe is a one-file JSON description of "what it takes to run this specific game": environment variables, winetricks verbs, registry tweaks, and renderer choice. Community-verified, synced from a remote catalog, applied automatically at launch. Most wrappers stop at "the game might run"; MacBottle learns how to run each game properly.
+- **It picks the right engine for the job.** Every launch scans the executable (PE imports + runtime profile) and, combined with any attached recipe, decides between **D3DMetal**, **DXVK**, or **WineD3D** — then switches to the matching Wine engine without asking.
+- **Chinese and English are first-class citizens.** UI, recipes, and documentation are maintained bilingually from day one — not translated as an afterthought.
 
 ---
 
-## 致谢 / Credits & Acknowledgments
+## Capability overview
 
-MacBottle 站在以下项目的肩膀上，向所有作者致以最深的敬意：
-MacBottle stands on the shoulders of these projects. Our deepest thanks to all their authors.
+A quick scan of what's in the box.
 
-### 核心前辈 / Core Heritage
-
-- **[Whisky](https://github.com/Whisky-App/Whisky)** by [Isaac Marovitz](https://github.com/IsaacMarovitz) — MacBottle 直接 fork 自 Whisky。没有 Whisky 就没有 MacBottle。
-- **[CrossOver 22.1.1](https://www.codeweavers.com/crossover)** by CodeWeavers and WineHQ
-- **[D3DMetal (Game Porting Toolkit)](https://developer.apple.com/documentation/gameportingtoolkit)** by Apple
-
-### 依赖与组件 / Dependencies & Components
-
-- [msync](https://github.com/marzent/wine-msync) by marzent
-- [DXVK-macOS](https://github.com/Gcenx/DXVK-macOS) by Gcenx and doitsujin
-- [MoltenVK](https://github.com/KhronosGroup/MoltenVK) by KhronosGroup
-- [Sparkle](https://github.com/sparkle-project/Sparkle) by sparkle-project
-- [SemanticVersion](https://github.com/SwiftPackageIndex/SemanticVersion) by SwiftPackageIndex
-- [swift-argument-parser](https://github.com/apple/swift-argument-parser) by Apple
-- [SwiftyTextTable](https://github.com/scottrhoyt/SwiftyTextTable) by scottrhoyt
-
-特别感谢 Gcenx、ohaiibuzzle、Nat Brown 对 Whisky 的长期支持与贡献。
-Special thanks to Gcenx, ohaiibuzzle, and Nat Brown for their long-term support of Whisky.
+| Area | Highlights |
+| --- | --- |
+| **Bottle management** | Create, configure, rename, and delete bottles; pins/shortcuts; per-bottle engine binding |
+| **Game recipes** | Community JSON recipes (Steam / GOG / generic), bundled catalog + remote sync with ETag cache, diff UI with per-row selection |
+| **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), or **WineD3D**; Metal HUD/trace; DXR toggle |
+| **Wine engine layer** | CrossOver-based engine today; pluggable `WineEngine` protocol so pure upstream Wine can slot in later |
+| **Launch experience** | Wineserver prewarm, launch-status feedback, per-program run logs, force-stop for frozen runtimes, stale-status reconciliation |
+| **Bottle internals** | Winetricks catalog with categorized verbs, environment variables, Windows version & enhanced-sync (msync/esync) selection, AVX toggle |
+| **Integration** | CLI companion (`WhiskyCmd`), Finder thumbnail previews for `.exe` files, shader-cache wiping |
 
 ---
 
-## 许可证 / License
+## What you can build
 
-MacBottle 采用 **GNU GPL-3.0** 协议发布，与上游 Whisky 保持一致。详见 [LICENSE](./LICENSE)。
-MacBottle is released under **GNU GPL-3.0**, consistent with upstream Whisky. See [LICENSE](./LICENSE).
+| Source | What MacBottle does | Good for |
+| --- | --- | --- |
+| Steam library | Point at the game's `.exe`; recipe (if any) applies tweaks automatically | AAA and indie titles on Apple Silicon |
+| GOG / DRM-free installers | Install once into a bottle, launch from the programs list | The games you actually own outright |
+| Retail / other installers | Attach a `generic` recipe or configure manually | Origin, Battle.net, random installers |
+| Legacy 32-bit titles | `classic32` runtime profile forces the WineD3D path | Old games that never got 64-bit ports |
+| Non-game Windows apps | Works the same as games — bottles don't care | Office tools, utilities, old shareware |
 
-请注意：Apple 的 D3DMetal 为闭源组件，有其独立的许可条款。MacBottle 不分发 D3DMetal 本身。
+---
+
+## Full feature map
+
+MacBottle has more switches than a casual glance suggests. The sections below group them by use case, kept collapsible so the top of the page stays scannable.
+
+<details>
+<summary><b>🍾 Bottle management</b></summary>
+
+- **One-click creation** — name a bottle, pick a Windows version, go. No prefix path to type, no config file to edit.
+- **Per-bottle settings** — environment variables, Windows version (win10/…), enhanced sync (**msync** default, or esync), AVX toggle, Retina mode, DXR.
+- **Engine binding** — pin a bottle to a specific Wine engine, or leave it on auto-select (`LaunchEnginePolicy` decides per launch).
+- **Pins** — pin any installed program to the bottle home screen as a launch shortcut, with its own environment arguments.
+- **Winetricks catalog** — categorized verb table with one-click install (vcrun, dotnet, and friends).
+- **Housekeeping** — rename, delete, force-stop every running process in a bottle from the menu bar.
+
+</details>
+
+<details>
+<summary><b>🧪 Recipe system</b></summary>
+
+- **Bundled catalog** — recipes ship inside the app and load at startup; zero configuration required.
+- **Remote sync** — the catalog updates from a GitHub-backed manifest (`_index.json`, regenerated by CI on every merge) with ETag conditional GETs against the raw CDN — effectively unbounded rate limits, no API keys.
+- **Diff UI** — entering the game list checks for changes and shows a sheet with `+ new / − removed / ~ updated`, per-row checkboxes, and a "sync selected" footer. Nothing interrupts you when there are no changes.
+- **Game detail sheets & installer** — browse recipes as a library, read compatibility notes, and run a guided install that creates a bottle, applies winetricks/registry, and launches.
+- **Recipe wins on conflict** — a recipe is a narrower, community-vetted source of truth than bottle defaults; detach it if you disagree.
+
+</details>
+
+<details>
+<summary><b>⚙️ Wine engine layer</b></summary>
+
+- **`WineEngine` protocol** — everything about "which Wine build this install uses" lives behind one interface; a future engine swap is a one-line registry change, not a repo-wide search-and-replace.
+- **`CrossOverEngine`** — the first concrete engine, carrying the Whisky/CrossOver-derived packaging forward.
+- **`LaunchEnginePolicy`** — per-launch decision engine: scans PE imports + runtime profile, honors bottle pinning and recipe `renderer`, and falls back gracefully when D3DMetal isn't installed.
+- **Temporary engine switching** — auto-select swaps engines for the launch only; your saved selection is restored afterwards.
+
+</details>
+
+<details>
+<summary><b>🚀 Launch experience</b></summary>
+
+- **Wineserver prewarm** — the engine is warmed before the game launches, so first clicks aren't dead air.
+- **Launch status feedback** — the UI reflects real state instead of silently sitting on a spinner.
+- **Run logs** — every program run writes a log you can open from the UI (`⌘L` opens the logs folder); old logs are cleaned up automatically after 7 days.
+- **Force-stop** — host-side force stop for frozen Wine runtimes, with `⌘⇧K` to kill all bottles; stale "running" status is reconciled when the game process actually dies.
+
+</details>
+
+<details>
+<summary><b>🔌 Integration & tooling</b></summary>
+
+- **CLI companion** — `WhiskyCmd` exposes bottle and launch workflows from the terminal, installed from the app menu.
+- **Finder thumbnails** — a Quick Look–style extension renders previews for Windows executables in Finder.
+- **Shader-cache management** — one menu item kills bottles and wipes D3DMetal shader caches when graphics misbehave.
+- **Setup flow** — first-run assistant for Rosetta 2 and the Wine engine download/install, so a brand-new Mac goes from zero to gaming in one sitting.
+
+</details>
+
+---
+
+## Recipes
+
+Recipes are the reason this project exists as a distinct fork, and they are MacBottle's primary growth mechanism. A recipe is a single JSON file — no Swift knowledge required to contribute one:
+
+```
+WhiskyKit/Sources/WhiskyKit/Recipes/
+  steam/<AppID>.json       # e.g. steam/2050650.json for Black Myth: Wukong
+  gog/<ProductID>.json     # e.g. gog/1207658924.json for The Witcher 2
+  generic/<slug>.json      # out-of-platform titles or retail installers
+```
+
+Each recipe declares the game's DirectX version, minimum macOS, recommended renderer, optional winetricks verbs, environment variables, registry tweaks, and an honest compatibility tier (platinum → broken, on the ProtonDB scale). CI validates every file against the real Swift `Recipe` type, so a recipe either decodes or it tells you exactly which field is wrong.
+
+The full schema, examples, and review criteria live in [`docs/RECIPE_AUTHORING.md`](docs/RECIPE_AUTHORING.md).
+
+---
+
+## Architecture
+
+```
+Whisky/                  macOS app target — SwiftUI views, bottle/program UX
+WhiskyKit/               Core library (SwiftPM) — models, Wine invocation, recipes
+  ├─ Recipe/             Recipe types, loader, applier, remote sync, diff
+  ├─ Recipes/            Shipped recipe JSON files
+  ├─ WineEngine/         Engine protocol, CrossOverEngine, catalog, launch policy
+  ├─ Whisky/             Bottle / Program / settings models
+  ├─ Wine/               Launch coordinator, run logs, force-stop, optimizers
+  └─ PE/                 Windows PE parser (imports, architecture, graphics API)
+WhiskyCmd/               CLI companion
+WhiskyThumbnail/         Finder thumbnail extension for PE files
+```
+
+A game launch merges environments in a strict order — program defaults → bottle settings → recipe overrides (recipe wins) — then spawns `wine <exe>` through the engine selected by `LaunchEnginePolicy`. If no recipe is attached, the path is identical to upstream Whisky; the recipe layer is purely additive.
+
+The complete design rationale lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+---
+
+## Roadmap
+
+| Version | Core deliverable |
+| -- | -- |
+| v0.1 | Brand switch + a compilable, runnable `.app` (Whisky/CrossOver packaging) |
+| v0.2 | Recipe system — schema, loader, applier, example recipes |
+| v0.3 | CI schema-lint + PR template + architecture docs + Recipe UI |
+| v0.4 | Wine engine abstraction; `CrossOverEngine` as first implementation |
+| v0.5 | Remote recipe sync (data layer → sync engine → diff UI) |
+| v0.6 | User-switchable engines; second implementation (pure upstream Wine or GPTK2) |
+| v1.0 | Formal release, GitHub Release |
+
+The full plan — including the v0.5 sub-phases and the explicit non-goals (no virtualization, no DRM/anti-cheat workarounds, no game content) — is in [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
+
+---
+
+## System requirements
+
+- **CPU:** Apple Silicon (M1 / M2 / M3 / M4 series)
+- **OS:** macOS Sonoma 14.0 or later
+- **Recommended:** 16 GB RAM or more, macOS 15 Sequoia or later
+
+MacBottle does not ship game content. You obtain games through legitimate channels (Steam, Epic, GOG, Battle.net); MacBottle only concerns itself with running them well on your Mac.
+
+---
+
+## Contributing
+
+| Lane | What you do | Effort |
+| --- | --- | --- |
+| **Recipes** | Get a game running, then add or update its JSON recipe — the highest-impact contribution there is | hours |
+| **Issues** | Report a bug, request a feature, or file a recipe request for a game you can't run | minutes |
+| **Code** | Fix a bug or build a feature in the Swift app / WhiskyKit | days |
+| **Translation** | Help keep UI copy and docs bilingual (中文 / English) | varies |
+
+All work follows one delivery loop — **Issue → PR → main → CI → merge** (issues close on merge via `Fixes #N` only). The full guide, including the required CI checks and code style, is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+---
+
+## Whisky heritage & credits
+
+MacBottle is a derivative of [Whisky](https://github.com/Whisky-App/Whisky) (created by Isaac Marovitz, GPL-3.0, archived 2025-05-11), and stands on the shoulders of the projects that made Wine-on-Mac possible: CrossOver/WineHQ, Apple's D3DMetal (Game Porting Toolkit), DXVK-macOS, MoltenVK, wine-msync, Sparkle, and more. All original authorship and attribution are preserved in every inherited file and in [`NOTICE`](NOTICE).
+
+## License
+
+[GPL-3.0](LICENSE), consistent with upstream Whisky.
+
 Note: Apple's D3DMetal is a closed-source component with its own license terms. MacBottle does not redistribute D3DMetal itself.
+
+<div align="center">
+
+**Open source · Built for Apple Silicon · Play more, configure less**
+
+</div>
