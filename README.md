@@ -32,11 +32,11 @@
 
 ## Why MacBottle
 
-In May 2025, [Whisky](https://github.com/Whisky-App/Whisky) — the best Wine wrapper on macOS — was archived, leaving more than 13,000 users without a maintainer. MacBottle is the community that picked it back up, and it pulls ahead exactly where a plain wrapper falls short:
+Running Windows games on Apple Silicon shouldn't require a command-line tutorial. MacBottle does that work for you, and keeps going where a default setup stops:
 
-- **Actively maintained.** MacBottle is the community continuation of Whisky (GPL-3.0, created by Isaac Marovitz). All original authorship is preserved; bugs, fixes, and new features now get ongoing attention.
+- **Actively maintained.** Open source and under continuous development — fixes, new recipes, and support for the latest Apple Silicon and macOS land as they arrive.
 - **No terminal required.** There is no need to build wine prefixes by hand or memorize `WINEPREFIX`. MacBottle creates, configures, and launches every bottle from a native macOS window.
-- **Free and open source.** CrossOver charges a license fee for this kind of convenience. MacBottle delivers the same under GPL-3.0 — paid for in contributions, not subscriptions.
+- **Free and open source.** Everything MacBottle does is GPL-3.0 and built in public — no license fees, no subscriptions, no locked-in features.
 - **Recipes that know each game.** A recipe is one JSON file describing what a single game needs: environment variables, winetricks verbs, registry tweaks, and the right renderer. Community-verified, synced from a shared catalog, and applied automatically at launch. Most wrappers leave you to guess; a recipe hands MacBottle the answer.
 - **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, or **WineD3D** — then runs the matching Wine engine without asking.
 - **Chinese and English, written together.** The UI, recipes, and documentation are authored in both languages from the first line, not translated in afterward.
