@@ -24,8 +24,10 @@ import Foundation
 ///
 /// Recipes are authored as JSON files under `WhiskyKit/Sources/WhiskyKit/Recipes/`
 /// and shipped inside the WhiskyKit bundle as embedded resources. See
-/// `docs/RECIPE_AUTHORING.md` for the contribution workflow and
-/// `docs/recipe.v1.schema.json` for the machine-readable schema.
+/// `docs/RECIPE_AUTHORING.md` for the contribution workflow and the field-by-field
+/// schema table. The machine-readable contract is this `Recipe` type itself:
+/// CI's `RecipeLint` validates every JSON file by decoding it through `Recipe`,
+/// so this struct is the single source of truth for the schema.
 ///
 /// The `Recipe` type is intentionally flat and append-only: new optional
 /// fields may be added, existing fields are never renamed or removed. The

@@ -18,7 +18,7 @@
 </div>
 
 <p align="center">
-  <a href="#为什么是-macbottle">为什么是 MacBottle</a> ·
+  <a href="#为什么选择-macbottle">为什么是 MacBottle</a> ·
   <a href="#能力概览">能力概览</a> ·
   <a href="#你能用它做什么">你能用它做什么</a> ·
   <a href="#完整功能地图">功能地图</a> ·

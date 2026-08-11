@@ -56,10 +56,10 @@ struct BottleView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("固定程序")
+                            Text("bottle.section.pinned")
                                 .font(.headline)
                             Spacer()
-                            Text("点击启动 · 拖拽排序")
+                            Text("bottle.section.pinned.hint")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -83,11 +83,11 @@ struct BottleView: View {
                     if !recentPrograms.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
-                                Text("最近运行")
+                                Text("bottle.section.recent")
                                     .font(.headline)
                                 Spacer()
                                 NavigationLink(value: BottleStage.programs) {
-                                    Text("全部")
+                                    Text("bottle.section.recent.all")
                                         .font(.caption)
                                 }
                                 .buttonStyle(.plain)
@@ -101,37 +101,37 @@ struct BottleView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("管理")
+                        Text("bottle.section.manage")
                             .font(.headline)
                         NavigationLink(value: BottleStage.programs) {
                             QuickActionTile(
-                                title: "已安装程序",
+                                title: "bottle.manage.programs.title",
                                 systemImage: "list.bullet.rectangle",
-                                subtitle: "筛选、分组、最近运行与屏蔽管理"
+                                subtitle: "bottle.manage.programs.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
                         NavigationLink(value: BottleStage.config) {
                             QuickActionTile(
-                                title: "容器配置",
+                                title: "bottle.manage.config.title",
                                 systemImage: "slider.horizontal.3",
-                                subtitle: "Windows 版本、引擎绑定、DXVK、Metal"
+                                subtitle: "bottle.manage.config.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
                         NavigationLink(value: BottleStage.processes) {
                             QuickActionTile(
-                                title: "运行中的进程",
+                                title: "bottle.manage.processes.title",
                                 systemImage: "list.bullet.rectangle.portrait",
-                                subtitle: "查看并结束容器内 Windows 进程"
+                                subtitle: "bottle.manage.processes.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
                         NavigationLink(value: BottleStage.logs) {
                             QuickActionTile(
-                                title: "运行日志",
+                                title: "bottle.manage.logs.title",
                                 systemImage: "doc.text",
-                                subtitle: "按程序查看完整运行日志与实时输出"
+                                subtitle: "bottle.manage.logs.subtitle"
                             )
                         }
                         .buttonStyle(.plain)
@@ -211,15 +211,15 @@ struct BottleView: View {
             launchBanner(
                 tint: .blue,
                 systemImage: "flame.fill",
-                title: "正在预热容器",
-                message: "为 \(bottleName) 启动 wineserver，二次启动会更快…",
+                title: String(localized: "bottle.launch.warming"),
+                message: String(format: String(localized: "bottle.launch.warming.message %@"), bottleName),
                 showsProgress: true
             )
         case .launching(let programName, _):
             launchBanner(
                 tint: .accentColor,
                 systemImage: "play.circle.fill",
-                title: "正在启动",
+                title: String(localized: "bottle.launch.launching"),
                 message: programName,
                 showsProgress: true
             )
@@ -227,7 +227,7 @@ struct BottleView: View {
             launchBanner(
                 tint: .green,
                 systemImage: "checkmark.circle.fill",
-                title: "已启动",
+                title: String(localized: "bottle.launch.launched"),
                 message: programName,
                 showsProgress: false
             )
@@ -235,7 +235,7 @@ struct BottleView: View {
             launchBanner(
                 tint: .red,
                 systemImage: "exclamationmark.triangle.fill",
-                title: "启动失败 · \(programName)",
+                title: String(format: String(localized: "bottle.launch.failed %@"), programName),
                 message: message,
                 showsProgress: false,
                 showsLogLink: true
@@ -271,13 +271,13 @@ struct BottleView: View {
             Spacer(minLength: 8)
             if showsLogLink {
                 NavigationLink(value: BottleStage.logs) {
-                    Text("运行日志")
+                    Text("bottle.launch.viewLogs")
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.borderless)
             }
             if case .failed = launchCoordinator.phase {
-                Button("关闭") {
+                Button("bottle.launch.close") {
                     launchCoordinator.dismiss()
                 }
                 .buttonStyle(.borderless)
@@ -301,12 +301,12 @@ struct BottleView: View {
             Button {
                 bottle.openCDrive()
             } label: {
-                Label("C 盘", systemImage: "internaldrive")
+                Label("bottle.bar.cDrive", systemImage: "internaldrive")
             }
             Button {
                 bottle.openTerminal()
             } label: {
-                Label("终端", systemImage: "terminal")
+                Label("bottle.bar.terminal", systemImage: "terminal")
             }
             Button {
                 showWinetricksSheet.toggle()
@@ -316,14 +316,14 @@ struct BottleView: View {
             Button {
                 path.append(BottleStage.logs)
             } label: {
-                Label("运行日志", systemImage: "doc.text")
+                Label("bottle.bar.logs", systemImage: "doc.text")
             }
             Button(role: .destructive) {
                 BottleForceStop.forceStop(bottle: bottle, reason: "bottle-bar")
             } label: {
-                Label("强制结束运行时", systemImage: "xmark.octagon.fill")
+                Label("bottle.bar.forceStop", systemImage: "xmark.octagon.fill")
             }
-            .help("立即结束本容器的 Wine/wineserver（卡死时使用）")
+            .help("bottle.bar.forceStop.help")
             Spacer()
             if programLoading {
                 ProgressView()
@@ -331,7 +331,7 @@ struct BottleView: View {
             }
             Menu {
                 if !bottle.pinnedPrograms.isEmpty {
-                    Section("固定程序") {
+                    Section("bottle.section.pinned") {
                         ForEach(bottle.pinnedPrograms, id: \.id) { pinned in
                             Button {
                                 selectedProgramURL = pinned.program.url
@@ -342,7 +342,7 @@ struct BottleView: View {
                         }
                     }
                 }
-                Button("浏览其他程序…", systemImage: "folder") {
+                Button("bottle.bar.browsePrograms", systemImage: "folder") {
                     runExternalProgram()
                 }
             } label: {
@@ -365,15 +365,15 @@ struct BottleView: View {
 
     private var primaryRunTitle: String {
         if let selected = selectedPinnedProgram {
-            return "运行 \(selectedPinnedName(for: selected))"
+            return String(format: String(localized: "bottle.bar.runSelected %@"), selectedPinnedName(for: selected))
         }
         if bottle.pinnedPrograms.count == 1, let only = bottle.pinnedPrograms.first {
-            return "运行 \(only.pin.name)"
+            return String(format: String(localized: "bottle.bar.runSelected %@"), only.pin.name)
         }
         if let first = bottle.pinnedPrograms.first {
-            return "运行 \(first.pin.name)"
+            return String(format: String(localized: "bottle.bar.runSelected %@"), first.pin.name)
         }
-        return "运行程序"
+        return String(localized: "bottle.bar.runProgram")
     }
 
     private func selectedPinnedName(for program: Program) -> String {
@@ -425,8 +425,8 @@ struct BottleView: View {
         ].compactMap { $0 }
         panel.allowsOtherFileTypes = true
         panel.directoryURL = bottle.url.appending(path: "drive_c")
-        panel.message = "选择要在此容器中运行的 Windows 程序（.exe / .msi）"
-        panel.prompt = "运行"
+        panel.message = String(localized: "bottle.run.panel.message")
+        panel.prompt = String(localized: "bottle.run.panel.prompt")
 
         panel.begin { result in
             guard result == .OK, let selected = panel.url else { return }
@@ -453,15 +453,16 @@ struct BottleView: View {
                         )
                     }
                     await MainActor.run {
+                        let launchedFormat = String(localized: "bottle.run.info.launched.message %@")
                         presentRunInfo(
-                            title: "已启动",
-                            message: "正在运行：\(selected.lastPathComponent)\n\n若没有窗口出现，请换一个新建的空容器再试（不要用已开 DXVK 的游戏容器跑安装包）。"
+                            title: String(localized: "bottle.run.info.launched.title"),
+                            message: String(format: launchedFormat, selected.lastPathComponent)
                         )
                     }
                 } catch {
                     await MainActor.run {
                         presentRunInfo(
-                            title: "启动失败",
+                            title: String(localized: "bottle.run.info.failed.title"),
                             message: error.localizedDescription
                         )
                     }
@@ -515,7 +516,7 @@ private struct RecentProgramRow: View {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = .autoupdatingCurrent
         return formatter
     }()
 
@@ -535,7 +536,7 @@ private struct RecentProgramRow: View {
                 }
             }
             Spacer()
-            Button("配置") {
+            Button("bottle.recent.configure") {
                 path.append(program)
             }
             .buttonStyle(.borderless)
@@ -549,7 +550,7 @@ private struct RecentProgramRow: View {
                     Image(systemName: "play.fill")
                 }
                 .buttonStyle(.borderless)
-                .help("运行")
+                .help("programs.run")
             }
         }
         .padding(.horizontal, 12)

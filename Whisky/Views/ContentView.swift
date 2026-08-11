@@ -45,6 +45,7 @@ struct ContentView: View {
     }()
 
     @State private var bottleFilter = ""
+    @State private var currentEngineID = WineEngineRegistry.shared.current.identifier
 
     var body: some View {
         NavigationSplitView {
@@ -55,17 +56,17 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .automatic) {
                 StatusPill(
-                    title: MacBottleTheme.engineLabel(for: WineEngineRegistry.shared.current.identifier),
+                    title: MacBottleTheme.engineLabel(for: currentEngineID),
                     systemImage: "cpu",
-                    color: MacBottleTheme.engineColor(for: WineEngineRegistry.shared.current.identifier)
+                    color: MacBottleTheme.engineColor(for: currentEngineID)
                 )
-                .help("当前全局 Wine 引擎")
+                .help("toolbar.engine.help")
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showBottleCreation.toggle()
                 } label: {
-                    Label("新建", systemImage: "plus")
+                    Label("button.createBottle", systemImage: "plus")
                 }
                 .help("button.createBottle")
             }
@@ -116,9 +117,13 @@ struct ContentView: View {
         .onOpenURL { url in
             openedFileURL = url
         }
+        .onReceive(NotificationCenter.default.publisher(for: WineEngineRegistry.engineDidChangeNotification)) { _ in
+            currentEngineID = WineEngineRegistry.shared.current.identifier
+        }
         .task {
             bottleVM.loadBottles()
             bottlesLoaded = true
+            currentEngineID = WineEngineRegistry.shared.current.identifier
 
             // MacBottle: default to the Game Library unless the user has
             // an explicit bottle selection restored from a prior session.
@@ -160,11 +165,11 @@ struct ContentView: View {
     var sidebar: some View {
         ScrollViewReader { proxy in
             List(selection: $selected) {
-                Section("发现") {
-                    Label("游戏库", systemImage: "square.grid.2x2.fill")
+                Section("sidebar.discover") {
+                    Label("sidebar.library", systemImage: "square.grid.2x2.fill")
                         .tag(Self.libraryMarker)
                 }
-                Section("容器") {
+                Section("sidebar.bottles") {
                     ForEach(filteredBottles) { bottle in
                         Group {
                             if bottle.inFlight {
@@ -189,7 +194,7 @@ struct ContentView: View {
             .animation(.default, value: bottleFilter)
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
-            .searchable(text: $bottleFilter, placement: .sidebar, prompt: "搜索容器")
+            .searchable(text: $bottleFilter, placement: .sidebar, prompt: "sidebar.bottles.search")
             .onChange(of: newlyCreatedBottleURL) { _, url in
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(200))
@@ -214,25 +219,25 @@ struct ContentView: View {
             } else {
                 EmptyStateCard(
                     systemImage: "questionmark.folder",
-                    title: "容器不可用",
-                    message: "所选容器可能已被移除或移动。"
+                    title: "bottle.unavailable.title",
+                    message: "bottle.unavailable.message"
                 )
             }
         } else {
             if (bottleVM.bottles.isEmpty || bottleVM.countActive() == 0) && bottlesLoaded {
                 EmptyStateCard(
                     systemImage: "shippingbox.and.arrow.backward",
-                    title: "创建你的第一个容器",
-                    message: "容器是隔离的 Windows 环境。先建一个，再安装或导入游戏。",
-                    actionTitle: "新建容器"
+                    title: "main.createFirst",
+                    message: "main.createFirst.message",
+                    actionTitle: "button.createBottle"
                 ) {
                     showBottleCreation.toggle()
                 }
             } else {
                 EmptyStateCard(
                     systemImage: "sidebar.left",
-                    title: "选择左侧项目",
-                    message: "从游戏库浏览可玩配方，或打开一个容器管理已安装程序。"
+                    title: "main.pickSidebar.title",
+                    message: "main.pickSidebar.message"
                 )
             }
         }

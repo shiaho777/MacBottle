@@ -24,6 +24,8 @@ public final class WineEngineRegistry: @unchecked Sendable {
 
     public static let selectionDefaultsKey = "macbottle.wineEngineID"
 
+    public static let engineDidChangeNotification = Notification.Name("app.macbottle.engineDidChange")
+
     private let lock = NSLock()
     private var _current: any WineEngine
 
@@ -54,12 +56,15 @@ public final class WineEngineRegistry: @unchecked Sendable {
 
     public func setCurrent(_ engine: any WineEngine, persist: Bool = true) {
         lock.lock()
+        let oldValue = _current.identifier
         _current = engine
         lock.unlock()
+        guard oldValue != engine.identifier else { return }
         if persist {
             UserDefaults.standard.set(engine.identifier, forKey: Self.selectionDefaultsKey)
         }
         Logger.wineKit.info("WineEngineRegistry active engine: \(engine.identifier)")
+        NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
     }
 
     @discardableResult

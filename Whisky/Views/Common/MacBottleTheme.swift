@@ -22,17 +22,31 @@ import WhiskyKit
 enum MacBottleTheme {
     static let cardRadius: CGFloat = 14
     static let compactRadius: CGFloat = 10
-    static let gridSpacing: CGFloat = 14
+    static let tileRadius: CGFloat = 12
+
     static let pagePadding: CGFloat = 20
+    static let sectionSpacing: CGFloat = 18
+    static let gridSpacing: CGFloat = 14
+    static let contentSpacing: CGFloat = 12
+    static let rowSpacing: CGFloat = 10
+    static let tightSpacing: CGFloat = 6
+
+    static let heroIconSize: CGFloat = 64
+    static let rowIconSize: CGFloat = 40
+
+    static let hairline: CGFloat = 1
+    static let borderOpacity: Double = 0.35
+    static let tintFillOpacity: Double = 0.12
+    static let tintBorderOpacity: Double = 0.28
+    static let badgeFillOpacity: Double = 0.18
 
     static var cardBackground: some ShapeStyle {
         .background.secondary
     }
-
     static func engineLabel(for engineID: String?) -> String {
         guard let engineID,
               let engine = WineEngineCatalog.engine(id: engineID) else {
-            return "自动"
+            return String(localized: "engine.auto")
         }
         if engineID == WineEngineCatalog.d3dMetalIdentifier {
             return "D3DMetal"
@@ -66,25 +80,25 @@ struct StatusPill: View {
                 Image(systemName: systemImage)
                     .font(.caption2.weight(.semibold))
             }
-            Text(title)
+            Text(verbatim: title)
                 .font(.caption.weight(.semibold))
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .foregroundStyle(color)
-        .background(color.opacity(0.14), in: Capsule())
+        .background(color.opacity(MacBottleTheme.badgeFillOpacity), in: Capsule())
     }
 }
 
 struct EmptyStateCard: View {
     let systemImage: String
-    let title: String
-    let message: String
-    var actionTitle: String?
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    var actionTitle: LocalizedStringKey?
     var action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: MacBottleTheme.gridSpacing) {
             Image(systemName: systemImage)
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(.secondary)
@@ -107,21 +121,21 @@ struct EmptyStateCard: View {
         .padding(32)
     }
 }
-
 struct SurfaceCard<Content: View>: View {
-    var padding: CGFloat = 14
+    var radius: CGFloat = MacBottleTheme.cardRadius
+    var padding: CGFloat = MacBottleTheme.contentSpacing
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         content()
             .padding(padding)
             .background {
-                RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(.background.secondary)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
-                    .strokeBorder(.separator.opacity(0.35), lineWidth: 1)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(.separator.opacity(MacBottleTheme.borderOpacity), lineWidth: MacBottleTheme.hairline)
             }
     }
 }
@@ -139,9 +153,9 @@ struct BottleHeroHeader: View {
 
     var body: some View {
         SurfaceCard {
-            HStack(alignment: .center, spacing: 16) {
+            HStack(alignment: .center, spacing: MacBottleTheme.gridSpacing) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [.accentColor.opacity(0.85), .accentColor.opacity(0.45)],
@@ -153,9 +167,9 @@ struct BottleHeroHeader: View {
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(.white)
                 }
-                .frame(width: 64, height: 64)
+                .frame(width: MacBottleTheme.heroIconSize, height: MacBottleTheme.heroIconSize)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: MacBottleTheme.tightSpacing) {
                     Text(bottle.settings.name)
                         .font(.title2.weight(.bold))
                         .lineLimit(1)
@@ -171,7 +185,7 @@ struct BottleHeroHeader: View {
                             color: MacBottleTheme.engineColor(for: engineID)
                         )
                         StatusPill(
-                            title: "\(pinCount) 固定",
+                            title: "\(pinCount) \(String(localized: "bottle.pinned"))",
                             systemImage: "pin.fill",
                             color: .orange
                         )
@@ -192,13 +206,13 @@ struct BottleHeroHeader: View {
 }
 
 struct QuickActionTile: View {
-    let title: String
+    let title: LocalizedStringKey
     let systemImage: String
-    let subtitle: String
+    let subtitle: LocalizedStringKey
 
     var body: some View {
-        SurfaceCard(padding: 12) {
-            HStack(spacing: 12) {
+        SurfaceCard(padding: MacBottleTheme.tileRadius) {
+            HStack(spacing: MacBottleTheme.contentSpacing) {
                 Image(systemName: systemImage)
                     .font(.title3)
                     .foregroundStyle(Color.accentColor)

@@ -45,7 +45,7 @@
 | v0.4 | Wine 引擎抽象层,CrossOverEngine 为首个实现 |
 | v0.5 | 远程配方同步(Stage 1 数据层 + Stage 2 同步引擎 + Stage 3 diff UI) |
 | v0.6 | 用户可切换引擎,第二个实现(纯上游 Wine 或 GPTK2) |
-| v1.0 | 正式发布,GitHub Release,Show HN 一次 |
+| v1.0 | 正式发布,GitHub Release |
 
 ### v0.5 子阶段
 

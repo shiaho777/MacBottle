@@ -32,7 +32,7 @@ struct ProgramView: View {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = .autoupdatingCurrent
         return formatter
     }()
 
@@ -70,7 +70,7 @@ struct ProgramView: View {
                     program.pinned.toggle()
                 } label: {
                     Label(
-                        program.pinned ? "取消固定" : "固定到主页",
+                        program.pinned ? "program.unpin" : "program.pinToHome",
                         systemImage: program.pinned ? "pin.slash" : "pin"
                     )
                 }
@@ -80,7 +80,7 @@ struct ProgramView: View {
                 Button("button.createShortcut") {
                     createShortcut()
                 }
-                Button("运行日志") {
+                Button("program.runLogs") {
                     showProgramLogs = true
                 }
                 Spacer()
@@ -96,7 +96,7 @@ struct ProgramView: View {
                         programLoading = false
                     }
                 } label: {
-                    Label("运行", systemImage: "play.fill")
+                    Label("programs.run", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(programLoading)
@@ -159,7 +159,11 @@ struct ProgramView: View {
                             )
                         }
                         if program.pinned {
-                            StatusPill(title: "已固定", systemImage: "pin.fill", color: .orange)
+                            StatusPill(
+                                title: String(localized: "program.pinned"),
+                                systemImage: "pin.fill",
+                                color: .orange
+                            )
                         }
                         if let last = program.settings.lastLaunchedAt {
                             StatusPill(

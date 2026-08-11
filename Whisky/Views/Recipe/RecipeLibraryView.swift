@@ -54,8 +54,8 @@ struct RecipeLibraryView: View {
             }
             .padding(MacBottleTheme.pagePadding)
         }
-        .navigationTitle("游戏库")
-        .searchable(text: $query, placement: .toolbar, prompt: "搜索游戏 / 配方")
+        .navigationTitle("library.title")
+        .searchable(text: $query, placement: .toolbar, prompt: "library.search")
         .overlay {
             if recipes.isEmpty {
                 emptyState
@@ -88,8 +88,8 @@ struct RecipeLibraryView: View {
     private var emptyState: some View {
         EmptyStateCard(
             systemImage: "gamecontroller.fill",
-            title: "还没有游戏配方",
-            message: "点击工具栏同步按钮，从社区获取最新配方。"
+            title: "library.empty.title",
+            message: "library.empty.message"
         )
     }
 

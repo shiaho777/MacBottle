@@ -106,14 +106,14 @@ struct ConfigView: View {
                     Text("config.enhacnedSync.esync").tag(EnhancedSync.esync)
                     Text("config.enhacnedSync.msync").tag(EnhancedSync.msync)
                 }
-                Picker("Wine 引擎绑定", selection: bottleEngineSelection) {
-                    Text("自动（配方 / PE）").tag(LaunchEnginePolicy.autoEngineToken)
+                Picker("config.engineBinding", selection: bottleEngineSelection) {
+                    Text("config.engineBinding.auto").tag(LaunchEnginePolicy.autoEngineToken)
                     Text(WineEngineCatalog.describe(WineEngineCatalog.modernEngine()))
                         .tag(WineEngineCatalog.modernIdentifier)
                     Text(WineEngineCatalog.describe(WineEngineCatalog.d3dMetalEngine()))
                         .tag(WineEngineCatalog.d3dMetalIdentifier)
                 }
-                Text("仅对本容器生效。选「自动」时遵循全局自动策略；固定引擎会覆盖配方/PE 建议。")
+                Text("config.engineBinding.help")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 SettingItemView(title: "config.dpi", loadingState: dpiConfigLoadingState) {
@@ -180,24 +180,28 @@ struct ConfigView: View {
                 }
             }
             Section("D3DMetal / GPTK") {
-                LabeledContent("状态") {
+                LabeledContent("config.status") {
                     Text(d3dMetalStatus.summary)
                         .foregroundStyle(d3dMetalStatus.available ? .green : .secondary)
                 }
                 if d3dMetalStatus.linkedUnixModules {
-                    Text("Unix d3d 模块已桥接，64 位 D3D11/12 可走 D3DMetal。")
+                    Text("config.d3dmetal.bridgeOk")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else if d3dMetalStatus.available {
-                    Text("已找到 D3DMetal，但当前 Wine 未链接 d3d11.so 桥。老 2D 游戏不受影响。")
+                    Text("config.d3dmetal.foundNoBridge")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("未检测到 D3DMetal。可从历史 WhiskyWine 备份恢复框架文件。")
+                    Text("config.d3dmetal.missing")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Button(d3dMetalBusy ? "处理中…" : "探测 / 恢复 D3DMetal") {
+                Button(
+                    d3dMetalBusy
+                        ? String(localized: "settings.engine.busy")
+                        : String(localized: "config.d3dmetal.probe")
+                ) {
                     d3dMetalBusy = true
                     Task.detached(priority: .userInitiated) {
                         _ = try? D3DMetalCapability.restoreBundledIfPossible()

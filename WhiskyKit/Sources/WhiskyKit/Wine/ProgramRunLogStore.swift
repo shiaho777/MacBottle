@@ -38,10 +38,10 @@ public enum ProgramRunLogSort: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .newest: return "最新优先"
-        case .oldest: return "最旧优先"
-        case .failedFirst: return "失败优先"
-        case .longest: return "时长优先"
+        case .newest: return String(localized: "logs.sort.newest")
+        case .oldest: return String(localized: "logs.sort.oldest")
+        case .failedFirst: return String(localized: "logs.sort.failedFirst")
+        case .longest: return String(localized: "logs.sort.longest")
         }
     }
 }
@@ -69,9 +69,9 @@ public struct ProgramRunRecord: Codable, Identifiable, Hashable, Sendable {
 
     public var statusLabel: String {
         switch status {
-        case .running: return "运行中"
-        case .finished: return "已结束"
-        case .failed: return "失败"
+        case .running: return String(localized: "logs.status.running")
+        case .finished: return String(localized: "logs.status.finished")
+        case .failed: return String(localized: "logs.status.failed")
         }
     }
 }

@@ -26,6 +26,7 @@ changes. The visible differences are:
 | `WhiskyKit/WineEngine/` | MacBottle-only: `WineEngine` protocol, `CrossOverEngine`, catalog, launch policy |
 | `WhiskyKit/Whisky/` | Bottle / Program / BottleSettings models |
 | `WhiskyKit/Wine/` | Wine command invocation (uses WineEngine), launch coordinator, run logs |
+| `WhiskyKit/NativeBridge/` | MacBottle-only: native Steam install path — `SteamCMDEngine` (login, app_update, validate, progress), `ChunkedDownloader`, `DepotStore`/`ContentStore`, `SteamClientSeeder`, VDF parser. Drives `Views/Recipe/GameInstaller`. |
 | `WhiskyKit/WhiskyWine/` | Legacy shim. Forwards to `WineEngineRegistry`. |
 | `WhiskyKit/PE/` | Windows PE file parser (imports, architecture, graphics API) |
 | `WhiskyKit/Extensions/` | Foundation extensions |
@@ -76,7 +77,7 @@ two layers.
 | Type | Responsibility |
 | --- | --- |
 | `Views/Recipe/RecipeSyncController.swift` | `@MainActor ObservableObject` wrapping `RecipeSyncService` for SwiftUI. Throttles checks to once per 10 seconds per process so `onAppear` navigation does not hammer the network. |
-| `Views/Recipe/RecipeSyncView.swift` | Modal sheet with per-row checkboxes, a summary header, and a "Sync selected" footer button. Presented from `BottleView` via `.sheet(item:)` only when the diff is non-empty — nothing interrupts the user if there are no changes. |
+| `Views/Recipe/RecipeSyncView.swift` | Modal sheet with per-row checkboxes, a summary header, and a "Sync selected" footer button. Presented from `RecipeSyncToolbarButton` (the global toolbar item) only when the diff is non-empty — nothing interrupts the user if there are no changes. |
 
 Design choices worth knowing:
 
@@ -156,11 +157,22 @@ suffixes for the launch layer (launch coordinator, runtime optimizer, engine
 policy, display policy, run log store). `RecipeApplier` should have 100%
 line coverage because every game launch goes through it.
 
-## Continuing beyond v0.4
+## Current state and what's next
 
-- v0.5 introduces a user-facing engine selector once a second concrete
-  engine (pure upstream Wine) ships. The Recipe schema will grow a
-  `min_wine` field at that point.
-- The CI RecipeLint workflow already validates the entire `Recipes/` tree
-  through the real `Recipe` Swift type, so schema evolution only requires
-  editing `Recipe.swift` and migrating existing recipes.
+- v0.5 (remote recipe sync) shipped: the data layer (`RecipeCache`,
+  `RemoteRecipeSource`), the sync engine (`RecipeSyncService`), and the
+  diff UI (`RecipeSyncView` + `RecipeSyncToolbarButton`) are all live.
+  See `PROJECT_PLAN.md` for the v0.5.1–v0.5.3 sub-phase breakdown.
+- v0.7 added the native install-and-play flow: `NativeBridge/` (SteamCMD
+  engine, chunked downloader, depot/content stores) plus
+  `Views/Recipe/GameInstaller` and `GameDetailSheet`. This is the largest
+  undocumented-in-README subsystem; this module map is its canonical entry
+  point for contributors.
+- The engine layer (`WineEngine` protocol, `CrossOverEngine`,
+  `LocalPathEngine`, `LaunchEnginePolicy`) is in place. v0.6's goal of a
+  second concrete engine (pure upstream Wine or GPTK2) is still open.
+- The CI RecipeLint workflow validates the entire `Recipes/` tree through
+  the real `Recipe` Swift type, so schema evolution only requires editing
+  `Recipe.swift` and migrating existing recipes. The `installer` and
+  `main_exe` fields (added for the install flow) are optional and
+  documented in `docs/RECIPE_AUTHORING.md`.

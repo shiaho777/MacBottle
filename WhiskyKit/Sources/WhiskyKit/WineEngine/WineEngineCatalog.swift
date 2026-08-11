@@ -57,9 +57,9 @@ public enum WineEngineCatalog {
             parts.append("v\(version.major).\(version.minor).\(version.patch)")
         }
         if engine.isInstalled() {
-            parts.append("已安装")
+            parts.append(String(localized: "engineCatalog.installed"))
         } else {
-            parts.append("未安装")
+            parts.append(String(localized: "engineCatalog.notInstalled"))
         }
         if let local = engine as? LocalPathEngine, local.supportsD3DMetalBridge {
             parts.append("D3DMetal")
@@ -171,9 +171,9 @@ public enum WineEngineCatalogError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .backupNotFound:
-            return "未找到带 D3DMetal 的 Wine 备份（Libraries.bak*）"
+            return String(localized: "engineCatalog.d3dmetalBackupMissing")
         case .engineNotInstalled:
-            return "所选 Wine 引擎尚未安装"
+            return String(localized: "engineCatalog.engineNotInstalled")
         }
     }
 }
