@@ -40,6 +40,7 @@
 		ECE00000000000000000009A /* wqy-microhei.ttc in Resources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000009B /* wqy-microhei.ttc */; };
 		6E40495D29CCA19C006E3F1B /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6E40495C29CCA19C006E3F1B /* Preview Assets.xcassets */; };
 		6E40498129CCA8B0006E3F1B /* BottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E40498029CCA8B0006E3F1B /* BottleView.swift */; };
+		596E16A5CF044AC8A32D8E41 /* WorkspaceImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADD65335ED545A6827FC927 /* WorkspaceImportView.swift */; };
 		6E40498329CCA91B006E3F1B /* Bottle+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E40498229CCA91B006E3F1B /* Bottle+Extensions.swift */; };
 		6E49E0212AECB7DB00009CAC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E49E0202AECB7DB00009CAC /* SettingsView.swift */; };
 		6E50D98329CD6066008C39F6 /* BottleVM.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E50D98229CD6066008C39F6 /* BottleVM.swift */; };
@@ -155,6 +156,7 @@
 		6E40495C29CCA19C006E3F1B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		6E40495E29CCA19C006E3F1B /* Whisky.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Whisky.entitlements; sourceTree = "<group>"; };
 		6E40498029CCA8B0006E3F1B /* BottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleView.swift; sourceTree = "<group>"; };
+		AADD65335ED545A6827FC927 /* WorkspaceImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceImportView.swift; sourceTree = "<group>"; };
 		6E40498229CCA91B006E3F1B /* Bottle+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bottle+Extensions.swift"; sourceTree = "<group>"; };
 		6E49E0202AECB7DB00009CAC /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		6E50D98229CD6066008C39F6 /* BottleVM.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleVM.swift; sourceTree = "<group>"; };
@@ -276,6 +278,7 @@
 			isa = PBXGroup;
 			children = (
 				6E40498029CCA8B0006E3F1B /* BottleView.swift */,
+				AADD65335ED545A6827FC927 /* WorkspaceImportView.swift */,
 				6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */,
 				6E50D98429CDF25B008C39F6 /* BottleCreationView.swift */,
 				6E355E5729D78249002D83BE /* ConfigView.swift */,
@@ -665,6 +668,7 @@
 				6E7C07C02AAF570100F6E66B /* FileOpenView.swift in Sources */,
 				6E6C0CF22A419A6800356232 /* WelcomeView.swift in Sources */,
 				6E40498129CCA8B0006E3F1B /* BottleView.swift in Sources */,
+				596E16A5CF044AC8A32D8E41 /* WorkspaceImportView.swift in Sources */,
 				6E355E5E29D7D85D002D83BE /* ProgramView.swift in Sources */,
 				ECE00000000000000000000A /* RecipeSection.swift in Sources */,
 				ECE00000000000000000001A /* RecipeSyncController.swift in Sources */,

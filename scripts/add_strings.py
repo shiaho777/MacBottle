@@ -210,6 +210,23 @@ CATALOG = {
     "library.search": ("Search games / recipes", "搜索游戏 / 配方"),
     "library.empty.title": ("No recipes yet", "还没有游戏配方"),
     "library.empty.message": ("Click the sync button in the toolbar to fetch the latest recipes from the community.", "点击工具栏同步按钮，从社区获取最新配方。"),
+
+    # --- workspace import ---
+    "workspace.import.title": ("Import to Workspace", "导入工作区"),
+    "workspace.import.subtitle": ("Import files/folders and pick a launch entry", "导入文件/文件夹并指定启动入口"),
+    "workspace.import.create": ("Import", "导入"),
+    "workspace.import.failed": ("Import failed", "导入失败"),
+    "workspace.source": ("Source", "来源"),
+    "workspace.source.pick": ("Pick file or folder", "选择文件或文件夹"),
+    "workspace.copyIntoBottle": ("Copy into bottle workspace", "复制进 bottle 工作区"),
+    "workspace.launchEntry": ("Launch entry", "启动入口"),
+    "workspace.launchMode": ("Launch mode", "启动方式"),
+    "workspace.launchMode.file": ("Launch file", "启动文件"),
+    "workspace.launchMode.command": ("Launch command", "启动命令"),
+    "workspace.launchFile": ("Executable", "可执行文件"),
+    "workspace.launchCommand.placeholder": ("e.g. winecfg  /  cmd /c setup.bat", "如 winecfg  /  cmd /c setup.bat"),
+    "workspace.entryName": ("Name", "名称"),
+    "workspace.entryName.placeholder": ("Entry name", "入口名称"),
 }
 
 def main():
