@@ -43,7 +43,7 @@ struct PinView: View {
             card
         }
         .buttonStyle(.plain)
-        .help("点击启动 \(name) · 可拖拽排序")
+        .help("pin.help \(name)")
         .draggable(program.url.absoluteString) {
             card
                 .opacity(0.9)
@@ -55,31 +55,31 @@ struct PinView: View {
             isDropTargeted = targeted
         }
         .contextMenu {
-            Button("运行", systemImage: "play.fill") {
+            Button("pin.run", systemImage: "play.fill") {
                 runProgram()
             }
             ProgramMenuView(program: program, path: $path)
             Divider()
-            Button("前移", systemImage: "arrow.left") {
+            Button("pin.moveLeft", systemImage: "arrow.left") {
                 bottle.movePin(program.url, by: -1)
             }
-            Button("后移", systemImage: "arrow.right") {
+            Button("pin.moveRight", systemImage: "arrow.right") {
                 bottle.movePin(program.url, by: 1)
             }
-            Button("移到最前", systemImage: "backward.end") {
+            Button("pin.moveToFront", systemImage: "backward.end") {
                 bottle.movePinToStart(program.url)
             }
-            Button("移到最后", systemImage: "forward.end") {
+            Button("pin.moveToBack", systemImage: "forward.end") {
                 bottle.movePinToEnd(program.url)
             }
             Divider()
-            Button("重命名", systemImage: "pencil.line") {
+            Button("pin.rename", systemImage: "pencil.line") {
                 showRenameSheet.toggle()
             }
-            Button("在 Finder 中显示", systemImage: "folder") {
+            Button("programs.showInFinder", systemImage: "folder") {
                 NSWorkspace.shared.activateFileViewerSelecting([program.url])
             }
-            Button("取消固定", systemImage: "pin.slash", role: .destructive) {
+            Button("pin.unpin", systemImage: "pin.slash", role: .destructive) {
                 program.pinned = false
             }
         }
@@ -160,7 +160,7 @@ struct PinView: View {
         }
         .overlay(alignment: .top) {
             if launchCoordinator.isLaunching(programURL: program.url) {
-                Text("正在启动")
+                Text("pin.launching")
                     .font(.caption2.weight(.semibold))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)

@@ -54,10 +54,10 @@ struct ProgramLogsView: View {
             logDetail
                 .frame(minWidth: 360)
         }
-        .navigationTitle("运行日志")
+        .navigationTitle("logs.title")
         .toolbar {
             ToolbarItemGroup {
-                Picker("排序", selection: $sort) {
+                Picker("logs.sort", selection: $sort) {
                     ForEach(ProgramRunLogSort.allCases) { item in
                         Text(item.title).tag(item)
                     }
@@ -65,30 +65,30 @@ struct ProgramLogsView: View {
                 .pickerStyle(.menu)
                 .frame(width: 120)
 
-                Toggle("详细调试", isOn: $verboseWineDebug)
+                Toggle("logs.verbose", isOn: $verboseWineDebug)
                     .toggleStyle(.checkbox)
-                    .help("开启后捕获 Wine 详细输出（最多约 12MB/次）；关闭时仅记录元数据与心跳")
+                    .help("logs.verbose.help")
                     .onChange(of: verboseWineDebug) { _, newValue in
                         ProgramRunLogStore.verboseWineDebugEnabled = newValue
                     }
 
-                Button("导出", systemImage: "square.and.arrow.down") {
+                Button("logs.export", systemImage: "square.and.arrow.down") {
                     exportSelected()
                 }
                 .disabled(selectedRun == nil)
 
-                Button("复制", systemImage: "doc.on.doc") {
+                Button("logs.copy", systemImage: "doc.on.doc") {
                     copySelected()
                 }
                 .disabled(detailText.isEmpty)
 
-                Button("删除", systemImage: "trash") {
+                Button("logs.delete", systemImage: "trash") {
                     deleteSelected()
                 }
                 .disabled(selectedRunIDs.isEmpty && selectedRun == nil)
 
-                Menu("清理", systemImage: "trash.slash") {
-                    Button("清空当前程序日志", role: .destructive) {
+                Menu("logs.clean", systemImage: "trash.slash") {
+                    Button("logs.clean.program", role: .destructive) {
                         if let selectedProgramKey {
                             store.clearProgram(bottle: bottle, programKey: selectedProgramKey)
                             self.selectedRunID = nil
@@ -99,7 +99,7 @@ struct ProgramLogsView: View {
                     }
                     .disabled(selectedProgramKey == nil)
 
-                    Button("清空本容器全部日志", role: .destructive) {
+                    Button("logs.clean.bottle", role: .destructive) {
                         store.clearBottle(bottle)
                         selectedProgramKey = nil
                         selectedRunID = nil
@@ -150,14 +150,14 @@ struct ProgramLogsView: View {
 
     private var programSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("程序")
+            Text("logs.sidebar.programs")
                 .font(.headline)
                 .padding(12)
             Divider()
             if programsCache.isEmpty {
                 emptyState(
-                    title: "暂无程序日志",
-                    subtitle: "运行程序后会按程序分类记录完整日志"
+                    title: "logs.empty.programs.title",
+                    subtitle: "logs.empty.programs.subtitle"
                 )
             } else {
                 List(programsCache, selection: $selectedProgramKey) { program in
@@ -165,7 +165,7 @@ struct ProgramLogsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(program.programName)
                                 .lineLimit(1)
-                            Text("\(program.runCount) 次运行")
+                            Text("programs.runCount \(program.runCount)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -188,11 +188,11 @@ struct ProgramLogsView: View {
     private var runList: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("运行记录")
+                Text("logs.section.runs")
                     .font(.headline)
                 Spacer()
                 if !selectedRunIDs.isEmpty {
-                    Text("已选 \(selectedRunIDs.count)")
+                    Text("programs.selected \(selectedRunIDs.count)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -200,7 +200,7 @@ struct ProgramLogsView: View {
             .padding(12)
             Divider()
             if runsCache.isEmpty {
-                emptyState(title: "无运行记录", subtitle: "选择左侧程序查看每次运行日志")
+                emptyState(title: "logs.empty.runs.title", subtitle: "logs.empty.runs.subtitle")
             } else {
                 List(selection: $selectedRunIDs) {
                     ForEach(runsCache) { run in
@@ -232,7 +232,7 @@ struct ProgramLogsView: View {
             HStack {
                 Text(durationText(run))
                 if let code = run.exitCode {
-                    Text("退出码 \(code)")
+                    Text("programs.exitCode \(code)")
                 }
                 if run.byteCount > 0 {
                     Text(ByteCountFormatter.string(fromByteCount: Int64(run.byteCount), countStyle: .file))
@@ -256,12 +256,12 @@ struct ProgramLogsView: View {
                             .foregroundStyle(.secondary)
                     }
                     if run.status == .running {
-                        Label("实时输出", systemImage: "dot.radiowaves.left.and.right")
+                        Label("logs.liveOutput", systemImage: "dot.radiowaves.left.and.right")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.green)
                     }
                 } else {
-                    Text("日志内容")
+                    Text("logs.detail.placeholder")
                         .font(.headline)
                 }
                 Spacer()
@@ -269,18 +269,18 @@ struct ProgramLogsView: View {
                     ProgressView()
                         .controlSize(.small)
                 }
-                Toggle("跟随底部", isOn: $autoScroll)
+                Toggle("logs.followTail", isOn: $autoScroll)
                     .toggleStyle(.checkbox)
                     .font(.caption)
                 if selectedRun?.status == .running {
-                    Button("强制结束", role: .destructive) {
+                    Button("logs.forceStop", role: .destructive) {
                         BottleForceStop.forceStop(bottle: bottle, reason: "run-log")
                         store.reconcileStaleRunningRuns(for: bottle)
                         reloadCaches()
                         refreshDetail()
                     }
                 }
-                Button("在 Finder 中显示") {
+                Button("programs.showInFinder") {
                     revealSelected()
                 }
                 .disabled(selectedRun == nil)
@@ -289,11 +289,11 @@ struct ProgramLogsView: View {
             Divider()
 
             if selectedRun == nil {
-                emptyState(title: "选择一条运行记录", subtitle: "可查看、复制、导出日志预览（末尾片段）")
+                emptyState(title: "logs.empty.detail.title", subtitle: "logs.empty.detail.subtitle")
             } else if isLoadingDetail && detailText.isEmpty {
-                emptyState(title: "正在加载…", subtitle: "仅读取日志末尾预览，避免卡顿")
+                emptyState(title: "logs.loading.title", subtitle: "logs.loading.subtitle")
             } else if detailText.isEmpty {
-                emptyState(title: "暂无输出", subtitle: "该次运行尚未产生可显示日志")
+                emptyState(title: "logs.empty.output.title", subtitle: "logs.empty.output.subtitle")
             } else {
                 LogTextView(text: detailText, autoScroll: autoScroll)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -301,7 +301,7 @@ struct ProgramLogsView: View {
         }
     }
 
-    private func emptyState(title: String, subtitle: String) -> some View {
+    private func emptyState(title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
         VStack(spacing: 8) {
             Spacer()
             Image(systemName: "doc.text.magnifyingglass")
@@ -393,7 +393,7 @@ struct ProgramLogsView: View {
                 try store.exportRun(run, to: url)
             } catch {
                 let alert = NSAlert()
-                alert.messageText = "导出失败"
+                alert.messageText = String(localized: "logs.export.failed")
                 alert.informativeText = error.localizedDescription
                 alert.runModal()
             }

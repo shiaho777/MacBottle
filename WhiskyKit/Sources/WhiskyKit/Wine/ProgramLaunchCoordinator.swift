@@ -66,7 +66,7 @@ public final class ProgramLaunchCoordinator {
     }
 
     public func noteAlreadyLaunching(programName: String) {
-        lastErrorMessage = "「\(programName)」正在启动中，请稍候"
+        lastErrorMessage = String(format: String(localized: "launch.alreadyLaunching %@"), programName)
         phase = .failed(programName: programName, message: lastErrorMessage ?? "")
         scheduleClear(after: 2.5)
     }

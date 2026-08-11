@@ -45,6 +45,8 @@ reviewers can find a file by platform id without grep.
 | `dx_version` | enum | yes | `d3d9` \| `d3d10` \| `d3d11` \| `d3d12` \| `vulkan` \| `opengl`. |
 | `min_macos` | string | yes | Semantic version, e.g. `14.0`. |
 | `renderer` | enum | yes | `d3dmetal` (default, Apple Silicon) \| `dxvk` \| `wined3d`. |
+| `installer` | enum | no | How the game's content is obtained, driving the install UI: `steam` \| `gog` \| `custom`. Omit for configuration-only recipes. |
+| `main_exe` | string | no | Relative path inside `drive_c` to the main executable after install, e.g. `Program Files/Game/game.exe`. Used as a hint in the "pick main .exe" dialog; nil means "ask the user". |
 | `winetricks` | string[] | no | Verbs to install, lowercase. Example: `["vcrun2022", "dotnet48"]`. |
 | `env` | object | no | String-to-string map. Keys are env vars. Example: `{"WINEESYNC": "1"}`. |
 | `registry` | object[] | no | See below. |

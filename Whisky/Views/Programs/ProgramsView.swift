@@ -27,11 +27,11 @@ private enum ProgramsPane: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .library: return "程序库"
-        case .recent: return "最近运行"
-        case .blocklist: return "屏蔽列表"
+        case .library: return "programs.pane.library"
+        case .recent: return "programs.pane.recent"
+        case .blocklist: return "programs.pane.blocklist"
         }
     }
 }
@@ -47,15 +47,15 @@ private enum ProgramFilter: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .all: return "全部"
-        case .pinned: return "已固定"
-        case .unpinned: return "未固定"
-        case .x64: return "64 位"
-        case .x86: return "32 位"
-        case .games: return "游戏/主程序"
-        case .tools: return "工具/安装器"
+        case .all: return "programs.filter.all"
+        case .pinned: return "programs.filter.pinned"
+        case .unpinned: return "programs.filter.unpinned"
+        case .x64: return "programs.filter.x64"
+        case .x86: return "programs.filter.x86"
+        case .games: return "programs.filter.games"
+        case .tools: return "programs.filter.tools"
         }
     }
 }
@@ -69,13 +69,13 @@ private enum ProgramSort: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .pinnedFirst: return "固定优先"
-        case .recent: return "最近运行"
-        case .name: return "名称"
-        case .folder: return "目录"
-        case .architecture: return "架构"
+        case .pinnedFirst: return "programs.sort.pinnedFirst"
+        case .recent: return "programs.sort.recent"
+        case .name: return "programs.sort.name"
+        case .folder: return "programs.sort.folder"
+        case .architecture: return "programs.sort.architecture"
         }
     }
 }
@@ -86,10 +86,10 @@ private enum ProgramLayout: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .flat: return "列表"
-        case .folders: return "按文件夹"
+        case .flat: return "programs.layout.flat"
+        case .folders: return "programs.layout.folders"
         }
     }
 
@@ -195,11 +195,16 @@ struct ProgramsView: View {
     private var statsLine: String {
         switch pane {
         case .library:
-            return "共 \(programs.count) 个 · 固定 \(programs.filter(\.pinned).count) · 显示 \(filteredPrograms.count)"
+            return String(
+                format: String(localized: "programs.stats.library %lld %lld %lld"),
+                programs.count,
+                programs.filter(\.pinned).count,
+                filteredPrograms.count
+            )
         case .recent:
-            return "最近运行 \(recentPrograms.count) 个"
+            return String(format: String(localized: "programs.stats.recent %lld"), recentPrograms.count)
         case .blocklist:
-            return "已屏蔽 \(blocklist.count) 个"
+            return String(format: String(localized: "programs.stats.blocklist %lld"), blocklist.count)
         }
     }
 
@@ -217,8 +222,8 @@ struct ProgramsView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("已安装程序")
-        .searchable(text: $searchText, prompt: "搜索名称或路径")
+        .navigationTitle("programs.title")
+        .searchable(text: $searchText, prompt: "programs.search")
         .toolbar { toolbarContent }
         .onAppear {
             reload(rescan: false)
@@ -237,7 +242,7 @@ struct ProgramsView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Picker("面板", selection: $pane) {
+                    Picker("programs.pane.library", selection: $pane) {
                     ForEach(ProgramsPane.allCases) { item in
                         Text(item.title).tag(item)
                     }
@@ -264,7 +269,7 @@ struct ProgramsView: View {
                         }
                     }
 
-                    Picker("布局", selection: $layout) {
+                    Picker("programs.layout.flat", selection: $layout) {
                         ForEach(ProgramLayout.allCases) { item in
                             Label(item.title, systemImage: item.systemImage).tag(item)
                         }
@@ -272,7 +277,7 @@ struct ProgramsView: View {
                     .labelsHidden()
                     .frame(width: 120)
 
-                    Picker("排序", selection: $sort) {
+                    Picker("programs.sort.name", selection: $sort) {
                         ForEach(ProgramSort.allCases) { item in
                             Text(item.title).tag(item)
                         }
@@ -280,12 +285,12 @@ struct ProgramsView: View {
                     .labelsHidden()
                     .frame(width: 120)
 
-                    Toggle("隐藏系统噪声", isOn: $hideSystemNoise)
+                    Toggle("programs.hideNoise", isOn: $hideSystemNoise)
                         .toggleStyle(.checkbox)
-                        .help("隐藏 uninstall、crash、redist 等常见非主程序")
+                        .help("programs.hideNoise.help")
                 }
             } else if pane == .recent {
-                Toggle("隐藏系统噪声", isOn: $hideSystemNoise)
+                Toggle("programs.hideNoise", isOn: $hideSystemNoise)
                     .toggleStyle(.checkbox)
             }
         }
@@ -298,11 +303,11 @@ struct ProgramsView: View {
         if filteredPrograms.isEmpty {
             EmptyStateCard(
                 systemImage: searchText.isEmpty ? "shippingbox" : "magnifyingglass",
-                title: searchText.isEmpty ? "还没有可显示的程序" : "没有匹配结果",
+                title: searchText.isEmpty ? "programs.empty.title" : "programs.empty.search.title",
                 message: searchText.isEmpty
-                    ? "点右上角刷新扫描 drive_c。也可从固定区或底部「浏览其他程序」导入。"
-                    : "试试换关键词，或关闭「隐藏系统噪声」。",
-                actionTitle: searchText.isEmpty ? "刷新扫描" : nil,
+                    ? "programs.empty.message"
+                    : "programs.empty.search.message",
+                actionTitle: searchText.isEmpty ? "programs.empty.action" : nil,
                 action: searchText.isEmpty ? { refreshPrograms() } : nil
             )
         } else if layout == .folders {
@@ -317,8 +322,8 @@ struct ProgramsView: View {
         if recentPrograms.isEmpty {
             EmptyStateCard(
                 systemImage: "clock.arrow.circlepath",
-                title: "还没有运行记录",
-                message: "从程序库或固定区启动程序后，会按时间显示在这里，方便一键再开。"
+                title: "programs.recent.empty.title",
+                message: "programs.recent.empty.message"
             )
         } else {
             flatLibraryList(recentPrograms, showRecentTime: true)
@@ -413,8 +418,8 @@ struct ProgramsView: View {
         if blocklist.isEmpty {
             EmptyStateCard(
                 systemImage: "hand.raised",
-                title: "屏蔽列表为空",
-                message: "被屏蔽的 exe 不会再出现在程序库扫描结果中。可从程序库右键加入。"
+                title: "programs.blocklist.empty.title",
+                message: "programs.blocklist.empty.message"
             )
         } else {
             List(selection: $selectedBlockitems) {
@@ -432,14 +437,14 @@ struct ProgramsView: View {
                                 .truncationMode(.middle)
                         }
                         Spacer()
-                        Button("移除") {
+                        Button("programs.blocklist.remove") {
                             removeFromBlocklist([url])
                         }
                         .buttonStyle(.borderless)
                     }
                     .tag(url)
                     .contextMenu {
-                        Button("移除屏蔽", systemImage: "hand.raised.slash") {
+                        Button("programs.blocklist.unblock", systemImage: "hand.raised.slash") {
                             removeFromBlocklist(
                                 selectedBlockitems.isEmpty ? [url] : Array(selectedBlockitems)
                             )
@@ -474,35 +479,35 @@ struct ProgramsView: View {
                 Button {
                     runSelectedOrFirst()
                 } label: {
-                    Label("运行", systemImage: "play.fill")
+                    Label("programs.run", systemImage: "play.fill")
                 }
                 .disabled(selectedProgramObjects.isEmpty && currentList.isEmpty)
 
                 Button {
                     togglePinSelected()
                 } label: {
-                    Label("固定", systemImage: "pin")
+                    Label("programs.pin", systemImage: "pin")
                 }
                 .disabled(selectedProgramObjects.isEmpty)
 
                 Button {
                     openConfigSelected()
                 } label: {
-                    Label("配置", systemImage: "gearshape")
+                    Label("programs.config", systemImage: "gearshape")
                 }
                 .disabled(selectedProgramObjects.count != 1)
 
                 Button {
                     blockSelected()
                 } label: {
-                    Label("屏蔽", systemImage: "hand.raised")
+                    Label("programs.block", systemImage: "hand.raised")
                 }
                 .disabled(selectedProgramObjects.isEmpty)
 
                 Button {
                     revealSelected()
                 } label: {
-                    Label("在 Finder 中显示", systemImage: "folder")
+                    Label("programs.showInFinder", systemImage: "folder")
                 }
                 .disabled(selectedProgramObjects.isEmpty)
 
@@ -510,16 +515,16 @@ struct ProgramsView: View {
                     Button {
                         clearRecentSelected()
                     } label: {
-                        Label("清除记录", systemImage: "clock.badge.xmark")
+                        Label("programs.clearHistory", systemImage: "clock.badge.xmark")
                     }
                     .disabled(selectedProgramObjects.isEmpty && recentPrograms.isEmpty)
-                    .help("清除选中项的最近运行时间；未选中则清空全部")
+                    .help("programs.clearHistory.help")
                 }
             } else {
                 Button {
                     removeFromBlocklist(Array(selectedBlockitems))
                 } label: {
-                    Label("移除屏蔽", systemImage: "hand.raised.slash")
+                    Label("programs.blocklist.unblock", systemImage: "hand.raised.slash")
                 }
                 .disabled(selectedBlockitems.isEmpty)
             }
@@ -528,12 +533,12 @@ struct ProgramsView: View {
                 Button {
                     expandedFolders = Set(folderGroups.map(\.id))
                 } label: {
-                    Label("全部展开", systemImage: "rectangle.expand.vertical")
+                    Label("programs.expandAll", systemImage: "rectangle.expand.vertical")
                 }
                 Button {
                     expandedFolders.removeAll()
                 } label: {
-                    Label("全部折叠", systemImage: "rectangle.compress.vertical")
+                    Label("programs.collapseAll", systemImage: "rectangle.compress.vertical")
                 }
             }
 
@@ -543,7 +548,7 @@ struct ProgramsView: View {
                 if isRefreshing {
                     ProgressView().controlSize(.small)
                 } else {
-                    Label("刷新", systemImage: "arrow.clockwise")
+                    Label("programs.refresh", systemImage: "arrow.clockwise")
                 }
             }
             .disabled(isRefreshing)
@@ -564,27 +569,27 @@ struct ProgramsView: View {
             ? selectedProgramObjects
             : [program]
 
-        Button("运行", systemImage: "play.fill") {
+        Button("programs.run", systemImage: "play.fill") {
             targets.forEach { $0.run() }
             reload(rescan: false)
         }
-        Button(program.pinned ? "取消固定" : "固定到主页", systemImage: "pin") {
+        Button(program.pinned ? "programs.unpin" : "programs.pinToHome", systemImage: "pin") {
             targets.forEach { $0.pinned.toggle() }
             reload(rescan: false)
         }
-        Button("程序配置", systemImage: "gearshape") {
+        Button("programs.programConfig", systemImage: "gearshape") {
             path.append(program)
         }
         .disabled(targets.count != 1)
         Divider()
-        Button("在 Finder 中显示", systemImage: "folder") {
+        Button("programs.showInFinder", systemImage: "folder") {
             NSWorkspace.shared.activateFileViewerSelecting(targets.map(\.url))
         }
-        Button("加入屏蔽列表", systemImage: "hand.raised") {
+        Button("programs.addToBlocklist", systemImage: "hand.raised") {
             addToBlocklist(targets.map(\.url))
         }
         if targets.contains(where: { $0.settings.lastLaunchedAt != nil }) {
-            Button("清除运行记录", systemImage: "clock.badge.xmark") {
+            Button("programs.clearRunHistory", systemImage: "clock.badge.xmark") {
                 targets.forEach {
                     $0.settings.lastLaunchedAt = nil
                 }
@@ -728,7 +733,7 @@ struct ProgramsView: View {
 }
 
 private struct FilterChip: View {
-    let title: String
+    let title: LocalizedStringKey
     let isSelected: Bool
     let action: () -> Void
 
@@ -773,7 +778,7 @@ private struct ProgramLibraryRow: View {
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.locale = .autoupdatingCurrent
         return formatter
     }()
 
@@ -830,7 +835,7 @@ private struct ProgramLibraryRow: View {
                 Image(systemName: program.pinned ? "pin.fill" : "pin")
             }
             .buttonStyle(.borderless)
-            .help(program.pinned ? "取消固定" : "固定")
+            .help(program.pinned ? "programs.unpin" : "programs.pin")
 
             Button {
                 program.run()
@@ -838,7 +843,7 @@ private struct ProgramLibraryRow: View {
                 Image(systemName: "play.fill")
             }
             .buttonStyle(.borderless)
-            .help("运行")
+            .help("programs.run")
         }
         .padding(.vertical, 4)
         .task(id: program.url) {

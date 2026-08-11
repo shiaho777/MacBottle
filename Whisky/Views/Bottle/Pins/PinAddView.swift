@@ -36,7 +36,7 @@ struct PinAddView: View {
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
-                Text("添加固定")
+                Text("pin.add")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(2, reservesSpace: true)

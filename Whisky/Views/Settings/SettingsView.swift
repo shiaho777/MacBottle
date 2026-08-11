@@ -33,7 +33,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("通用") {
+            Section("settings.general") {
                 Toggle("settings.toggle.kill.on.terminate", isOn: $killOnTerminate)
                 ActionView(
                     text: "settings.path",
@@ -54,15 +54,15 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Wine 引擎") {
-                Toggle("启动时按游戏自动选择引擎", isOn: $autoSelectEngine)
+            Section("settings.engine.section") {
+                Toggle("settings.engine.autoSelect", isOn: $autoSelectEngine)
                     .onChange(of: autoSelectEngine) { _, newValue in
                         LaunchEnginePolicy.autoSelectEnabled = newValue
                     }
-                Text("配方 renderer / PE 导入表会在启动瞬间临时切换引擎，不覆盖你的手动选择。")
+                Text("settings.engine.autoSelect.help")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Picker("当前引擎", selection: $selectedEngineID) {
+                Picker("settings.engine.current", selection: $selectedEngineID) {
                     ForEach(WineEngineCatalog.allEngines().map(\.identifier), id: \.self) { id in
                         Text(engineDescriptions[id] ?? id).tag(id)
                     }
@@ -72,7 +72,7 @@ struct SettingsView: View {
                     switchEngine(to: newValue, installIfNeeded: false)
                 }
 
-                Text("Modern：Wine 11.x 通用栈。D3DMetal：旧 CrossOver 栈，64 位 D3D11/12 更强。切换后请重开游戏。")
+                Text("settings.engine.help")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -83,26 +83,30 @@ struct SettingsView: View {
                 }
 
                 HStack {
-                    Button(engineBusy ? "处理中…" : "安装 / 修复 D3DMetal 引擎") {
+                    Button(
+                        engineBusy
+                            ? String(localized: "settings.engine.busy")
+                            : String(localized: "settings.engine.installD3DMetal")
+                    ) {
                         installD3DMetalEngine()
                     }
                     .disabled(engineBusy)
 
-                    Button("刷新状态") {
+                    Button("settings.engine.refresh") {
                         refreshEngineDescriptions()
                     }
                     .disabled(engineBusy)
                 }
             }
 
-            Section("更新") {
+            Section("settings.section.update") {
                 Toggle("settings.toggle.whisky.updates", isOn: $whiskyUpdate)
                 Toggle("settings.toggle.whiskywine.updates", isOn: $checkWhiskyWineUpdates)
             }
         }
         .formStyle(.grouped)
         .frame(minWidth: 520, idealWidth: 560)
-        .navigationTitle("设置")
+        .navigationTitle("settings.general")
         .onAppear {
             selectedEngineID = WineEngineRegistry.shared.current.identifier
             refreshEngineDescriptions()
@@ -131,7 +135,7 @@ struct SettingsView: View {
                 )
                 await MainActor.run {
                     selectedEngineID = engine.identifier
-                    engineMessage = "已切换到 \(engine.displayName)"
+                    engineMessage = String(format: String(localized: "settings.engine.switched %@"), engine.displayName)
                     engineBusy = false
                     refreshEngineDescriptions()
                 }
@@ -158,7 +162,8 @@ struct SettingsView: View {
                 )
                 await MainActor.run {
                     selectedEngineID = engine.identifier
-                    engineMessage = "D3DMetal 引擎已就绪：\(engine.libraryRoot.path)"
+                    let format = String(localized: "settings.engine.d3dmetalReady %@")
+                    engineMessage = String(format: format, engine.libraryRoot.path)
                     engineBusy = false
                     refreshEngineDescriptions()
                 }
