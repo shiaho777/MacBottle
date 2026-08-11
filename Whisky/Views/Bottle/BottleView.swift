@@ -34,6 +34,7 @@ struct BottleView: View {
     @State private var path = NavigationPath()
     @State private var programLoading: Bool = false
     @State private var showWinetricksSheet: Bool = false
+    @State private var showWorkspaceImport: Bool = false
     @State private var selectedProgramURL: URL?
 
     private let gridLayout = [GridItem(.adaptive(minimum: 112, maximum: 140), spacing: MacBottleTheme.gridSpacing)]
@@ -135,6 +136,16 @@ struct BottleView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        Button {
+                            showWorkspaceImport.toggle()
+                        } label: {
+                            QuickActionTile(
+                                title: "workspace.import.title",
+                                systemImage: "tray.and.arrow.down",
+                                subtitle: "workspace.import.subtitle"
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(MacBottleTheme.pagePadding)
@@ -162,6 +173,9 @@ struct BottleView: View {
             .navigationTitle(bottle.settings.name)
             .sheet(isPresented: $showWinetricksSheet) {
                 WinetricksView(bottle: bottle)
+            }
+            .sheet(isPresented: $showWorkspaceImport) {
+                WorkspaceImportView(bottle: bottle)
             }
             .onChange(of: bottle.settings) { oldValue, newValue in
                 guard oldValue != newValue else { return }

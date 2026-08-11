@@ -65,17 +65,25 @@ public enum Locales: String, Codable, CaseIterable {
     }
 }
 
+public enum LaunchMode: String, Codable, Sendable {
+    case file
+    case command
+}
+
 public struct ProgramSettings: Codable {
     public var locale: Locales = .auto
     public var environment: [String: String] = [:]
     public var arguments: String = ""
     public var recipeID: String?
     public var lastLaunchedAt: Date?
+    public var launchMode: LaunchMode = .file
+    public var launchCommand: String = ""
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case locale, environment, arguments, recipeID, lastLaunchedAt
+        case launchMode, launchCommand
     }
 
     public init(from decoder: Decoder) throws {
@@ -85,6 +93,8 @@ public struct ProgramSettings: Codable {
         self.arguments = try container.decodeIfPresent(String.self, forKey: .arguments) ?? ""
         self.recipeID = try container.decodeIfPresent(String.self, forKey: .recipeID)
         self.lastLaunchedAt = try container.decodeIfPresent(Date.self, forKey: .lastLaunchedAt)
+        self.launchMode = try container.decodeIfPresent(LaunchMode.self, forKey: .launchMode) ?? .file
+        self.launchCommand = try container.decodeIfPresent(String.self, forKey: .launchCommand) ?? ""
     }
 
     static func decode(from settingsURL: URL) throws -> ProgramSettings {

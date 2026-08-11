@@ -33,6 +33,8 @@ extension Program {
     func runInWine() {
         let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
         let environment = generateEnvironment()
+        let launchMode = settings.launchMode
+        let launchCommandArgs = settings.launchCommand.split { $0.isWhitespace }.map(String.init)
         let recipe: Recipe?
         if let recipeID = settings.recipeID {
             recipe = RecipeStore.shared.recipe(id: recipeID)
@@ -55,15 +57,24 @@ extension Program {
 
             Task.detached(priority: .userInitiated) {
                 do {
-                    try await Wine.runProgram(
-                        at: programURL,
-                        args: arguments,
-                        bottle: bottle,
-                        environment: environment,
-                        wait: false,
-                        recipe: recipe,
-                        autoSelectEngine: true
-                    )
+                    switch launchMode {
+                    case .file:
+                        try await Wine.runProgram(
+                            at: programURL,
+                            args: arguments,
+                            bottle: bottle,
+                            environment: environment,
+                            wait: false,
+                            recipe: recipe,
+                            autoSelectEngine: true
+                        )
+                    case .command:
+                        try await Wine.runWine(
+                            launchCommandArgs,
+                            bottle: bottle,
+                            environment: environment
+                        )
+                    }
                     await MainActor.run {
                         ProgramLaunchCoordinator.shared.finishLaunchSuccess(
                             programURL: programURL,
