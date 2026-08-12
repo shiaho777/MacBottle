@@ -101,52 +101,6 @@ struct BottleView: View {
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("bottle.section.manage")
-                            .font(.headline)
-                        NavigationLink(value: BottleStage.programs) {
-                            QuickActionTile(
-                                title: "bottle.manage.programs.title",
-                                systemImage: "list.bullet.rectangle",
-                                subtitle: "bottle.manage.programs.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        NavigationLink(value: BottleStage.config) {
-                            QuickActionTile(
-                                title: "bottle.manage.config.title",
-                                systemImage: "slider.horizontal.3",
-                                subtitle: "bottle.manage.config.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        NavigationLink(value: BottleStage.processes) {
-                            QuickActionTile(
-                                title: "bottle.manage.processes.title",
-                                systemImage: "list.bullet.rectangle.portrait",
-                                subtitle: "bottle.manage.processes.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        NavigationLink(value: BottleStage.logs) {
-                            QuickActionTile(
-                                title: "bottle.manage.logs.title",
-                                systemImage: "doc.text",
-                                subtitle: "bottle.manage.logs.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        Button {
-                            showWorkspaceImport.toggle()
-                        } label: {
-                            QuickActionTile(
-                                title: "workspace.import.title",
-                                systemImage: "tray.and.arrow.down",
-                                subtitle: "workspace.import.subtitle"
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
                 }
                 .padding(MacBottleTheme.pagePadding)
             }
@@ -171,6 +125,30 @@ struct BottleView: View {
             }
             .disabled(!bottle.isAvailable)
             .navigationTitle(bottle.settings.name)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button("bottle.manage.programs.title", systemImage: "list.bullet.rectangle") {
+                            path.append(BottleStage.programs)
+                        }
+                        Button("bottle.manage.config.title", systemImage: "slider.horizontal.3") {
+                            path.append(BottleStage.config)
+                        }
+                        Button("bottle.manage.processes.title", systemImage: "list.bullet.rectangle.portrait") {
+                            path.append(BottleStage.processes)
+                        }
+                        Button("bottle.manage.logs.title", systemImage: "doc.text") {
+                            path.append(BottleStage.logs)
+                        }
+                        Divider()
+                        Button("workspace.import.title", systemImage: "tray.and.arrow.down") {
+                            showWorkspaceImport.toggle()
+                        }
+                    } label: {
+                        Label("bottle.section.manage", systemImage: "slider.horizontal.3")
+                    }
+                }
+            }
             .sheet(isPresented: $showWinetricksSheet) {
                 WinetricksView(bottle: bottle)
             }
@@ -326,11 +304,6 @@ struct BottleView: View {
                 showWinetricksSheet.toggle()
             } label: {
                 Label("Winetricks", systemImage: "wrench.and.screwdriver")
-            }
-            Button {
-                path.append(BottleStage.logs)
-            } label: {
-                Label("bottle.bar.logs", systemImage: "doc.text")
             }
             Button(role: .destructive) {
                 BottleForceStop.forceStop(bottle: bottle, reason: "bottle-bar")
