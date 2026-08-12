@@ -17,46 +17,44 @@
 //
 
 import SwiftUI
-import UniformTypeIdentifiers
 import WhiskyKit
 
 struct PinCreationView: View {
     let bottle: Bottle
 
-    @State private var newPinURL: URL?
-    @State private var pinPath: String = ""
+    @State private var projects: [URL] = []
+    @State private var selectedProject: URL?
+    @State private var selectedExe: URL?
     @State private var newPinName: String = ""
     @State private var isDuplicate: Bool = false
 
     @Environment(\.dismiss) private var dismiss
 
+    private var availableExes: [URL] {
+        guard let selectedProject else { return [] }
+        return bottle.executables(inProject: selectedProject)
+    }
+
+    private var canSubmit: Bool {
+        selectedExe != nil && !newPinName.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                TextField("pin.name", text: $newPinName)
-
-                ActionView(
-                    text: "pin.path",
-                    subtitle: pinPath,
-                    actionName: "create.browse"
-                ) {
-                    let panel = NSOpenPanel()
-                    panel.canChooseFiles = true
-                    panel.allowedContentTypes = [UTType.exe,
-                                                 UTType(exportedAs: "com.microsoft.msi-installer"),
-                                                 UTType(exportedAs: "com.microsoft.bat")]
-                    panel.directoryURL = newPinURL ?? bottle.url.appending(path: "drive_c")
-                    panel.canChooseDirectories = false
-                    panel.allowsMultipleSelection = false
-                    panel.canCreateDirectories = false
-                    panel.begin { result in
-                        if result == .OK, let url = panel.urls.first {
-                            newPinURL = url
-                        }
+            Group {
+                if projects.isEmpty {
+                    EmptyStateCard(
+                        systemImage: "tray",
+                        title: "pin.empty.title",
+                        message: "pin.empty.message",
+                        actionTitle: "pin.empty.action"
+                    ) {
+                        dismiss()
                     }
+                } else {
+                    pinForm
                 }
             }
-            .formStyle(.grouped)
             .navigationTitle("pin.title")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -65,51 +63,79 @@ struct PinCreationView: View {
                     }
                     .keyboardShortcut(.cancelAction)
                 }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("pin.create") {
-                        submit()
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(newPinName.isEmpty || newPinURL == nil)
-                    .alert("pin.error.title", isPresented: $isDuplicate) {
-                    } message: {
-                        Text("pin.error.duplicate.\(newPinURL?.lastPathComponent ?? "unknown")")
+                if !projects.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("pin.create") {
+                            submit()
+                        }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(!canSubmit)
+                        .alert("pin.error.title", isPresented: $isDuplicate) {
+                        } message: {
+                            Text("pin.error.duplicate.\(selectedExe?.lastPathComponent ?? "unknown")")
+                        }
                     }
                 }
             }
-            .onChange(of: newPinURL, initial: true) { oldValue, newValue in
-                guard let newValue = newValue else { return }
-
-                // Only reset newPinName if the textbox hasn't been modified
-                if newPinName.isEmpty ||
-                    newPinName == oldValue?.deletingPathExtension().lastPathComponent {
-
-                    newPinName = newValue.deletingPathExtension().lastPathComponent
-                }
-
-                pinPath = newValue.prettyPath()
+        }
+        .onAppear {
+            projects = bottle.workspaceProjects()
+            if selectedProject == nil {
+                selectedProject = projects.first
             }
-            .onSubmit {
-                submit()
+        }
+        .onChange(of: selectedProject, initial: true) { _, _ in
+            selectedExe = availableExes.first
+        }
+        .onChange(of: selectedExe) { _, newValue in
+            guard let newValue else { return }
+            if newPinName.isEmpty {
+                newPinName = newValue.deletingPathExtension().lastPathComponent
             }
         }
         .fixedSize(horizontal: false, vertical: true)
         .frame(minWidth: ViewWidth.small)
     }
 
-    func submit() {
-        guard let newPinURL else { return }
+    private var pinForm: some View {
+        Form {
+            Section("pin.project") {
+                Picker("pin.project", selection: $selectedProject) {
+                    ForEach(projects, id: \.self) { project in
+                        Text(project.lastPathComponent).tag(project as URL?)
+                    }
+                }
+            }
 
-        // Ensure this pin doesn't already exist
-        guard !bottle.settings.pins.contains(where: { $0.url == newPinURL })
-        else {
+            Section("pin.executable") {
+                if availableExes.isEmpty {
+                    Text("pin.no.executable")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Picker("pin.executable", selection: $selectedExe) {
+                        ForEach(availableExes, id: \.self) { exe in
+                            Text(exe.lastPathComponent).tag(exe as URL?)
+                        }
+                    }
+                }
+            }
+
+            Section("pin.name") {
+                TextField("pin.name", text: $newPinName)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private func submit() {
+        guard let selectedExe else { return }
+
+        guard !bottle.settings.pins.contains(where: { $0.url == selectedExe }) else {
             isDuplicate = true
             return
         }
 
-        bottle.settings.pins.append(PinnedProgram(name: newPinName, url: newPinURL))
-
-        // Trigger a reload
+        bottle.settings.pins.append(PinnedProgram(name: newPinName, url: selectedExe))
         bottle.updateInstalledPrograms()
         dismiss()
     }

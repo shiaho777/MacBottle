@@ -227,6 +227,17 @@ CATALOG = {
     "workspace.launchCommand.placeholder": ("e.g. winecfg  /  cmd /c setup.bat", "如 winecfg  /  cmd /c setup.bat"),
     "workspace.entryName": ("Name", "名称"),
     "workspace.entryName.placeholder": ("Entry name", "入口名称"),
+
+    # --- pin from workspace project ---
+    "pin.empty.title": ("No projects yet", "还没有项目"),
+    "pin.empty.message": (
+        "Import a folder or file as a workspace project first, then pin an executable from it.",
+        "先导入一个文件夹或文件作为工作区项目，然后从项目里置顶可执行文件。"
+    ),
+    "pin.empty.action": ("Close", "关闭"),
+    "pin.project": ("Project", "项目"),
+    "pin.executable": ("Executable", "可执行文件"),
+    "pin.no.executable": ("No executable found in this project", "该项目里没有可执行文件"),
 }
 
 def main():
