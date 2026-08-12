@@ -63,33 +63,7 @@ struct ContentView: View {
                 .help("toolbar.engine.help")
             }
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showBottleCreation.toggle()
-                } label: {
-                    Label("button.createBottle", systemImage: "plus")
-                }
-                .help("button.createBottle")
-            }
-            ToolbarItem(placement: .primaryAction) {
                 RecipeSyncToolbarButton()
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    bottleVM.loadBottles()
-                    if let bottle = bottleVM.bottles.first(where: { $0.url == selected }) {
-                        bottle.updateInstalledPrograms()
-                    }
-                    triggerRefresh.toggle()
-                    withAnimation(.default) {
-                        refreshAnimation = .degrees(360)
-                    } completion: {
-                        refreshAnimation = .degrees(0)
-                    }
-                } label: {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .help("button.refresh")
-                        .rotationEffect(refreshAnimation)
-                }
             }
         }
         .sheet(isPresented: $showBottleCreation) {
@@ -195,6 +169,30 @@ struct ContentView: View {
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 320)
             .searchable(text: $bottleFilter, placement: .sidebar, prompt: "sidebar.bottles.search")
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 6) {
+                    Button {
+                        showBottleCreation.toggle()
+                    } label: {
+                        Label("button.createBottle", systemImage: "plus")
+                    }
+                    .help("button.createBottle")
+
+                    Button {
+                        refreshBottles()
+                    } label: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .rotationEffect(refreshAnimation)
+                    }
+                    .help("button.refresh")
+
+                    Spacer()
+                }
+                .buttonStyle(.borderless)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
             .onChange(of: newlyCreatedBottleURL) { _, url in
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(200))
@@ -251,6 +249,19 @@ struct ContentView: View {
             bottleVM.bottles
                 .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
                 .sorted()
+        }
+    }
+
+    private func refreshBottles() {
+        bottleVM.loadBottles()
+        if let bottle = bottleVM.bottles.first(where: { $0.url == selected }) {
+            bottle.updateInstalledPrograms()
+        }
+        triggerRefresh.toggle()
+        withAnimation(.default) {
+            refreshAnimation = .degrees(360)
+        } completion: {
+            refreshAnimation = .degrees(0)
         }
     }
 }
