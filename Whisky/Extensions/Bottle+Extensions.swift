@@ -26,6 +26,38 @@ extension Bottle {
         NSWorkspace.shared.open(url.appending(path: "drive_c"))
     }
 
+    func workspaceProjects() -> [URL] {
+        let imports = url.appending(path: "drive_c").appending(path: "MacBottleImports")
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: imports,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        return contents.sorted {
+            $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending
+        }
+    }
+
+    func executables(inProject projectURL: URL) -> [URL] {
+        var isDir: ObjCBool = false
+        let path = projectURL.path(percentEncoded: false)
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir) else { return [] }
+        if !isDir.boolValue {
+            if projectURL.pathExtension.lowercased() == "exe" { return [projectURL] }
+            return []
+        }
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: projectURL,
+            includingPropertiesForKeys: nil,
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        return contents
+            .filter { $0.pathExtension.lowercased() == "exe" }
+            .sorted {
+                $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending
+            }
+    }
+
     func openTerminal() {
         guard let whiskyCmdURL = Bundle.main.url(forResource: "WhiskyCmd", withExtension: nil) else {
             return
