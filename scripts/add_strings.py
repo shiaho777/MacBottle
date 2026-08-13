@@ -17,6 +17,7 @@ CATALOG = {
 
     # --- toolbar / sidebar (ContentView) ---
     "toolbar.engine.help": ("Current global Wine engine", "当前全局 Wine 引擎"),
+    "toolbar.engine.error.title": ("Engine switch failed", "引擎切换失败"),
     "sidebar.discover": ("Discover", "发现"),
     "sidebar.library": ("Game Library", "游戏库"),
     "sidebar.bottles": ("Bottles", "容器"),
