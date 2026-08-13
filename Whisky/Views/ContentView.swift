@@ -46,6 +46,8 @@ struct ContentView: View {
 
     @State private var bottleFilter = ""
     @State private var currentEngineID = WineEngineRegistry.shared.current.identifier
+    @State private var engineBusy = false
+    @State private var engineError: String?
 
     var body: some View {
         NavigationSplitView {
@@ -55,11 +57,29 @@ struct ContentView: View {
         }
         .toolbar {
             ToolbarItem(placement: .automatic) {
-                StatusPill(
-                    title: MacBottleTheme.engineLabel(for: currentEngineID),
-                    systemImage: "cpu",
-                    color: MacBottleTheme.engineColor(for: currentEngineID)
-                )
+                Menu {
+                    ForEach(WineEngineCatalog.allEngines(), id: \.identifier) { engine in
+                        Button {
+                            switchEngine(to: engine.identifier)
+                        } label: {
+                            if engine.identifier == currentEngineID {
+                                Label(WineEngineCatalog.describe(engine), systemImage: "checkmark")
+                            } else {
+                                Text(WineEngineCatalog.describe(engine))
+                            }
+                        }
+                    }
+                } label: {
+                    if engineBusy {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        StatusPill(
+                            title: MacBottleTheme.engineLabel(for: currentEngineID),
+                            systemImage: "cpu",
+                            color: MacBottleTheme.engineColor(for: currentEngineID)
+                        )
+                    }
+                }
                 .help("toolbar.engine.help")
             }
             ToolbarItem(placement: .primaryAction) {
@@ -93,6 +113,14 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: WineEngineRegistry.engineDidChangeNotification)) { _ in
             currentEngineID = WineEngineRegistry.shared.current.identifier
+        }
+        .alert(
+            String(localized: "toolbar.engine.error.title"),
+            isPresented: Binding(get: { engineError != nil }, set: { if !$0 { engineError = nil } })
+        ) {
+            Button("OK") { engineError = nil }
+        } message: {
+            if let engineError { Text(engineError) }
         }
         .task {
             bottleVM.loadBottles()
@@ -249,6 +277,29 @@ struct ContentView: View {
             bottleVM.bottles
                 .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
                 .sorted()
+        }
+    }
+
+    private func switchEngine(to identifier: String) {
+        guard !engineBusy, identifier != currentEngineID else { return }
+        engineBusy = true
+        Task.detached(priority: .userInitiated) {
+            do {
+                await MainActor.run { WhiskyApp.killBottles() }
+                let engine = try WineEngineRegistry.shared.select(
+                    identifier: identifier,
+                    installIfNeeded: true
+                )
+                await MainActor.run {
+                    engineBusy = false
+                    currentEngineID = engine.identifier
+                }
+            } catch {
+                await MainActor.run {
+                    engineBusy = false
+                    engineError = error.localizedDescription
+                }
+            }
         }
     }
 

@@ -23852,6 +23852,22 @@
           }
         }
       }
+    },
+    "toolbar.engine.error.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine switch failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎切换失败"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
