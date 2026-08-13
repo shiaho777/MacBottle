@@ -171,11 +171,11 @@ struct WorkspaceImportView: View {
         if copyIntoBottle {
             do {
                 try FileManager.default.createDirectory(at: imports, withIntermediateDirectories: true)
-                let dest = imports.appending(path: source.lastPathComponent)
+                let dest = imports.appending(path: Self.sanitizeFileName(source.lastPathComponent))
                 if FileManager.default.fileExists(atPath: dest.path) {
                     try FileManager.default.removeItem(at: dest)
                 }
-                try FileManager.default.copyItem(at: source, to: dest)
+                _ = try copyEntryRobustly(at: source, to: dest)
                 entryURL = resolvedEntryURL(afterCopyingTo: dest, from: source)
             } catch {
                 importError = error.localizedDescription
@@ -217,6 +217,53 @@ struct WorkspaceImportView: View {
         case .command:
             return dest
         }
+    }
+
+    /// Recursively copies a file or folder, sanitizing each entry's name and
+    /// skipping entries that cannot be copied (returns the count skipped).
+    /// Only a failure to create the top-level destination directory aborts
+    /// the whole import — a single bad file should never sink the entire copy.
+    private func copyEntryRobustly(at source: URL, to destination: URL) throws -> Int {
+        let fileManager = FileManager.default
+        var isDir: ObjCBool = false
+        guard fileManager.fileExists(atPath: source.path, isDirectory: &isDir) else {
+            do {
+                try fileManager.copyItem(at: source, to: destination)
+                return 0
+            } catch {
+                return 1
+            }
+        }
+        if isDir.boolValue {
+            try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+            var skipped = 0
+            let contents = (try? fileManager.contentsOfDirectory(at: source, includingPropertiesForKeys: nil)) ?? []
+            for item in contents {
+                let safeName = Self.sanitizeFileName(item.lastPathComponent)
+                do {
+                    skipped += try copyEntryRobustly(at: item, to: destination.appending(path: safeName))
+                } catch {
+                    skipped += 1
+                }
+            }
+            return skipped
+        } else {
+            do {
+                try fileManager.copyItem(at: source, to: destination)
+                return 0
+            } catch {
+                return 1
+            }
+        }
+    }
+
+    private static func sanitizeFileName(_ name: String) -> String {
+        let invalid: Set<Character> = ["/", ":", "\0"]
+        let safe = String(name.map { invalid.contains($0) ? "_" : $0 })
+        if safe.trimmingCharacters(in: .whitespaces).isEmpty {
+            return "unnamed_\(UUID().uuidString.prefix(8))"
+        }
+        return safe
     }
 }
 
