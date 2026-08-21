@@ -689,11 +689,30 @@ extension Wine {
         if !FileManager.default.fileExists(atPath: Self.logsFolder.path) {
             try FileManager.default.createDirectory(at: Self.logsFolder, withIntermediateDirectories: true)
         }
+        purgeOldLogs()
 
         let dateString = Date.now.ISO8601Format()
         let fileURL = Self.logsFolder.appending(path: dateString).appendingPathExtension("log")
         try "".write(to: fileURL, atomically: true, encoding: .utf8)
         return try FileHandle(forWritingTo: fileURL)
+    }
+
+    /// Every wine invocation creates a timestamped log; without a sweep
+    /// they accumulate forever. Match the run-log store's 7-day
+    /// retention.
+    private static func purgeOldLogs(maxAgeDays: Int = 7) {
+        let fileManager = FileManager.default
+        guard let files = try? fileManager.contentsOfDirectory(
+            at: Self.logsFolder,
+            includingPropertiesForKeys: [.contentModificationDateKey]
+        ) else { return }
+        let cutoff = Date().addingTimeInterval(Double(-maxAgeDays) * 24 * 60 * 60)
+        for file in files where file.pathExtension == "log" {
+            guard let values = try? file.resourceValues(forKeys: [.contentModificationDateKey]),
+                  let modified = values.contentModificationDate,
+                  modified < cutoff else { continue }
+            try? fileManager.removeItem(at: file)
+        }
     }
 }
 

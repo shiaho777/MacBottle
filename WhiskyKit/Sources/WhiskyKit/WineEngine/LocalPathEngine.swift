@@ -51,7 +51,8 @@ public struct LocalPathEngine: WineEngine, Sendable, Equatable {
     }
 
     public func isInstalled() -> Bool {
-        FileManager.default.fileExists(atPath: wineBinary.path(percentEncoded: false))
+        guard installedVersion() != nil else { return false }
+        return FileManager.default.isExecutableFile(atPath: wineBinary.path(percentEncoded: false))
     }
 
     public func installedVersion() -> SemanticVersion? {
