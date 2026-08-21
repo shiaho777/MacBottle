@@ -55,16 +55,19 @@ public struct DepotStore: Sendable {
     }
 
     public func isDepotPresent(appID: Int) -> Bool {
-        let steamapps = steamapps(appID: appID)
-        let manifest = steamapps.appending(path: "appmanifest_\(appID).acf")
-        if FileManager.default.fileExists(atPath: manifest.path) {
-            return true
-        }
-        let common = steamapps.appending(path: "common")
-        guard let items = try? FileManager.default.contentsOfDirectory(atPath: common.path) else {
+        // Steam's StateFlags: 2 = update required, 4 = fully installed,
+        // 32 = files missing. Only a manifest vouching for a complete
+        // install counts as present; leftovers from a cancelled download
+        // (partial common/ tree, no manifest, or incomplete flags) fall
+        // through to app_update so steamcmd resumes or repairs in place.
+        let manifest = steamapps(appID: appID)
+            .appending(path: "appmanifest_\(appID).acf")
+        guard let text = try? String(contentsOf: manifest, encoding: .utf8),
+              let root = try? VDF.parse(text),
+              let flags = Int(root["AppState"]?["StateFlags"]?.stringValue ?? "") else {
             return false
         }
-        return !items.isEmpty
+        return flags & 4 != 0 && flags & (2 | 32) == 0
     }
 
     public func materializeDepot(appID: Int, intoBottle bottleURL: URL) throws {
