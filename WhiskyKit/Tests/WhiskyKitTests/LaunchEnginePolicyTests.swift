@@ -140,4 +140,39 @@ final class LaunchEnginePolicyTests: XCTestCase {
             WineEngineCatalog.modernIdentifier
         )
     }
+
+    func testDecisionRewriteReportsActualEngine() {
+        let original = LaunchEnginePolicy.Decision(
+            engineID: WineEngineCatalog.d3dMetalIdentifier,
+            reason: "pe.d3d12",
+            importProfile: nil,
+            recipeRenderer: nil,
+            bottlePinned: false
+        )
+
+        let rewritten = LaunchEnginePolicy.decision(
+            original,
+            reportingActualEngineID: WineEngineCatalog.modernIdentifier
+        )
+        XCTAssertEqual(rewritten.engineID, WineEngineCatalog.modernIdentifier)
+        XCTAssertTrue(rewritten.reason.contains(WineEngineCatalog.d3dMetalIdentifier))
+        XCTAssertEqual(rewritten.importProfile, original.importProfile)
+        XCTAssertEqual(rewritten.recipeRenderer, original.recipeRenderer)
+        XCTAssertEqual(rewritten.bottlePinned, original.bottlePinned)
+    }
+
+    func testDecisionRewriteKeepsMatchingDecision() {
+        let original = LaunchEnginePolicy.Decision(
+            engineID: WineEngineCatalog.modernIdentifier,
+            reason: "classic32",
+            importProfile: nil,
+            recipeRenderer: nil,
+            bottlePinned: false
+        )
+        let rewritten = LaunchEnginePolicy.decision(
+            original,
+            reportingActualEngineID: WineEngineCatalog.modernIdentifier
+        )
+        XCTAssertEqual(rewritten, original)
+    }
 }

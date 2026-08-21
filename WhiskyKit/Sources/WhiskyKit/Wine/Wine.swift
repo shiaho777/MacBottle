@@ -66,10 +66,12 @@ public class Wine {
         qualityOfService: QualityOfService = .userInitiated,
         quiet: Bool = false,
         systemLog: Bool = true,
-        fileCaptureOnly: Bool = false
+        fileCaptureOnly: Bool = false,
+        engine: (any WineEngine)? = nil
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
-            name: name, args: args, environment: environment, executableURL: wineBinary,
+            name: name, args: args, environment: environment,
+            executableURL: engine?.wineBinary ?? wineBinary,
             fileHandle: fileHandle,
             qualityOfService: qualityOfService,
             quiet: quiet,
@@ -97,7 +99,8 @@ public class Wine {
         quiet: Bool = false,
         logFileHandle: FileHandle? = nil,
         systemLog: Bool = true,
-        fileCaptureOnly: Bool = false
+        fileCaptureOnly: Bool = false,
+        engine: (any WineEngine)? = nil
     ) throws -> AsyncStream<ProcessOutput> {
         let fileHandle: FileHandle?
         if let logFileHandle {
@@ -124,7 +127,8 @@ public class Wine {
                 qualityOfService: qualityOfService,
                 quiet: quiet,
                 systemLog: systemLog,
-                fileCaptureOnly: fileCaptureOnly && logFileHandle != nil
+                fileCaptureOnly: fileCaptureOnly && logFileHandle != nil,
+                engine: engine
             )
         } catch {
             try? fileHandle?.close()
@@ -231,7 +235,7 @@ public class Wine {
             await ensureBottleReady(bottle)
         }
 
-        let engineDecision: LaunchEnginePolicy.Decision?
+        let engineDecision: LaunchEnginePolicy.AppliedLaunch?
         if autoSelectEngine {
             engineDecision = LaunchEnginePolicy.applyForLaunch(
                 executable: url,
@@ -242,9 +246,14 @@ public class Wine {
         } else {
             engineDecision = nil
         }
+        // Resolve the binaries synchronously from the applied engine:
+        // the registry may be flipped by a concurrent launch or a UI
+        // switch between here and spawn, and this launch must run under
+        // exactly the engine that was selected for it.
+        let launchEngine = engineDecision?.engine ?? WineEngineRegistry.shared.current
         defer {
             if autoSelectEngine {
-                LaunchEnginePolicy.restoreUserSelection()
+                LaunchEnginePolicy.restoreUserSelection(for: engineDecision)
             }
         }
 
@@ -255,7 +264,7 @@ public class Wine {
                 profile: profile,
                 bottleDXVKEnabled: bottle.settings.dxvk
             )
-        if engineDecision?.engineID == WineEngineCatalog.d3dMetalIdentifier {
+        if engineDecision?.decision.engineID == WineEngineCatalog.d3dMetalIdentifier {
             shouldApplyDXVK = false
         } else if recipe?.renderer == .d3dmetal {
             shouldApplyDXVK = false
@@ -319,7 +328,8 @@ public class Wine {
             qualityOfService: qos,
             quiet: quiet,
             fileCaptureOnly: fileCaptureOnly,
-            capture: capture
+            capture: capture,
+            engine: launchEngine
         )
 
         let runID = capture?.record.id
@@ -410,7 +420,8 @@ public class Wine {
         qualityOfService: QualityOfService = .userInitiated,
         quiet: Bool = false,
         fileCaptureOnly: Bool = false,
-        capture: ProgramRunCapture?
+        capture: ProgramRunCapture?,
+        engine: (any WineEngine)? = nil
     ) async throws -> AsyncStream<ProcessOutput> {
         do {
             return try Self.runWineProcess(
@@ -423,7 +434,8 @@ public class Wine {
                 quiet: quiet,
                 logFileHandle: capture?.fileHandle,
                 systemLog: false,
-                fileCaptureOnly: fileCaptureOnly
+                fileCaptureOnly: fileCaptureOnly,
+                engine: engine
             )
         } catch {
             if let capture {

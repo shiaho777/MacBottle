@@ -43,6 +43,15 @@ public enum LaunchEnginePolicy {
         public let bottlePinned: Bool
     }
 
+    /// What `applyForLaunch` decided and which engine the launch must
+    /// actually run under. `engine` is resolved eagerly so the spawn
+    /// path never has to re-read the mutable registry after an await
+    /// point.
+    public struct AppliedLaunch: Sendable {
+        public let decision: Decision
+        public let engine: any WineEngine
+    }
+
     public static func decide(
         executable: URL,
         recipe: Recipe?,
@@ -191,7 +200,7 @@ public enum LaunchEnginePolicy {
         recipe: Recipe?,
         bottleDXVKEnabled: Bool,
         bottleEngineID: String? = nil
-    ) -> Decision {
+    ) -> AppliedLaunch {
         let decision = decide(
             executable: executable,
             recipe: recipe,
@@ -210,11 +219,11 @@ public enum LaunchEnginePolicy {
             Logger.wineKit.info(
                 "LaunchEnginePolicy auto-select off; keep \(WineEngineRegistry.shared.current.identifier)"
             )
-            return decision
+            return AppliedLaunch(decision: decision, engine: WineEngineRegistry.shared.current)
         }
 
         if decision.engineID == WineEngineRegistry.shared.current.identifier {
-            return decision
+            return AppliedLaunch(decision: decision, engine: WineEngineRegistry.shared.current)
         }
 
         do {
@@ -223,28 +232,68 @@ public enum LaunchEnginePolicy {
             }
             guard let engine = WineEngineCatalog.engine(id: decision.engineID),
                   engine.isInstalled() else {
-                return decision
+                let actual = WineEngineRegistry.shared.current
+                Logger.wineKit.error(
+                    // swiftlint:disable:next line_length
+                    "LaunchEnginePolicy selected \(decision.engineID) but it is unavailable; running \(actual.identifier)"
+                )
+                return AppliedLaunch(
+                    decision: Self.decision(decision, reportingActualEngineID: actual.identifier),
+                    engine: actual
+                )
             }
             WineEngineRegistry.shared.setCurrent(engine, persist: false)
             Logger.wineKit.info(
                 "LaunchEnginePolicy temporary engine \(decision.engineID) (\(decision.reason))"
             )
+            return AppliedLaunch(decision: decision, engine: engine)
         } catch {
+            let actual = WineEngineRegistry.shared.current
             Logger.wineKit.error(
                 "LaunchEnginePolicy failed to select \(decision.engineID): \(error.localizedDescription)"
             )
+            return AppliedLaunch(
+                decision: Self.decision(decision, reportingActualEngineID: actual.identifier),
+                engine: actual
+            )
         }
-        return decision
     }
 
-    public static func restoreUserSelection() {
+    /// Rewrites a decision whose engine could not be applied so it names
+    /// the engine that will actually run. Callers key behavior off the
+    /// reported engine ID (e.g. disabling DXVK for d3dmetal), so a
+    /// phantom ID would misconfigure the launch.
+    static func decision(_ original: Decision, reportingActualEngineID actualID: String) -> Decision {
+        guard original.engineID != actualID else { return original }
+        return Decision(
+            engineID: actualID,
+            reason: "\(original.reason) (\(original.engineID) unavailable → \(actualID))",
+            importProfile: original.importProfile,
+            recipeRenderer: original.recipeRenderer,
+            bottlePinned: original.bottlePinned
+        )
+    }
+
+    /// Restores the user's saved selection. When `applied` is given, the
+    /// restore only happens if the registry still holds what that launch
+    /// applied — a concurrent launch or an explicit user choice wins.
+    public static func restoreUserSelection(for applied: AppliedLaunch? = nil) {
+        let target: any WineEngine
         if let id = UserDefaults.standard.string(forKey: WineEngineRegistry.selectionDefaultsKey),
            let engine = WineEngineCatalog.engine(id: id),
            engine.isInstalled() {
-            WineEngineRegistry.shared.setCurrent(engine, persist: false)
-            return
+            target = engine
+        } else {
+            target = CrossOverEngine.default
         }
-        WineEngineRegistry.shared.setCurrent(CrossOverEngine.default, persist: false)
+        if let applied {
+            _ = WineEngineRegistry.shared.restoreIfCurrent(
+                expectedIdentifier: applied.engine.identifier,
+                engine: target
+            )
+        } else {
+            WineEngineRegistry.shared.setCurrent(target, persist: false)
+        }
     }
 
     public static func normalizedBottleEngineID(_ raw: String?) -> String? {
