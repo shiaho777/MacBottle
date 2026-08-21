@@ -34,6 +34,7 @@ struct WorkspaceImportView: View {
 
     @State private var entryName: String = ""
     @State private var importError: String?
+    @State private var isImporting: Bool = false
 
     @Environment(\.dismiss) private var dismiss
 
@@ -102,7 +103,7 @@ struct WorkspaceImportView: View {
                         submit()
                     }
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!canSubmit)
+                    .disabled(!canSubmit || isImporting)
                 }
             }
             .onChange(of: sourceURL, initial: true) { _, newValue in
@@ -163,33 +164,49 @@ struct WorkspaceImportView: View {
     }
 
     private func submit() {
-        guard let source = sourceURL, canSubmit else { return }
-
-        let imports = bottle.url.appending(path: "drive_c").appending(path: "MacBottleImports")
-        var entryURL: URL
+        guard let source = sourceURL, canSubmit, !isImporting else { return }
 
         if copyIntoBottle {
-            do {
-                try FileManager.default.createDirectory(at: imports, withIntermediateDirectories: true)
-                let dest = imports.appending(path: Self.sanitizeFileName(source.lastPathComponent))
-                if FileManager.default.fileExists(atPath: dest.path) {
-                    try FileManager.default.removeItem(at: dest)
+            let imports = bottle.url.appending(path: "drive_c").appending(path: "MacBottleImports")
+            isImporting = true
+            let launchMode = self.launchMode
+            let launchFileURL = self.launchFileURL
+            Task.detached(priority: .userInitiated) {
+                do {
+                    try FileManager.default.createDirectory(at: imports, withIntermediateDirectories: true)
+                    let dest = imports.appending(path: Self.sanitizeFileName(source.lastPathComponent))
+                    if FileManager.default.fileExists(atPath: dest.path) {
+                        try FileManager.default.removeItem(at: dest)
+                    }
+                    _ = try Self.copyEntryRobustly(at: source, to: dest)
+                    let entryURL = Self.resolvedEntryURL(
+                        afterCopyingTo: dest,
+                        from: source,
+                        launchMode: launchMode,
+                        launchFileURL: launchFileURL
+                    )
+                    await MainActor.run {
+                        finishImport(entryURL: entryURL)
+                    }
+                } catch {
+                    await MainActor.run {
+                        importError = error.localizedDescription
+                        isImporting = false
+                    }
                 }
-                _ = try copyEntryRobustly(at: source, to: dest)
-                entryURL = resolvedEntryURL(afterCopyingTo: dest, from: source)
-            } catch {
-                importError = error.localizedDescription
-                return
             }
         } else {
             switch launchMode {
             case .file:
-                entryURL = launchFileURL ?? source
+                finishImport(entryURL: launchFileURL ?? source)
             case .command:
-                entryURL = source
+                finishImport(entryURL: source)
             }
         }
+    }
 
+    @MainActor
+    private func finishImport(entryURL: URL) {
         let program = Program(url: entryURL, bottle: bottle)
         var settings = program.settings
         settings.launchMode = launchMode
@@ -203,7 +220,12 @@ struct WorkspaceImportView: View {
         dismiss()
     }
 
-    private func resolvedEntryURL(afterCopyingTo dest: URL, from source: URL) -> URL {
+    private nonisolated static func resolvedEntryURL(
+        afterCopyingTo dest: URL,
+        from source: URL,
+        launchMode: LaunchMode,
+        launchFileURL: URL?
+    ) -> URL {
         switch launchMode {
         case .file:
             guard let file = launchFileURL else { return dest }
@@ -223,7 +245,7 @@ struct WorkspaceImportView: View {
     /// skipping entries that cannot be copied (returns the count skipped).
     /// Only a failure to create the top-level destination directory aborts
     /// the whole import — a single bad file should never sink the entire copy.
-    private func copyEntryRobustly(at source: URL, to destination: URL) throws -> Int {
+    private nonisolated static func copyEntryRobustly(at source: URL, to destination: URL) throws -> Int {
         let fileManager = FileManager.default
         var isDir: ObjCBool = false
         guard fileManager.fileExists(atPath: source.path, isDirectory: &isDir) else {
@@ -257,7 +279,7 @@ struct WorkspaceImportView: View {
         }
     }
 
-    private static func sanitizeFileName(_ name: String) -> String {
+    private nonisolated static func sanitizeFileName(_ name: String) -> String {
         let invalid: Set<Character> = ["/", ":", "\0"]
         let safe = String(name.map { invalid.contains($0) ? "_" : $0 })
         if safe.trimmingCharacters(in: .whitespaces).isEmpty {
