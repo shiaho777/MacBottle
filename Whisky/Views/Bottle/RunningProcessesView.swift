@@ -21,9 +21,10 @@ import WhiskyKit
 import os.log
 
 struct BottleProcess: Identifiable {
-    var id = UUID()
     var pid: String
     var procName: String
+
+    var id: String { pid }
 }
 
 struct RunningProcessesView: View {
@@ -84,29 +85,32 @@ struct RunningProcessesView: View {
         }
     }
 
+    @MainActor
     func fetchProcesses() async {
         var newProcessList = [BottleProcess]()
         let output: String?
 
         do {
-            output = try await Wine.runWine(["tasklist.exe"], bottle: bottle)
+            output = try await Wine.runWine(["tasklist.exe", "/fo", "csv", "/nh"], bottle: bottle)
         } catch {
             Logger.uiLogger.error("Error running tasklist.exe: \(error.localizedDescription)")
             output = ""
         }
 
+        let quotes = CharacterSet(charactersIn: "\"")
         let lines = output?.split(omittingEmptySubsequences: true, whereSeparator: \.isNewline)
         for line in lines ?? [] {
             let lineParts = line.split(separator: ",", omittingEmptySubsequences: true)
             if lineParts.count > 1 {
-                let pid = String(lineParts[1])
-                let procName = String(lineParts[0])
+                let procName = String(lineParts[0]).trimmingCharacters(in: quotes)
+                let pid = String(lineParts[1]).trimmingCharacters(in: quotes)
                 newProcessList.append(BottleProcess(pid: pid, procName: procName))
             }
         }
         processes = newProcessList
     }
 
+    @MainActor
     func killProcess() async {
         if let thisProcess = processes.first(where: { $0.id == selectedProcess }) {
             do {
