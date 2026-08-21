@@ -109,7 +109,7 @@ struct BottleView: View {
                 bottleBottomBar
             }
             .onAppear {
-                updateStartMenu()
+                Task { await updateStartMenu() }
                 if selectedProgramURL == nil {
                     selectedProgramURL = bottle.pinnedPrograms.first?.program.url
                 }
@@ -381,8 +381,8 @@ struct BottleView: View {
         runExternalProgram()
     }
 
-    private func updateStartMenu() {
-        bottle.updateInstalledPrograms()
+    private func updateStartMenu() async {
+        await bottle.refreshInstalledPrograms()
 
         let startMenuPrograms = bottle.getStartMenuPrograms()
         for startMenuProgram in startMenuPrograms {
@@ -423,7 +423,7 @@ struct BottleView: View {
                 defer {
                     Task { @MainActor in
                         programLoading = false
-                        updateStartMenu()
+                        await updateStartMenu()
                     }
                 }
                 do {

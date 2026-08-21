@@ -117,8 +117,19 @@ struct ProgramLogsView: View {
             refreshDetail()
         }
         .task(id: bottle.url) {
+            var lastSeenRevision = store.revision
+            let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
+                // Idle ticks must not touch disk: skip when nothing is
+                // running and no other component bumped the store.
+                let hasLiveSession = store.sessions.values.contains {
+                    $0.record.bottleKey == bottleKey && $0.isLive
+                }
+                if !hasLiveSession, store.revision == lastSeenRevision {
+                    continue
+                }
+                lastSeenRevision = store.revision
                 store.reconcileStaleRunningRuns(for: bottle)
                 reloadCaches()
                 if selectedRun?.status == .running {
