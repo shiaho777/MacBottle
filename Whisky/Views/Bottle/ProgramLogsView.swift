@@ -34,6 +34,7 @@ struct ProgramLogsView: View {
     @State private var verboseWineDebug = ProgramRunLogStore.verboseWineDebugEnabled
     @State private var programsCache: [ProgramRunProgramSummary] = []
     @State private var runsCache: [ProgramRunRecord] = []
+    @State private var showDeleteConfirm = false
 
     private var selectedRun: ProgramRunRecord? {
         if let selectedRunID,
@@ -82,8 +83,8 @@ struct ProgramLogsView: View {
                 }
                 .disabled(detailText.isEmpty)
 
-                Button("logs.delete", systemImage: "trash") {
-                    deleteSelected()
+                Button("logs.delete", systemImage: "trash", role: .destructive) {
+                    showDeleteConfirm = true
                 }
                 .disabled(selectedRunIDs.isEmpty && selectedRun == nil)
 
@@ -136,6 +137,17 @@ struct ProgramLogsView: View {
                     refreshDetail()
                 }
             }
+        }
+        .confirmationDialog(
+            "logs.delete.confirm",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("logs.delete.confirm.action", role: .destructive) {
+                deleteSelected()
+            }
+        } message: {
+            Text("logs.delete.confirm.message")
         }
         .onChange(of: store.revision) { _, _ in
             reloadCaches()

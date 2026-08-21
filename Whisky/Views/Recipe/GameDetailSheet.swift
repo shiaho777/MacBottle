@@ -386,7 +386,15 @@ struct GameDetailSheet: View {
     }
 
     private func uninstall() {
-        try? InstalledGameRegistry.shared.remove(recipeID: recipe.id)
+        do {
+            try InstalledGameRegistry.shared.remove(recipeID: recipe.id)
+        } catch {
+            installer.phase = .failed(message: String(
+                format: String(localized: "game.detail.error.uninstall %@"),
+                error.localizedDescription
+            ))
+            return
+        }
         installedGame = nil
         NotificationCenter.default.post(name: .macbottleInstalledGamesChanged, object: nil)
     }
@@ -400,12 +408,21 @@ struct GameDetailSheet: View {
         if let winPath = installed.mainExe, let exeURL = resolveMacURL(forWinPath: winPath, bottle: bottle) {
             let recipe = self.recipe
             Task.detached(priority: .userInitiated) {
-                try? await Wine.runProgram(
-                    at: exeURL,
-                    bottle: bottle,
-                    recipe: recipe,
-                    autoSelectEngine: true
-                )
+                do {
+                    try await Wine.runProgram(
+                        at: exeURL,
+                        bottle: bottle,
+                        recipe: recipe,
+                        autoSelectEngine: true
+                    )
+                } catch {
+                    await MainActor.run {
+                        installer.phase = .failed(message: String(
+                            format: String(localized: "game.detail.error.launch %@"),
+                            error.localizedDescription
+                        ))
+                    }
+                }
             }
         } else {
             installer.phase = .failed(message: String(localized: "game.detail.error.mainExeInvalid"))

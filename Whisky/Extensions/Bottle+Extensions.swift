@@ -208,22 +208,23 @@ extension Bottle {
 
     @MainActor
     func move(destination: URL) {
+        guard let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) else { return }
+        bottle.inFlight = true
+        let previousPins = bottle.settings.pins
+        let previousBlocklist = bottle.settings.blocklist
         do {
-            if let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) {
-                bottle.inFlight = true
-                for index in 0..<bottle.settings.pins.count {
-                    let pin = bottle.settings.pins[index]
-                    if let url = pin.url {
-                        bottle.settings.pins[index].url = url.updateParentBottle(old: url,
-                                                                                 new: destination)
-                    }
+            for index in 0..<bottle.settings.pins.count {
+                let pin = bottle.settings.pins[index]
+                if let url = pin.url {
+                    bottle.settings.pins[index].url = url.updateParentBottle(old: url,
+                                                                             new: destination)
                 }
+            }
 
-                for index in 0..<bottle.settings.blocklist.count {
-                    let blockedUrl = bottle.settings.blocklist[index]
-                    bottle.settings.blocklist[index] = blockedUrl.updateParentBottle(old: url,
-                                                                                     new: destination)
-                }
+            for index in 0..<bottle.settings.blocklist.count {
+                let blockedUrl = bottle.settings.blocklist[index]
+                bottle.settings.blocklist[index] = blockedUrl.updateParentBottle(old: url,
+                                                                                 new: destination)
             }
             try FileManager.default.moveItem(at: url, to: destination)
             if let path = BottleVM.shared.bottlesList.paths.firstIndex(of: url) {
@@ -231,25 +232,42 @@ extension Bottle {
             }
             BottleVM.shared.loadBottles()
         } catch {
-            Logger.wineKit.error("Failed to move bottle")
+            // The directory never moved; undo the reference rewrites so
+            // pins and the blocklist do not point at a destination that
+            // was never reached.
+            bottle.settings.pins = previousPins
+            bottle.settings.blocklist = previousBlocklist
+            bottle.inFlight = false
+            Logger.wineKit.error("Failed to move bottle: \(error.localizedDescription)")
+            showRunError(message: String(
+                format: String(localized: "bottle.error.move %@"),
+                error.localizedDescription
+            ))
         }
     }
 
     func exportAsArchive(destination: URL) {
-        do {
-            try Tar.tar(folder: url, toURL: destination)
-        } catch {
-            Logger.wineKit.error("Failed to export bottle")
+        let source = url
+        Task.detached(priority: .userInitiated) {
+            do {
+                try Tar.tar(folder: source, toURL: destination)
+            } catch {
+                Logger.wineKit.error("Failed to export bottle: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.showRunError(message: String(
+                        format: String(localized: "bottle.error.export %@"),
+                        error.localizedDescription
+                    ))
+                }
+            }
         }
     }
 
     @MainActor
     func remove(delete: Bool) {
+        guard let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) else { return }
+        bottle.inFlight = true
         do {
-            if let bottle = BottleVM.shared.bottles.first(where: { $0.url == url }) {
-                bottle.inFlight = true
-            }
-
             if delete {
                 try FileManager.default.removeItem(at: url)
             }
@@ -259,7 +277,12 @@ extension Bottle {
             }
             BottleVM.shared.loadBottles()
         } catch {
-            Logger.wineKit.error("Failed to remove bottle")
+            bottle.inFlight = false
+            Logger.wineKit.error("Failed to remove bottle: \(error.localizedDescription)")
+            showRunError(message: String(
+                format: String(localized: "bottle.error.remove %@"),
+                error.localizedDescription
+            ))
         }
     }
 
