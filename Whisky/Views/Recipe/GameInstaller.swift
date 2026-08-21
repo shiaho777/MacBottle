@@ -89,25 +89,25 @@ final class GameInstaller {
         DownloadBridge.cancelDepotDownload()
         workTask?.cancel()
         if phase.isActive {
-            fail("Cancelled.")
+            fail(String(localized: "game.install.cancelled"))
         }
     }
 
     func markInstallerFinished() {
         guard let url = bottleURL else { return }
         phase = .awaitingMainExe(bottleURL: url)
-        statusDetail = "Pick the main game executable to finish."
+        statusDetail = String(localized: "game.install.pickMainExe")
         progress = nil
     }
 
     private func run() async {
         guard recipe.installer != nil else {
-            fail("Recipe has no installer configured.")
+            fail(String(localized: "game.install.error.noInstaller"))
             return
         }
 
         phase = .creatingBottle
-        statusDetail = "Creating a new bottle…"
+        statusDetail = String(localized: "game.install.creatingBottle")
         progress = nil
 
         let url = bottleVM.createNewBottle(
@@ -120,12 +120,12 @@ final class GameInstaller {
         let bottle = await waitForBottle(url: url)
         if Task.isCancelled { return }
         guard let bottle else {
-            fail("Bottle creation failed or timed out. Check that Wine is installed and try again.")
+            fail(String(localized: "game.install.error.bottleTimeout"))
             return
         }
 
         phase = .configuringBottle
-        statusDetail = "Waiting for Wine prefix…"
+        statusDetail = String(localized: "game.install.waitingPrefix")
         let windowsDir = bottle.url.appending(path: "drive_c").appending(path: "windows")
         let windowsReady = await waitForPath(windowsDir, timeout: 45)
         if Task.isCancelled { return }
@@ -133,7 +133,7 @@ final class GameInstaller {
             Logger.wineKit.warning("GameInstaller: drive_c/windows not found after timeout")
         }
 
-        statusDetail = "Applying recipe settings…"
+        statusDetail = String(localized: "game.install.applyingRecipe")
         await applyRecipeSettings(to: bottle)
         if Task.isCancelled { return }
 
@@ -155,11 +155,11 @@ final class GameInstaller {
             )
             try registry.record(game)
             phase = .done(game)
-            statusDetail = "Installed."
+            statusDetail = String(localized: "game.install.done")
             progress = nil
             NotificationCenter.default.post(name: .macbottleInstalledGamesChanged, object: nil)
         } catch {
-            fail("Could not save install record: \(error.localizedDescription)")
+            fail(String(format: String(localized: "game.install.error.saveRecord %@"), error.localizedDescription))
         }
     }
 
@@ -172,13 +172,13 @@ final class GameInstaller {
 
     private func runSteamInstaller(bottle: Bottle) async {
         phase = .configuringBottle
-        statusDetail = "Preparing Wine for Steam…"
+        statusDetail = String(localized: "game.install.preparingWine")
         progress = nil
         await prepareWineForSteam(bottle: bottle)
         if Task.isCancelled { return }
 
         phase = .nativeSeedingSteam
-        statusDetail = "Native Download Bridge: seeding Windows Steam client at macOS speed…"
+        statusDetail = String(localized: "game.install.seedingSteam")
         progress = 0
 
         do {
@@ -188,12 +188,19 @@ final class GameInstaller {
                     self.statusDetail = detail
                 }
             }
-            statusDetail = "Seeded Steam \(result.version) · \(result.packageCount) packages · "
-                + "\(Self.formatBytes(result.totalBytes)) via native CDN"
+            statusDetail = String(
+                format: String(localized: "game.install.seeded %@ %@ %@"),
+                result.version,
+                String(result.packageCount),
+                Self.formatBytes(result.totalBytes)
+            )
             progress = 1
         } catch {
             Logger.wineKit.error("Native seed failed, falling back to SteamSetup: \(error.localizedDescription)")
-            statusDetail = "Native seed failed (\(error.localizedDescription)). Falling back to SteamSetup…"
+            statusDetail = String(
+                format: String(localized: "game.install.seedFailed %@"),
+                error.localizedDescription
+            )
             if Task.isCancelled { return }
             await runSteamSetupFallback(bottle: bottle)
             return
@@ -204,7 +211,10 @@ final class GameInstaller {
             let credentials = pendingCredentials ?? .anonymous
             phase = .downloadingDepot
             progress = 0
-            statusDetail = "Native steamcmd: app_update \(appID) (windows platform)…"
+            statusDetail = String(
+                format: String(localized: "game.install.depotUpdate %@"),
+                String(appID)
+            )
             do {
                 try await DownloadBridge.downloadGameDepot(
                     appID: appID,
@@ -224,23 +234,25 @@ final class GameInstaller {
                 }
                 phase = .materializingDepot
                 progress = 1
-                statusDetail = "Depot ready — launching Steam control plane…"
+                statusDetail = String(localized: "game.install.depotReady")
             } catch is CancellationError {
                 return
             } catch SteamCMDError.needsSteamGuard {
-                fail("Steam Guard code required. Enter the code and install again.")
+                fail(String(localized: "game.install.error.needsGuard"))
                 return
             } catch {
                 Logger.wineKit.error("Depot download failed: \(error.localizedDescription)")
-                statusDetail = "Native depot download failed (\(error.localizedDescription)). "
-                    + "You can still install via Steam UI."
+                statusDetail = String(
+                    format: String(localized: "game.install.error.depotFailed %@"),
+                    error.localizedDescription
+                )
             }
         }
         if Task.isCancelled { return }
 
         phase = .runningInstaller
         progress = nil
-        statusDetail = "Launching Steam (control plane only)…"
+        statusDetail = String(localized: "game.install.launchingSteamControlPlane")
 
         let steamExe = bottle.url
             .appending(path: "drive_c")
@@ -272,22 +284,15 @@ final class GameInstaller {
         }
 
         if SteamAppID.parse(fromRecipeID: recipe.id) != nil {
-            statusDetail = (
-                "Game depot was downloaded at native speed via steamcmd and "
-                + "cloned into the bottle. Steam is only the control plane "
-                + "(DRM / launch). If the game does not auto-start, open Library "
-                + "in Steam, then continue and pick the main .exe."
-            )
+            statusDetail = String(localized: "game.install.steamControlPlaneNote")
         } else {
-            statusDetail = """
-            Steam client was seeded natively. Log in, install the game, then continue.
-            """
+            statusDetail = String(localized: "game.install.steamSeededNote")
         }
     }
 
     private func runSteamSetupFallback(bottle: Bottle) async {
         phase = .downloadingSteamSetup
-        statusDetail = "Connecting to Steam CDN…"
+        statusDetail = String(localized: "game.install.connectingCDN")
         progress = 0
 
         let tempSetup: URL
@@ -295,13 +300,16 @@ final class GameInstaller {
             tempSetup = try await downloadSteamSetup()
         } catch {
             if Task.isCancelled { return }
-            fail("Could not download SteamSetup.exe: \(error.localizedDescription)")
+            fail(String(
+                format: String(localized: "game.install.error.setupDownloadFailed %@"),
+                error.localizedDescription
+            ))
             return
         }
         if Task.isCancelled { return }
 
         phase = .runningInstaller
-        statusDetail = "Launching Steam installer (fallback)…"
+        statusDetail = String(localized: "game.install.launchingSetupFallback")
         progress = nil
 
         let setupURL = tempSetup
@@ -321,7 +329,7 @@ final class GameInstaller {
             }
         }
 
-        statusDetail = "SteamSetup fallback launched. Finish setup in the Steam window, then continue."
+        statusDetail = String(localized: "game.install.setupFallbackLaunched")
     }
 
     private func prepareWineForSteam(bottle: Bottle) async {
@@ -353,31 +361,37 @@ final class GameInstaller {
                 guard let self else { return }
                 if expected > 0 {
                     self.progress = min(1, Double(written) / Double(expected))
-                    self.statusDetail = "Downloading SteamSetup.exe… "
-                        + "\(Self.formatBytes(written)) / \(Self.formatBytes(expected))"
+                    self.statusDetail = String(
+                        format: String(localized: "game.install.downloadingSetupBytes %@ %@"),
+                        Self.formatBytes(written),
+                        Self.formatBytes(expected)
+                    )
                 } else {
                     self.progress = nil
-                    self.statusDetail = "Downloading SteamSetup.exe… \(Self.formatBytes(written))"
+                    self.statusDetail = String(
+                        format: String(localized: "game.install.downloadingSetup %@"),
+                        Self.formatBytes(written)
+                    )
                 }
             }
         }
         let url = try await downloader.download(from: Self.steamSetupURL)
         progress = 1
-        statusDetail = "Download complete."
+        statusDetail = String(localized: "game.install.downloadComplete")
         return url
     }
 
     private func runPickedInstaller(bottle: Bottle) async {
-        statusDetail = "Select the Windows installer…"
+        statusDetail = String(localized: "game.install.selectInstallerPrompt")
         progress = nil
         let picked = await pickInstallerExe()
         guard let picked else {
-            fail("Installer selection cancelled.")
+            fail(String(localized: "game.install.error.selectionCancelled"))
             return
         }
 
         phase = .runningInstaller
-        statusDetail = "Launching installer…"
+        statusDetail = String(localized: "game.install.launchingInstaller")
 
         let installerURL = picked
         Task.detached(priority: .userInitiated) {
@@ -390,7 +404,7 @@ final class GameInstaller {
             }
         }
 
-        statusDetail = "Installer launched. Complete installation in the window that opened, then continue."
+        statusDetail = String(localized: "game.install.installerLaunched")
     }
 
     @MainActor
@@ -400,8 +414,11 @@ final class GameInstaller {
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowedContentTypes = [UTType.exe, UTType(exportedAs: "com.microsoft.msi-installer")]
-        panel.prompt = "Select installer"
-        panel.message = "Choose the Windows installer for \(recipe.title)."
+        panel.prompt = String(localized: "game.install.panel.prompt")
+        panel.message = String(
+            format: String(localized: "game.install.panel.message %@"),
+            recipe.title
+        )
         typealias ModalContinuation = CheckedContinuation<NSApplication.ModalResponse, Never>
         let response = await withCheckedContinuation { (continuation: ModalContinuation) in
             panel.begin { result in
@@ -415,7 +432,7 @@ final class GameInstaller {
     private func applyRecipeSettings(to bottle: Bottle) async {
         bottle.settings.dxvk = (recipe.renderer == .dxvk)
 
-        statusDetail = "Installing CJK fonts…"
+        statusDetail = String(localized: "game.install.installingCJKFonts")
         await installCJKFontSubstitutions(bottle: bottle)
 
         Logger.wineKit.info("GameInstaller: applied recipe \(self.recipe.id) to bottle \(bottle.url.lastPathComponent)")
@@ -463,7 +480,7 @@ final class GameInstaller {
         do {
             try reg.write(to: regURL, atomically: true, encoding: .utf8)
             defer { try? FileManager.default.removeItem(at: regURL) }
-            statusDetail = "Registering font substitutions…"
+            statusDetail = String(localized: "game.install.registeringFonts")
             try await Wine.runWine(
                 ["regedit", "/s", regURL.path(percentEncoded: false)],
                 bottle: bottle
@@ -484,7 +501,10 @@ final class GameInstaller {
                     sawInFlight = true
                     ticks += 1
                     if ticks % 4 == 0 {
-                        statusDetail = "Initializing Wine prefix… (\(ticks / 4)s)"
+                        statusDetail = String(
+                        format: String(localized: "game.install.initializingPrefix %@"),
+                        String(ticks / 4)
+                    )
                     }
                 } else {
                     return bottle
