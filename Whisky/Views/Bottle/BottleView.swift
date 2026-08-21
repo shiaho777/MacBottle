@@ -390,11 +390,12 @@ struct BottleView: View {
             // For some godforsaken reason "foo/bar" != "foo/Bar" so...
             program.url.path().caseInsensitiveCompare(startMenuProgram.url.path()) == .orderedSame {
                 program.pinned = true
-                guard !bottle.settings.pins.contains(where: { $0.url == program.url }) else { return }
-                bottle.settings.pins.append(PinnedProgram(
-                    name: program.url.deletingPathExtension().lastPathComponent,
-                    url: program.url
-                ))
+                if !bottle.settings.pins.contains(where: { $0.url == program.url }) {
+                    bottle.settings.pins.append(PinnedProgram(
+                        name: program.url.deletingPathExtension().lastPathComponent,
+                        url: program.url
+                    ))
+                }
             }
         }
     }
