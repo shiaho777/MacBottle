@@ -34,27 +34,35 @@ public extension Process {
         systemLog: Bool = true,
         fileCaptureOnly: Bool = false
     ) throws -> AsyncStream<ProcessOutput> {
+        var cleanupAfterFailedSpawn: (() -> Void)?
         let stream: AsyncStream<ProcessOutput>
         if fileCaptureOnly, let fileHandle {
-            stream = makeFileCaptureStream(name: name, fileHandle: fileHandle)
+            (stream, cleanupAfterFailedSpawn) = makeFileCaptureStream(name: name, fileHandle: fileHandle)
             if systemLog {
                 Logger.wineKit.info("Running process \(name) (file-capture)")
             }
             fileHandle.writeInfo(for: self)
         } else if quiet {
-            stream = makeQuietStream(name: name, fileHandle: fileHandle)
+            (stream, cleanupAfterFailedSpawn) = makeQuietStream(name: name, fileHandle: fileHandle)
             if systemLog {
                 Logger.wineKit.info("Running process \(name) (quiet)")
             }
             fileHandle?.writeInfo(for: self)
         } else {
-            stream = makeVerboseStream(name: name, fileHandle: fileHandle, systemLog: systemLog)
+            (stream, cleanupAfterFailedSpawn) = makeVerboseStream(
+                name: name, fileHandle: fileHandle, systemLog: systemLog
+            )
             if systemLog {
                 self.logProcessInfo(name: name)
             }
             fileHandle?.writeInfo(for: self)
         }
-        try run()
+        do {
+            try run()
+        } catch {
+            cleanupAfterFailedSpawn?()
+            throw error
+        }
         return stream
     }
 
@@ -62,13 +70,17 @@ public extension Process {
         name: String,
         fileHandle: FileHandle?,
         systemLog: Bool
-    ) -> AsyncStream<ProcessOutput> {
+    ) -> (stream: AsyncStream<ProcessOutput>, cleanup: @Sendable () -> Void) {
         let pipe = Pipe()
         let errorPipe = Pipe()
         standardOutput = pipe
         standardError = errorPipe
 
-        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+        let cleanup = PipeReaderCleanup(readers: [pipe.fileHandleForReading, errorPipe.fileHandleForReading])
+        let stopReading: @Sendable () -> Void = { cleanup.stopReading() }
+        let drainAndClose: @Sendable () -> Void = { cleanup.drainAndClose() }
+
+        let stream = AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
             continuation.onTermination = { @Sendable termination in
                 switch termination {
                 case .finished:
@@ -104,9 +116,8 @@ public extension Process {
             }
 
             self.terminationHandler = { (process: Process) in
+                drainAndClose()
                 do {
-                    _ = try pipe.fileHandleForReading.readToEnd()
-                    _ = try errorPipe.fileHandleForReading.readToEnd()
                     try fileHandle?.close()
                 } catch {
                     Logger.wineKit.error("Error while clearing data: \(error)")
@@ -117,15 +128,22 @@ public extension Process {
                 continuation.finish()
             }
         }
+        return (stream, stopReading)
     }
 
-    private func makeFileCaptureStream(name: String, fileHandle: FileHandle) -> AsyncStream<ProcessOutput> {
+    private func makeFileCaptureStream(
+        name: String,
+        fileHandle: FileHandle
+    ) -> (stream: AsyncStream<ProcessOutput>, cleanup: @Sendable () -> Void) {
         let outPipe = Pipe()
         let errPipe = Pipe()
         standardOutput = outPipe
         standardError = errPipe
 
-        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+        let cleanup = PipeReaderCleanup(readers: [outPipe.fileHandleForReading, errPipe.fileHandleForReading])
+        let stopReading: @Sendable () -> Void = { cleanup.stopReading() }
+
+        let stream = AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
             continuation.onTermination = { @Sendable termination in
                 if case .cancelled = termination, self.isRunning {
                     self.terminate()
@@ -143,8 +161,7 @@ public extension Process {
             }
 
             self.terminationHandler = { (process: Process) in
-                outPipe.fileHandleForReading.readabilityHandler = nil
-                errPipe.fileHandleForReading.readabilityHandler = nil
+                stopReading()
                 if let data = try? outPipe.fileHandleForReading.readToEnd() {
                     box.write(data)
                 }
@@ -157,13 +174,17 @@ public extension Process {
                 continuation.finish()
             }
         }
+        return (stream, stopReading)
     }
 
-    private func makeQuietStream(name: String, fileHandle: FileHandle?) -> AsyncStream<ProcessOutput> {
+    private func makeQuietStream(
+        name: String,
+        fileHandle: FileHandle?
+    ) -> (stream: AsyncStream<ProcessOutput>, cleanup: @Sendable () -> Void) {
         standardOutput = FileHandle.nullDevice
         standardError = FileHandle.nullDevice
 
-        return AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
+        let stream = AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
             continuation.onTermination = { @Sendable termination in
                 if case .cancelled = termination, self.isRunning {
                     self.terminate()
@@ -179,6 +200,7 @@ public extension Process {
                 continuation.finish()
             }
         }
+        return (stream, {})
     }
 
     private func logTermination(name: String) {
@@ -207,6 +229,28 @@ public extension Process {
         }
         if let environment = environment {
             Logger.wineKit.info("Environment: \(environment)")
+        }
+    }
+}
+
+private final class PipeReaderCleanup: @unchecked Sendable {
+    private let readers: [FileHandle]
+
+    init(readers: [FileHandle]) {
+        self.readers = readers
+    }
+
+    func stopReading() {
+        for reader in readers {
+            reader.readabilityHandler = nil
+        }
+    }
+
+    func drainAndClose() {
+        stopReading()
+        for reader in readers {
+            _ = try? reader.readToEnd()
+            try? reader.close()
         }
     }
 }
