@@ -178,6 +178,40 @@ final class RecipeSyncTests: XCTestCase {
         }
     }
 
+    func testDiffToleratesDuplicateIDsInRemoteIndex() {
+        let remote = RecipeIndex(
+            generatedAt: "now",
+            recipes: [
+                .init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10),
+                .init(id: "steam.1", path: "steam/1-dup.json", sha: "b", size: 20),
+                .init(id: "steam.2", path: "steam/2.json", sha: "c", size: 30)
+            ]
+        )
+        let changes = RecipeSyncDiff.compute(
+            remoteIndex: remote, localEntries: nil, knownRecipes: [:]
+        )
+        XCTAssertEqual(changes.count, 2)
+        XCTAssertEqual(changes.map(\.id), ["steam.1", "steam.2"])
+    }
+
+    func testDiffToleratesDuplicateIDsInLocalEntries() {
+        let remote = RecipeIndex(
+            generatedAt: "now",
+            recipes: [.init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10)]
+        )
+        let local: [RecipeIndex.Entry] = [
+            .init(id: "steam.1", path: "steam/1.json", sha: "old", size: 10),
+            .init(id: "steam.1", path: "steam/1-dup.json", sha: "old2", size: 10)
+        ]
+
+        let changes = RecipeSyncDiff.compute(
+            remoteIndex: remote, localEntries: local, knownRecipes: [:]
+        )
+        XCTAssertEqual(changes.count, 1)
+        XCTAssertEqual(changes[0].kind, .updated)
+        XCTAssertEqual(changes[0].id, "steam.1")
+    }
+
     // MARK: - Service end-to-end with stubs
 
     func testServiceAppliesAddAndRemoveAtomically() async throws {
@@ -206,6 +240,145 @@ final class RecipeSyncTests: XCTestCase {
         let meta = cache.loadMeta()
         XCTAssertEqual(meta.etag, "W/\"new\"")
         XCTAssertEqual(meta.index?.recipes.map(\.id), ["steam.1"])
+    }
+
+    func testServiceSubsetApplyKeepsUnselectedChangesPending() async throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-svc-subset-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        let cache = RecipeCache(root: temp)
+        let remote = RecipeIndex(
+            generatedAt: "new",
+            recipes: [
+                .init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10),
+                .init(id: "steam.2", path: "steam/2.json", sha: "b", size: 20)
+            ]
+        )
+        let service = stubbedService(
+            cache: cache,
+            index: remote,
+            recipesByFile: [
+                "1.json": Recipe(
+                    id: "steam.1", title: "One",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                ),
+                "2.json": Recipe(
+                    id: "steam.2", title: "Two",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                )
+            ]
+        )
+
+        let check = try await service.check(knownRecipes: [:])
+        XCTAssertEqual(check.changes.count, 2)
+
+        let outcomes = try await service.apply(
+            changes: check.changes.filter { $0.id == "steam.1" },
+            remoteIndex: check.remoteIndex,
+            newETag: check.newETag
+        )
+        XCTAssertEqual(outcomes.count, 1)
+        XCTAssertTrue(outcomes[0].success)
+
+        XCTAssertNotNil(cache.loadRecipe(id: "steam.1"))
+        XCTAssertNil(cache.loadRecipe(id: "steam.2"))
+
+        let meta = cache.loadMeta()
+        XCTAssertEqual(meta.index?.recipes.map(\.id), ["steam.1"])
+        XCTAssertNil(meta.etag)
+
+        let second = try await service.check(knownRecipes: [:])
+        XCTAssertEqual(second.changes.map(\.id), ["steam.2"])
+        XCTAssertEqual(second.changes[0].kind, .added)
+    }
+
+    func testServicePartialFailureKeepsFailedEntryPending() async throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-svc-partial-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        let cache = RecipeCache(root: temp)
+        let remote = RecipeIndex(
+            generatedAt: "new",
+            recipes: [
+                .init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10),
+                .init(id: "steam.2", path: "steam/2.json", sha: "b", size: 20)
+            ]
+        )
+        let service = stubbedService(
+            cache: cache,
+            index: remote,
+            recipesByFile: [
+                "1.json": Recipe(
+                    id: "steam.1", title: "One",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                ),
+                "2.json": Recipe(
+                    id: "steam.2", title: "Two",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                )
+            ],
+            failingFiles: ["2.json"]
+        )
+
+        let check = try await service.check(knownRecipes: [:])
+        let outcomes = try await service.apply(
+            changes: check.changes,
+            remoteIndex: check.remoteIndex,
+            newETag: check.newETag
+        )
+        XCTAssertEqual(outcomes.count, 2)
+        XCTAssertEqual(outcomes.filter { $0.success }.count, 1)
+
+        let meta = cache.loadMeta()
+        XCTAssertEqual(meta.index?.recipes.map(\.id), ["steam.1"])
+        XCTAssertNil(meta.etag)
+
+        let second = try await service.check(knownRecipes: [:])
+        XCTAssertEqual(second.changes.map(\.id), ["steam.2"])
+        XCTAssertEqual(second.changes[0].kind, .added)
+    }
+
+    func testServiceRejectsRecipeIDMismatch() async throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-svc-mismatch-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        let cache = RecipeCache(root: temp)
+        let remote = RecipeIndex(
+            generatedAt: "new",
+            recipes: [.init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10)]
+        )
+        let service = stubbedService(
+            cache: cache,
+            index: remote,
+            recipesByFile: [
+                "1.json": Recipe(
+                    id: "steam.other", title: "Impostor",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                )
+            ]
+        )
+
+        let check = try await service.check(knownRecipes: [:])
+        let outcomes = try await service.apply(
+            changes: check.changes,
+            remoteIndex: check.remoteIndex,
+            newETag: check.newETag
+        )
+        XCTAssertEqual(outcomes.count, 1)
+        XCTAssertFalse(outcomes[0].success)
+
+        XCTAssertNil(cache.loadRecipe(id: "steam.other"))
+        let meta = cache.loadMeta()
+        XCTAssertNil(meta.index)
+        XCTAssertNil(meta.etag)
     }
 
     // MARK: Fixture helpers
@@ -257,5 +430,39 @@ final class RecipeSyncTests: XCTestCase {
                 return (recipeData, nil)
             }
         )
+    }
+
+    private func stubbedService(
+        cache: RecipeCache,
+        index: RecipeIndex,
+        recipesByFile: [String: Recipe],
+        failingFiles: Set<String> = []
+    ) -> RecipeSyncService {
+        // swiftlint:disable force_try
+        let indexData = try! JSONEncoder().encode(index)
+        let recipeDataByFile = recipesByFile.mapValues { try! JSONEncoder().encode($0) }
+        // swiftlint:enable force_try
+        let source = RemoteRecipeSource(
+            configuration: .init(),
+            fetcher: { url, _ in
+                if url.lastPathComponent == "_index.json" {
+                    return (indexData, "W/\"new\"")
+                }
+                if failingFiles.contains(url.lastPathComponent) {
+                    throw NSError(
+                        domain: "RecipeSyncTests", code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "network down"]
+                    )
+                }
+                guard let data = recipeDataByFile[url.lastPathComponent] else {
+                    throw NSError(
+                        domain: "RecipeSyncTests", code: 2,
+                        userInfo: [NSLocalizedDescriptionKey: "no fixture for \(url.lastPathComponent)"]
+                    )
+                }
+                return (data, nil)
+            }
+        )
+        return RecipeSyncService(source: source, cache: cache)
     }
 }

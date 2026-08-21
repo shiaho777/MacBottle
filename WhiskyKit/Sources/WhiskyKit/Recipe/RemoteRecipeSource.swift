@@ -114,7 +114,7 @@ public final class RemoteRecipeSource: Sendable {
         public let indexPath: String
 
         public init(
-            owner: String = "shiahonb777",
+            owner: String = "shiaho777",
             repo: String = "MacBottle",
             branch: String = "main",
             recipesRootPath: String = "WhiskyKit/Sources/WhiskyKit/Recipes",

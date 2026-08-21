@@ -108,6 +108,7 @@ struct RecipeSyncView: View {
                 controller.dismiss()
             }
             .keyboardShortcut(.cancelAction)
+            .disabled(isApplying)
 
             if !isDone {
                 Button(primaryActionLabel) {

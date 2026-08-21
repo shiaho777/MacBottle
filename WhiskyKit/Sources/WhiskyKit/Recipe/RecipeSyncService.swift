@@ -132,6 +132,16 @@ public final class RecipeSyncService: @unchecked Sendable {
                         )
                     }
                     let recipe = try await source.fetchRecipe(entry)
+                    guard recipe.id == entry.id else {
+                        throw RemoteRecipeError.recipeMalformed(
+                            id: entry.id,
+                            underlying: NSError(
+                                domain: "RecipeSyncService", code: -2,
+                                // swiftlint:disable:next line_length
+                                userInfo: [NSLocalizedDescriptionKey: "Downloaded recipe id '\(recipe.id)' does not match index entry '\(entry.id)'"]
+                            )
+                        )
+                    }
                     try cache.storeRecipe(recipe)
                 case .removed:
                     try cache.removeRecipe(id: change.id)
@@ -145,24 +155,49 @@ public final class RecipeSyncService: @unchecked Sendable {
             }
         }
 
-        // Only update meta when at least one change succeeded. We do not
-        // mark the new index as accepted until it is actually reflected
-        // in the cache, so a fully-failed apply leaves the client in the
-        // same state it started in and will re-prompt next time.
-        if outcomes.contains(where: { $0.success }) {
-            var meta = cache.loadMeta()
-            // The accepted index is "what the user said yes to" which
-            // may be the full remote index or a subset. The simplest
-            // robust behaviour is to record the full remote index as the
-            // baseline once any change is applied — rejected changes
-            // will still show up next time as a diff if the user reopens
-            // the sync sheet, because we don't have a concept of
-            // "rejected" (and don't want one: users can change their mind).
-            meta.index = remoteIndex
-            if let newETag { meta.etag = newETag }
-            meta.lastSyncAt = Date()
-            try cache.saveMeta(meta)
+        // Rebuild the accepted baseline incrementally: only changes that
+        // actually landed on disk enter it. Rejected or failed changes
+        // stay out, so the next check re-surfaces them instead of
+        // silently swallowing them.
+        let succeeded = outcomes.filter { $0.success }
+        guard !succeeded.isEmpty else { return outcomes }
+
+        var meta = cache.loadMeta()
+        var entriesByID = Dictionary(
+            (meta.index?.recipes ?? []).map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for outcome in succeeded {
+            switch outcome.change.kind {
+            case .added, .updated:
+                if let entry = outcome.change.remoteEntry {
+                    entriesByID[outcome.change.id] = entry
+                }
+            case .removed:
+                entriesByID.removeValue(forKey: outcome.change.id)
+            }
         }
+        let baselineRecipes = entriesByID.values.sorted { $0.id < $1.id }
+        meta.index = RecipeIndex(
+            generatedAt: remoteIndex.generatedAt,
+            recipes: baselineRecipes
+        )
+
+        // Only trust the new ETag when the baseline fully covers the
+        // remote index. While outstanding changes remain (rejected,
+        // unselected, or failed), clearing the ETag forces the next
+        // check to re-fetch and re-surface them.
+        let remoteByID = Dictionary(
+            remoteIndex.recipes.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let baselineByID = Dictionary(
+            baselineRecipes.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        meta.etag = baselineByID == remoteByID ? newETag : nil
+        meta.lastSyncAt = Date()
+        try cache.saveMeta(meta)
 
         return outcomes
     }
