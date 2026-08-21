@@ -27,7 +27,7 @@ class WhiskyCmd {
         if let whiskyCmdURL = whiskyCmdURL {
             // swiftlint:disable line_length
             let script = """
-            do shell script "ln -fs \(whiskyCmdURL.path(percentEncoded: false)) /usr/local/bin/whisky" with administrator privileges
+            do shell script "mkdir -p /usr/local/bin && ln -fs \(appleScriptLiteral(shellQuoted(whiskyCmdURL.path(percentEncoded: false)))) /usr/local/bin/whisky" with administrator privileges
             """
             // swiftlint:enable line_length
 
@@ -52,5 +52,15 @@ class WhiskyCmd {
                 }
             }
         }
+    }
+
+    private static func shellQuoted(_ path: String) -> String {
+        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    private static func appleScriptLiteral(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
     }
 }

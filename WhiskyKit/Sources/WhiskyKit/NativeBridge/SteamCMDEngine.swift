@@ -174,31 +174,60 @@ public final class SteamCMDEngine: @unchecked Sendable {
             )
         )
 
-        var args: [String] = [
-            "+@sSteamCmdForcePlatformType", "windows",
-            "+@sSteamCmdForcePlatformBitness", "64",
-            "+@ShutdownOnFailedCommand", "1",
-            "+@NoPromptForPassword", "1",
-            "+force_install_dir", installDir.path
+        // Credentials ride in a 0600 script file instead of argv, where
+        // they would be readable by any local process via ps for the
+        // whole download session.
+        let script = Self.makeUpdateScript(
+            appID: appID,
+            installDir: installDir,
+            credentials: credentials,
+            validate: validate
+        )
+        let scriptURL = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-steamcmd-\(UUID().uuidString).txt")
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: scriptURL.path)
+        defer { try? FileManager.default.removeItem(at: scriptURL) }
+
+        try await runSteamCMD(
+            binary: binary,
+            arguments: ["+runscript", scriptURL.path],
+            appID: appID,
+            onProgress: onProgress
+        )
+    }
+
+    static func makeUpdateScript(
+        appID: Int,
+        installDir: URL,
+        credentials: SteamCredentials,
+        validate: Bool
+    ) -> String {
+        var lines: [String] = [
+            "@sSteamCmdForcePlatformType windows",
+            "@sSteamCmdForcePlatformBitness 64",
+            "@ShutdownOnFailedCommand 1",
+            "@NoPromptForPassword 1",
+            "force_install_dir \(installDir.path)"
         ]
-
         if let code = credentials.steamGuardCode, !code.isEmpty, !credentials.isAnonymous {
-            args += ["+set_steam_guard_code", code]
+            lines.append("set_steam_guard_code \(scriptQuoted(code))")
         }
-
         if credentials.isAnonymous {
-            args += ["+login", "anonymous"]
+            lines.append("login anonymous")
         } else {
-            args += ["+login", credentials.username, credentials.password]
+            lines.append("login \(scriptQuoted(credentials.username)) \(scriptQuoted(credentials.password))")
         }
+        lines.append("app_update \(appID)\(validate ? " validate" : "")")
+        lines.append("quit")
+        return lines.joined(separator: "\n") + "\n"
+    }
 
-        args += ["+app_update", String(appID)]
-        if validate {
-            args.append("validate")
-        }
-        args.append("+quit")
-
-        try await runSteamCMD(binary: binary, arguments: args, appID: appID, onProgress: onProgress)
+    private static func scriptQuoted(_ value: String) -> String {
+        let escaped = value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "\"\(escaped)\""
     }
 
     public func cancel() {
@@ -351,9 +380,12 @@ final class SteamCMDOutputParser: @unchecked Sendable {
     private func handle(line raw: String) {
         let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !line.isEmpty else { return }
-        Logger.wineKit.info("steamcmd: \(line, privacy: .public)")
-
         let lower = line.lowercased()
+        if lower.contains("login") || lower.contains("password") {
+            Logger.wineKit.info("steamcmd: \(line, privacy: .private)")
+        } else {
+            Logger.wineKit.info("steamcmd: \(line, privacy: .public)")
+        }
         if lower.contains("steam guard")
             || lower.contains("two-factor")
             || lower.contains("mobile authenticator")
