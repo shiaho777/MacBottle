@@ -91,10 +91,12 @@ public enum RecipeSyncDiff {
         knownRecipes: [String: Recipe]
     ) -> [RecipeChange] {
         let localByID = Dictionary(
-            uniqueKeysWithValues: (localEntries ?? []).map { ($0.id, $0) }
+            (localEntries ?? []).map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
         let remoteByID = Dictionary(
-            uniqueKeysWithValues: remoteIndex.recipes.map { ($0.id, $0) }
+            remoteIndex.recipes.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
         )
 
         var changes: [RecipeChange] = []
