@@ -109,9 +109,18 @@ public final class InstalledGameRegistry: @unchecked Sendable {
             decoder.dateDecodingStrategy = .iso8601
             return try decoder.decode([InstalledGame].self, from: data)
         } catch {
-            Logger.wineKit.error("InstalledGameRegistry: decode failed, returning empty: \(error.localizedDescription)")
+            Logger.wineKit.error(
+                "InstalledGameRegistry: decode failed, quarantining store: \(error.localizedDescription)"
+            )
+            quarantineCorruptStoreLocked()
             return []
         }
+    }
+
+    private func quarantineCorruptStoreLocked() {
+        let backup = storeURL.appendingPathExtension("corrupt")
+        try? FileManager.default.removeItem(at: backup)
+        try? FileManager.default.moveItem(at: storeURL, to: backup)
     }
 
     private func saveLocked(_ games: [InstalledGame]) throws {

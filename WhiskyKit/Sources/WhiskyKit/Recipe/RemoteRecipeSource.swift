@@ -205,6 +205,8 @@ public final class RemoteRecipeSource: Sendable {
 
     // MARK: - Default URLSession-backed fetcher
 
+    private static let session = URLSession(configuration: .ephemeral)
+
     @Sendable
     private static func defaultFetcher(
         url: URL, ifNoneMatch: String?
@@ -215,7 +217,6 @@ public final class RemoteRecipeSource: Sendable {
             request.setValue(ifNoneMatch, forHTTPHeaderField: "If-None-Match")
         }
 
-        let session = URLSession(configuration: .ephemeral)
         let (data, response) = try await session.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
