@@ -75,6 +75,27 @@ final class WineEngineTests: XCTestCase {
         XCTAssertEqual(registry.current.identifier, "fake")
     }
 
+    func testRestoreIfCurrentAppliesWhenRegistryUnchanged() {
+        let registry = WineEngineRegistry(current: CrossOverEngine.default)
+        XCTAssertTrue(registry.currentIdentifierIs(WineEngineCatalog.modernIdentifier))
+
+        XCTAssertTrue(registry.restoreIfCurrent(
+            expectedIdentifier: WineEngineCatalog.modernIdentifier,
+            engine: FakeEngine()
+        ))
+        XCTAssertEqual(registry.current.identifier, "fake")
+    }
+
+    func testRestoreIfCurrentSkipsWhenRegistryMovedOn() {
+        let registry = WineEngineRegistry(current: CrossOverEngine.default)
+
+        XCTAssertFalse(registry.restoreIfCurrent(
+            expectedIdentifier: "fake",
+            engine: FakeEngine()
+        ))
+        XCTAssertEqual(registry.current.identifier, WineEngineCatalog.modernIdentifier)
+    }
+
     // MARK: - WhiskyWineInstaller shim routes through registry
 
     func testWhiskyWineInstallerShimReflectsCurrentEngine() {

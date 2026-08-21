@@ -50,6 +50,32 @@ public final class WineEngineRegistry: @unchecked Sendable {
         return _current
     }
 
+    public func currentIdentifierIs(_ identifier: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _current.identifier == identifier
+    }
+
+    /// Activates `engine` only when the registry still holds
+    /// `expectedIdentifier`. Returns false — leaving the registry
+    /// untouched — when another launch or an explicit user choice moved
+    /// it on in the meantime.
+    @discardableResult
+    public func restoreIfCurrent(expectedIdentifier: String, engine: any WineEngine) -> Bool {
+        lock.lock()
+        guard _current.identifier == expectedIdentifier else {
+            lock.unlock()
+            return false
+        }
+        let oldValue = _current.identifier
+        _current = engine
+        lock.unlock()
+        guard oldValue != engine.identifier else { return true }
+        Logger.wineKit.info("WineEngineRegistry active engine: \(engine.identifier)")
+        NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
+        return true
+    }
+
     public var available: [any WineEngine] {
         WineEngineCatalog.allEngines()
     }

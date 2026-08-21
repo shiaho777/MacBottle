@@ -92,12 +92,21 @@ public enum WineEngineCatalog {
         try copyTree(from: source, to: staging)
 
         let destination = d3dMetalLibraryRoot
+        let trash = enginesRoot.appending(path: "\(d3dMetalIdentifier).old-\(UUID().uuidString)")
         if fileManager.fileExists(atPath: destination.path) {
-            let trash = enginesRoot.appending(path: "\(d3dMetalIdentifier).old-\(UUID().uuidString)")
             try fileManager.moveItem(at: destination, to: trash)
-            try? fileManager.removeItem(at: trash)
         }
-        try fileManager.moveItem(at: staging, to: destination)
+        do {
+            try fileManager.moveItem(at: staging, to: destination)
+        } catch {
+            // Put the previous engine back rather than leaving the
+            // machine with no engine installed at all.
+            if fileManager.fileExists(atPath: trash.path) {
+                try? fileManager.moveItem(at: trash, to: destination)
+            }
+            throw error
+        }
+        try? fileManager.removeItem(at: trash)
 
         Logger.wineKit.info("WineEngineCatalog installed D3DMetal engine at \(destination.path)")
         return d3dMetalEngine()
