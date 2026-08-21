@@ -86,20 +86,36 @@ actor ImageCache {
         return root.appending(path: String(format: "%016llx", hash))
     }
 
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        return URLSession(configuration: configuration)
+    }()
+
     private static func readFromDisk(url: URL, root: URL) -> Data? {
         let path = diskURL(for: url, root: root)
-        return try? Data(contentsOf: path)
+        guard let data = try? Data(contentsOf: path) else { return nil }
+        if NSImage(data: data) == nil {
+            try? FileManager.default.removeItem(at: path)
+            return nil
+        }
+        return data
     }
 
     private static func downloadAndStore(url: URL, root: URL) async -> Data? {
         do {
             var request = URLRequest(url: url)
             request.cachePolicy = .returnCacheDataElseLoad
-            let session = URLSession(configuration: .default)
             let (data, response) = try await session.data(for: request)
 
             guard let http = response as? HTTPURLResponse,
                   (200..<300).contains(http.statusCode) else {
+                return nil
+            }
+            guard NSImage(data: data) != nil else {
+                Logger.wineKit.debug(
+                    "ImageCache: discarding non-image response from \(url.host, privacy: .public)"
+                )
                 return nil
             }
 
