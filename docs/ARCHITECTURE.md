@@ -115,8 +115,10 @@ Design choices worth knowing:
 
 The `WineEngine` protocol under `WhiskyKit/Sources/WhiskyKit/WineEngine/`
 isolates everything about "which Wine build this install uses" into a single
-type. The reason to have this layer even with only one concrete
-implementation (`CrossOverEngine`) is that:
+type. Today two concrete implementations ship — `CrossOverEngine` (the
+Whisky/CrossOver-derived packaging) and `LocalPathEngine` (a locally
+installed engine root, used for the D3DMetal path) — and the reason to keep
+the abstraction is that:
 
 - It turns a future engine swap into a one-line change
   (`WineEngineRegistry.shared.setCurrent(...)`) rather than a repo-wide

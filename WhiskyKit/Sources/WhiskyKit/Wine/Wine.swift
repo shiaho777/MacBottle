@@ -112,19 +112,24 @@ public class Wine {
             }
         }
 
-        return try runWineProcess(
-            name: name, args: args,
-            environment: constructWineEnvironment(
-                for: bottle,
-                environment: environment,
-                executableURL: executableURL
-            ),
-            fileHandle: fileHandle,
-            qualityOfService: qualityOfService,
-            quiet: quiet,
-            systemLog: systemLog,
-            fileCaptureOnly: fileCaptureOnly && logFileHandle != nil
-        )
+        do {
+            return try runWineProcess(
+                name: name, args: args,
+                environment: constructWineEnvironment(
+                    for: bottle,
+                    environment: environment,
+                    executableURL: executableURL
+                ),
+                fileHandle: fileHandle,
+                qualityOfService: qualityOfService,
+                quiet: quiet,
+                systemLog: systemLog,
+                fileCaptureOnly: fileCaptureOnly && logFileHandle != nil
+            )
+        } catch {
+            try? fileHandle?.close()
+            throw error
+        }
     }
 
     /// Run a `wineserver` process with the given arguments and environment variables returning a stream of output
@@ -135,11 +140,16 @@ public class Wine {
         fileHandle.writeApplicationInfo()
         fileHandle.writeInfo(for: bottle)
 
-        return try runWineserverProcess(
-            name: name, args: args,
-            environment: constructWineServerEnvironment(for: bottle, environment: environment),
-            fileHandle: fileHandle
-        )
+        do {
+            return try runWineserverProcess(
+                name: name, args: args,
+                environment: constructWineServerEnvironment(for: bottle, environment: environment),
+                fileHandle: fileHandle
+            )
+        } catch {
+            try? fileHandle.close()
+            throw error
+        }
     }
 
     public static func prewarmBottle(_ bottle: Bottle) async throws {
@@ -301,17 +311,15 @@ public class Wine {
         let quiet = !fileCaptureOnly && (
             capture != nil || RuntimeLaunchOptimizer.shouldQuietProcessOutput(for: profile)
         )
-        let stream = try Self.runWineProcess(
-            name: url.lastPathComponent,
-            args: launchArgs,
+        let stream = try await Self.spawnRunProgramStream(
+            url: url,
+            launchArgs: launchArgs,
             bottle: bottle,
             environment: environment,
-            executableURL: url,
             qualityOfService: qos,
             quiet: quiet,
-            logFileHandle: capture?.fileHandle,
-            systemLog: false,
-            fileCaptureOnly: fileCaptureOnly
+            fileCaptureOnly: fileCaptureOnly,
+            capture: capture
         )
 
         let runID = capture?.record.id
@@ -388,6 +396,44 @@ public class Wine {
 
         Task(priority: .userInitiated) {
             await consume()
+        }
+    }
+
+    /// Spawn the wine process for a program launch, finalizing the run
+    /// record when the binary cannot be spawned at all so the run does
+    /// not stay "running" forever.
+    private static func spawnRunProgramStream(
+        url: URL,
+        launchArgs: [String],
+        bottle: Bottle,
+        environment: [String: String],
+        qualityOfService: QualityOfService = .userInitiated,
+        quiet: Bool = false,
+        fileCaptureOnly: Bool = false,
+        capture: ProgramRunCapture?
+    ) async throws -> AsyncStream<ProcessOutput> {
+        do {
+            return try Self.runWineProcess(
+                name: url.lastPathComponent,
+                args: launchArgs,
+                bottle: bottle,
+                environment: environment,
+                executableURL: url,
+                qualityOfService: qualityOfService,
+                quiet: quiet,
+                logFileHandle: capture?.fileHandle,
+                systemLog: false,
+                fileCaptureOnly: fileCaptureOnly
+            )
+        } catch {
+            if let capture {
+                try? capture.fileHandle.close()
+                let runID = capture.record.id
+                await MainActor.run {
+                    ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: -1)
+                }
+            }
+            throw error
         }
     }
 
@@ -476,7 +522,14 @@ public class Wine {
             environment = constructWineEnvironment(for: bottle, environment: environment)
         }
 
-        for await output in try runWineProcess(args: args, environment: environment, fileHandle: fileHandle) {
+        let stream: AsyncStream<ProcessOutput>
+        do {
+            stream = try runWineProcess(args: args, environment: environment, fileHandle: fileHandle)
+        } catch {
+            try? fileHandle.close()
+            throw error
+        }
+        for await output in stream {
             switch output {
             case .started, .terminated:
                 break
