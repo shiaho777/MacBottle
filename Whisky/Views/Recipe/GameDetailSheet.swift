@@ -465,9 +465,15 @@ struct GameDetailSheet: View {
         var path = winPath
         if path.hasPrefix("C:\\") || path.hasPrefix("C:/") {
             path = String(path.dropFirst(3))
+            let url = bottle.url
+                .appending(path: "drive_c")
+                .appending(path: path.replacingOccurrences(of: "\\", with: "/"))
+            return FileManager.default.fileExists(atPath: url.path) ? url : nil
         }
-        path = path.replacingOccurrences(of: "\\", with: "/")
-        let url = bottle.url.appending(path: "drive_c").appending(path: path)
+        // wineStylePath stores executables outside drive_c as backslashed
+        // absolute macOS paths; unmangle them before checking.
+        let unmangled = path.replacingOccurrences(of: "\\", with: "/")
+        let url = URL(fileURLWithPath: unmangled.hasPrefix("/") ? unmangled : "/" + unmangled)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 

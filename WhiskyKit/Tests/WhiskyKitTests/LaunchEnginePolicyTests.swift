@@ -99,36 +99,70 @@ final class LaunchEnginePolicyTests: XCTestCase {
         XCTAssertFalse(decision.bottlePinned)
     }
 
-    func testScanKnownSystemBinaryDoesNotCrash() {
-        let candidates = [
-            URL(fileURLWithPath: "/Users/shiaho/Library/Application Support/"
-                + "app.macbottle.MacBottle/Libraries/Wine/lib/wine/x86_64-windows/notepad.exe"),
-            URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/"
-                + "Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/"
-                + "Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
-        ]
-        for url in candidates where FileManager.default.fileExists(atPath: url.path) {
-            let profile = PEImportScanner.scan(url: url)
-            XCTAssertNotNil(profile)
-            if url.lastPathComponent.contains("pvz") {
-                XCTAssertEqual(profile?.architecture, .x32)
-            }
-            XCTAssertNotNil(profile?.delayLoadedDLLs)
-            XCTAssertNotNil(profile?.origins)
-        }
+    func testScanGeneratedPEFixturesDoNotCrash() throws {
+        let workRoot = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-pe-fixtures-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: workRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: workRoot) }
+
+        let pe32 = workRoot.appending(path: "classic32.exe")
+        try Self.writePEFixture(optionalHeaderMagic: 0x010B, to: pe32)
+        let scan32 = PEImportScanner.scan(url: pe32)
+        XCTAssertEqual(scan32?.architecture, .x32)
+
+        let pe64 = workRoot.appending(path: "modern64.exe")
+        try Self.writePEFixture(optionalHeaderMagic: 0x020B, to: pe64)
+        XCTAssertEqual(PEImportScanner.scan(url: pe64)?.architecture, .x64)
+
+        let garbage = workRoot.appending(path: "garbage.exe")
+        try Data("this is not a PE file".utf8).write(to: garbage)
+        XCTAssertNil(PEImportScanner.scan(url: garbage))
     }
 
-    func testClassic32DecisionUsesModern() {
-        let url = URL(fileURLWithPath: "/Users/shiaho/Library/Containers/app.macbottle.MacBottle/"
-            + "Bottles/E16A4BB5-C875-41B6-94C4-86C6D9A08D24/drive_c/"
-            + "Program Files (x86)/pvzHE/pvzHE-Launcher.exe")
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+    func testClassic32DecisionUsesModern() throws {
+        let fixture = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-classic32-\(UUID().uuidString).exe")
+        try Self.writePEFixture(optionalHeaderMagic: 0x010B, to: fixture)
+        defer { try? FileManager.default.removeItem(at: fixture) }
+
         let decision = LaunchEnginePolicy.decide(
-            executable: url,
+            executable: fixture,
             recipe: nil,
             bottleDXVKEnabled: false
         )
         XCTAssertEqual(decision.engineID, WineEngineCatalog.modernIdentifier)
+    }
+
+    /// Builds a minimal PE image: DOS header with e_lfanew, PE
+    /// signature, an empty COFF header, and an optional header carrying
+    /// just the magic that decides 32- vs 64-bit classification.
+    private static func writePEFixture(optionalHeaderMagic: UInt16, to url: URL) throws {
+        var data = Data(repeating: 0, count: 0x44 + 24 + 240)
+
+        let dosBytes: [UInt8] = [0x4D, 0x5A] // "MZ"
+        data.replaceSubrange(0..<2, with: dosBytes)
+        let peOffset = UInt32(0x40)
+        withUnsafeBytes(of: peOffset.littleEndian) { data.replaceSubrange(0x3C..<0x40, with: $0) }
+        data.replaceSubrange(0x40..<0x44, with: [0x50, 0x45, 0x00, 0x00]) // "PE\0\0"
+
+        let coffOffset = 0x44 // PE signature + 4
+        let machine: UInt16 = optionalHeaderMagic == 0x010B ? 0x014C : 0x8664
+        withUnsafeBytes(of: machine.littleEndian) {
+            data.replaceSubrange(coffOffset..<(coffOffset + 2), with: $0)
+        }
+        withUnsafeBytes(of: UInt16(0xE0).littleEndian) {
+            data.replaceSubrange((coffOffset + 16)..<(coffOffset + 18), with: $0)
+        }
+        withUnsafeBytes(of: UInt16(0x0002).littleEndian) {
+            data.replaceSubrange((coffOffset + 18)..<(coffOffset + 20), with: $0)
+        }
+
+        let optionalOffset = coffOffset + 20
+        withUnsafeBytes(of: optionalHeaderMagic.littleEndian) {
+            data.replaceSubrange(optionalOffset..<(optionalOffset + 2), with: $0)
+        }
+
+        try data.write(to: url)
     }
 
     func testNormalizedBottleEngineID() {

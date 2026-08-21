@@ -459,20 +459,35 @@ public class Wine {
             executable: url,
             extraArgs: extra
         )
-        let startCmd = startBits.map { token in
-            token.contains(" ") ? "\"\(token)\"" : token
-        }.joined(separator: " ")
-        var wineCmd = "\(wineBinary.esc) \(startCmd)"
+        let startCmd = startBits.map { $0.posixQuoted }.joined(separator: " ")
+        var wineCmd = "\(wineBinary.path.posixQuoted) \(startCmd)"
         let env = constructWineEnvironment(
             for: bottle,
             environment: environment,
             executableURL: url
         )
         for environment in env {
-            wineCmd = "\(environment.key)=\"\(environment.value)\" " + wineCmd
+            guard let key = sanitizedEnvKey(environment.key) else { continue }
+            wineCmd = "\(key)=\(environment.value.posixQuoted) " + wineCmd
         }
 
         return wineCmd
+    }
+
+    /// Shell `KEY=value` prefixes need valid identifiers; user-entered
+    /// variable names may contain anything.
+    private static func sanitizedEnvKey(_ key: String) -> String? {
+        let allowed = CharacterSet(charactersIn:
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+        var scalars = String.UnicodeScalarView()
+        for scalar in key.unicodeScalars {
+            scalars.append(allowed.contains(scalar) ? scalar : "_")
+        }
+        var sanitized = String(scalars)
+        if let first = sanitized.first, first.isNumber {
+            sanitized = "_" + sanitized
+        }
+        return sanitized.count > 1 ? sanitized : nil
     }
 
     public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
