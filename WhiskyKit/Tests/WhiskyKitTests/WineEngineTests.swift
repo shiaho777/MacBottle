@@ -62,6 +62,31 @@ final class WineEngineTests: XCTestCase {
         XCTAssertTrue(engine.wineBinary.path.hasSuffix("/Wine/bin/wine"))
     }
 
+    func testLocalPathEngineRequiresBinaryAndPlist() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-local-engine-\(UUID().uuidString)")
+        let engine = LocalPathEngine(
+            identifier: "crossover-d3dmetal",
+            displayName: "CrossOver + D3DMetal",
+            libraryRoot: root
+        )
+        XCTAssertFalse(engine.isInstalled())
+
+        let binDir = root.appending(path: "Wine").appending(path: "bin")
+        try FileManager.default.createDirectory(at: binDir, withIntermediateDirectories: true)
+        let binary = binDir.appending(path: "wine64")
+        try Data("#!/bin/sh\n".utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+
+        XCTAssertFalse(engine.isInstalled(), "a binary without a version plist is not installed")
+
+        let version = WhiskyWineVersion(version: SemanticVersion(9, 9, 9))
+        try PropertyListEncoder().encode(version).write(
+            to: root.appending(path: "WhiskyWineVersion.plist")
+        )
+        XCTAssertTrue(engine.isInstalled())
+    }
+
     func testCatalogListsBothEngines() {
         let ids = WineEngineCatalog.allEngines().map(\.identifier)
         XCTAssertTrue(ids.contains(WineEngineCatalog.modernIdentifier))

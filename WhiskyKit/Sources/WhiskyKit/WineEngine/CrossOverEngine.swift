@@ -97,7 +97,8 @@ public struct CrossOverEngine: WineEngine {
     // MARK: - WineEngine
 
     public func isInstalled() -> Bool {
-        installedVersion() != nil
+        guard installedVersion() != nil else { return false }
+        return FileManager.default.isExecutableFile(atPath: wineBinary.path(percentEncoded: false))
     }
 
     public func installedVersion() -> SemanticVersion? {

@@ -138,7 +138,6 @@ public enum BottleForceStop {
         let needle = prefix
         var pids = Set<Int32>()
 
-        var nameBytes = [UInt8](repeating: 0, count: Int(MAXPATHLEN))
         var buffer = [pid_t](repeating: 0, count: 4096)
         let count = proc_listpids(UInt32(PROC_ALL_PIDS), 0, &buffer, Int32(MemoryLayout<pid_t>.stride * buffer.count))
         let processCount = Int(count) / MemoryLayout<pid_t>.stride
@@ -147,10 +146,7 @@ public enum BottleForceStop {
         for index in 0..<min(processCount, buffer.count) {
             let pid = buffer[index]
             guard pid > 0 else { continue }
-            nameBytes = [UInt8](repeating: 0, count: Int(MAXPATHLEN))
-            let pathLen = proc_pidpath(pid, &nameBytes, UInt32(nameBytes.count))
-            guard pathLen > 0 else { continue }
-            guard let path = String(bytes: nameBytes.prefix(Int(pathLen)), encoding: .utf8) else { continue }
+            guard let path = processPath(pid: pid) else { continue }
             let base = URL(fileURLWithPath: path).lastPathComponent.lowercased()
             let isWineBinary = base == "wine"
                 || base == "wine64"
@@ -261,8 +257,23 @@ public enum BottleForceStop {
 
     private static func hardKill(pid: Int32) {
         guard pid > 1 else { return }
+        let identity = processPath(pid: pid)
         kill(pid, SIGTERM)
         usleep(80_000)
+        // The PID may have been recycled during the grace period; only
+        // SIGKILL when the same executable still owns it.
+        guard isAlive(pid: pid), processPath(pid: pid) == identity else { return }
         kill(pid, SIGKILL)
+    }
+
+    private static func isAlive(pid: Int32) -> Bool {
+        kill(pid, 0) == 0
+    }
+
+    private static func processPath(pid: Int32) -> String? {
+        var nameBytes = [UInt8](repeating: 0, count: Int(MAXPATHLEN))
+        let pathLen = proc_pidpath(pid, &nameBytes, UInt32(nameBytes.count))
+        guard pathLen > 0 else { return nil }
+        return String(bytes: nameBytes.prefix(Int(pathLen)), encoding: .utf8)
     }
 }
