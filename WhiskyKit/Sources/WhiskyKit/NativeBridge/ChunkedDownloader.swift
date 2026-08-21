@@ -57,15 +57,19 @@ public actor ChunkedDownloader {
         maxConcurrent: Int = 10,
         chunkThreshold: Int64 = 8 * 1024 * 1024,
         preferredChunkSize: Int64 = 4 * 1024 * 1024,
-        maxChunksPerFile: Int = 8
+        maxChunksPerFile: Int = 8,
+        sessionConfiguration: URLSessionConfiguration? = nil
     ) {
-        let config = URLSessionConfiguration.ephemeral
-        config.httpMaximumConnectionsPerHost = max(16, maxConcurrent * 2)
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 60 * 60
-        config.waitsForConnectivity = true
-        config.requestCachePolicy = .reloadIgnoringLocalCacheData
-        config.httpShouldUsePipelining = true
+        let config = sessionConfiguration ?? {
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.httpMaximumConnectionsPerHost = max(16, maxConcurrent * 2)
+            configuration.timeoutIntervalForRequest = 60
+            configuration.timeoutIntervalForResource = 60 * 60
+            configuration.waitsForConnectivity = true
+            configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+            configuration.httpShouldUsePipelining = true
+            return configuration
+        }()
         self.session = URLSession(configuration: config)
         self.maxConcurrent = max(1, maxConcurrent)
         self.chunkThreshold = max(1, chunkThreshold)
@@ -240,9 +244,21 @@ public actor ChunkedDownloader {
         let handle = try FileHandle(forWritingTo: partial)
         defer { try? handle.close() }
         try handle.seekToEnd()
-        let data = try Data(contentsOf: tempURL)
-        try handle.write(contentsOf: data)
+        try Self.appendFile(at: tempURL, to: handle)
         try? FileManager.default.removeItem(at: tempURL)
+    }
+
+    private static let copyBufferSize = 4 * 1024 * 1024
+
+    /// Streams `source` onto `output` through a bounded buffer instead of
+    /// loading the whole segment into memory.
+    private static func appendFile(at source: URL, to output: FileHandle) throws {
+        let input = try FileHandle(forReadingFrom: source)
+        defer { try? input.close() }
+        while let chunk = try input.read(upToCount: copyBufferSize) {
+            if chunk.isEmpty { break }
+            try output.write(contentsOf: chunk)
+        }
     }
 
     private func downloadParallel(
@@ -254,9 +270,10 @@ public actor ChunkedDownloader {
         let fileManager = FileManager.default
         let workDir = partial.deletingLastPathComponent()
             .appending(path: ".\(destination.lastPathComponent).parts")
-        try? fileManager.removeItem(at: workDir)
+        // The work directory survives failed attempts so completed parts
+        // are reused on retry; it is removed only after successful
+        // assembly.
         try fileManager.createDirectory(at: workDir, withIntermediateDirectories: true)
-        defer { try? fileManager.removeItem(at: workDir) }
 
         let chunkCount = min(
             maxChunksPerFile,
@@ -264,37 +281,57 @@ public actor ChunkedDownloader {
         )
         let chunkLength = (totalSize + Int64(chunkCount) - 1) / Int64(chunkCount)
 
-        try await withThrowingTaskGroup(of: Void.self) { group in
-            var scheduled = 0
+        let failures = FirstErrorBox()
+
+        await withTaskGroup(of: Void.self) { group in
+            var inflight = 0
             var next = 0
 
-            func schedule(_ index: Int) {
+            func addIfNeeded(_ index: Int) -> Bool {
                 let start = Int64(index) * chunkLength
-                guard start < totalSize else { return }
+                guard start < totalSize else { return false }
                 let end = min(totalSize, start + chunkLength) - 1
+                let expected = end - start + 1
                 let partURL = workDir.appending(path: String(format: "part-%04d", index))
-                group.addTask {
-                    try await self.downloadRange(
-                        url: url,
-                        start: start,
-                        end: end,
-                        to: partURL
-                    )
+                if fileSize(at: partURL) == expected {
+                    return false
                 }
+                group.addTask {
+                    do {
+                        try await self.downloadRange(
+                            url: url,
+                            start: start,
+                            end: end,
+                            expectedBytes: expected,
+                            to: partURL
+                        )
+                    } catch {
+                        failures.setIfFirst(error)
+                    }
+                }
+                return true
             }
 
-            while next < chunkCount && scheduled < min(maxConcurrent, chunkCount) {
-                schedule(next)
+            while next < chunkCount && inflight < min(maxConcurrent, chunkCount) {
+                if addIfNeeded(next) { inflight += 1 }
                 next += 1
-                scheduled += 1
             }
 
-            while try await group.next() != nil {
-                if next < chunkCount {
-                    schedule(next)
+            // A failing range must not cancel its in-flight siblings:
+            // they are allowed to finish so the next attempt reuses
+            // them. No new ranges are scheduled after a failure.
+            while !group.isEmpty {
+                await group.next()
+                inflight -= 1
+                guard failures.first == nil else { continue }
+                while next < chunkCount && inflight < min(maxConcurrent, chunkCount) {
+                    if addIfNeeded(next) { inflight += 1 }
                     next += 1
                 }
             }
+        }
+        if let error = failures.first {
+            throw error
         }
 
         if fileManager.fileExists(atPath: partial.path) {
@@ -306,8 +343,7 @@ public actor ChunkedDownloader {
 
         for index in 0..<chunkCount {
             let partURL = workDir.appending(path: String(format: "part-%04d", index))
-            let data = try Data(contentsOf: partURL)
-            try output.write(contentsOf: data)
+            try Self.appendFile(at: partURL, to: output)
         }
 
         let finalSize = fileSize(at: partial) ?? 0
@@ -322,6 +358,7 @@ public actor ChunkedDownloader {
             try fileManager.removeItem(at: destination)
         }
         try fileManager.moveItem(at: partial, to: destination)
+        try? fileManager.removeItem(at: workDir)
         return finalSize
     }
 
@@ -329,6 +366,7 @@ public actor ChunkedDownloader {
         url: URL,
         start: Int64,
         end: Int64,
+        expectedBytes: Int64,
         to destination: URL
     ) async throws {
         var request = URLRequest(url: url)
@@ -344,8 +382,7 @@ public actor ChunkedDownloader {
         try FileManager.default.moveItem(at: tempURL, to: destination)
 
         let size = fileSize(at: destination) ?? 0
-        let expected = end - start + 1
-        if size != expected && http.statusCode == 206 {
+        if size != expectedBytes && http.statusCode == 206 {
             throw URLError(.cannotParseResponse)
         }
     }
@@ -356,6 +393,25 @@ public actor ChunkedDownloader {
             return nil
         }
         return size.int64Value
+    }
+}
+
+private final class FirstErrorBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var error: Error?
+
+    func setIfFirst(_ newError: Error) {
+        lock.lock()
+        defer { lock.unlock() }
+        if error == nil {
+            error = newError
+        }
+    }
+
+    var first: Error? {
+        lock.lock()
+        defer { lock.unlock() }
+        return error
     }
 }
 
