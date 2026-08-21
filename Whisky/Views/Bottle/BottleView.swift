@@ -303,7 +303,7 @@ struct BottleView: View {
             Button {
                 showWinetricksSheet.toggle()
             } label: {
-                Label("Winetricks", systemImage: "wrench.and.screwdriver")
+                Label("bottle.menu.winetricks", systemImage: "wrench.and.screwdriver")
             }
             Button(role: .destructive) {
                 BottleForceStop.forceStop(bottle: bottle, reason: "bottle-bar")
@@ -491,7 +491,7 @@ struct BottleView: View {
         alert.messageText = title
         alert.informativeText = message
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "button.ok"))
         alert.runModal()
     }
 }

@@ -38,9 +38,9 @@ struct RecipeSection: View {
         .sorted { $0.title.lowercased() < $1.title.lowercased() }
 
     var body: some View {
-        Section("Recipe", isExpanded: $isExpanded) {
-            Picker("Attach a recipe", selection: recipeIDBinding) {
-                Text("None").tag(String?.none)
+        Section("recipe.section.header", isExpanded: $isExpanded) {
+            Picker("recipe.section.attach", selection: recipeIDBinding) {
+                Text("recipe.section.none").tag(String?.none)
                 ForEach(recipes) { recipe in
                     Text(verbatim: "\(recipe.title)  ·  \(recipe.compatibility.rawValue)")
                         .tag(Optional(recipe.id))
@@ -51,8 +51,7 @@ struct RecipeSection: View {
                 RecipeHeaderView(recipe: recipe)
                 RecipeDetailRows(recipe: recipe)
             } else {
-                // swiftlint:disable:next line_length
-                Text("A recipe tells MacBottle how to run a specific game. Pick one from the list to apply its env vars, renderer, and notes.")
+                Text("recipe.section.help")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -78,24 +77,24 @@ private struct RecipeDetailRows: View {
     let recipe: Recipe
 
     var body: some View {
-        LabeledContent("Compatibility") {
+        LabeledContent("recipe.section.compatibility") {
             Text(verbatim: recipe.compatibility.rawValue.capitalized)
                 .foregroundStyle(color(for: recipe.compatibility))
         }
-        LabeledContent("Renderer") {
+        LabeledContent("recipe.section.renderer") {
             Text(verbatim: recipe.renderer.rawValue)
         }
-        LabeledContent("DirectX") {
+        LabeledContent("recipe.section.directx") {
             Text(verbatim: recipe.dxVersion.rawValue)
         }
         if !recipe.winetricks.isEmpty {
-            LabeledContent("Winetricks") {
+            LabeledContent("recipe.section.winetricks") {
                 Text(verbatim: recipe.winetricks.joined(separator: ", "))
                     .font(.system(.callout, design: .monospaced))
             }
         }
         if !recipe.env.isEmpty {
-            LabeledContent("Env vars") {
+            LabeledContent("recipe.section.envVars") {
                 Text(verbatim: "\(recipe.env.count)")
                     .foregroundStyle(.secondary)
             }

@@ -173,7 +173,11 @@ struct ProgramView: View {
                             )
                         }
                         if program.settings.recipeID != nil {
-                            StatusPill(title: "Recipe", systemImage: "list.bullet.rectangle", color: .indigo)
+                            StatusPill(
+                                title: String(localized: "program.pill.recipe"),
+                                systemImage: "list.bullet.rectangle",
+                                color: .indigo
+                            )
                         }
                     }
                 }
