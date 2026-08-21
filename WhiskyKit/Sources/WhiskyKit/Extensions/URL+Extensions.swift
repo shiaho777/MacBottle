@@ -28,6 +28,12 @@ extension String {
         }
         return str
     }
+
+    /// POSIX single-quoted form. Safe against metacharacter injection
+    /// regardless of the content.
+    public var posixQuoted: String {
+        "'" + replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
 }
 
 extension URL {

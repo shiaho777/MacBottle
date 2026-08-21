@@ -51,7 +51,7 @@ class Winetricks {
         let pathPrefix = "\(WhiskyWineInstaller.binFolder.path):\(resourcesURL.path(percentEncoded: false)):$PATH"
         let winetricksCmd =
             "PATH=\"\(pathPrefix)\" WINE=wine64 WINEPREFIX=\"\(bottle.url.path)\" " +
-            "\"\(winetricksURL.path(percentEncoded: false))\" \(command)"
+            "\"\(winetricksURL.path(percentEncoded: false))\" \(command.posixQuoted)"
 
         do {
             try await TerminalLauncher.run(command: winetricksCmd)

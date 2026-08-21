@@ -40,7 +40,7 @@ class ProgramShortcut {
                              encoding: .utf8)
 
             // Make shell script runable
-            try FileManager.default.setAttributes([.posixPermissions: 0o777],
+            try FileManager.default.setAttributes([.posixPermissions: 0o755],
                                                   ofItemAtPath: scriptUrl.path(percentEncoded: false))
 
             // Create Info.plist (set category for Game mode)
