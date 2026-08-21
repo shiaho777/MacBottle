@@ -48,7 +48,7 @@ struct GameDetailSheet: View {
                     metadataGrid
                     if let notes = recipe.notes, !notes.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Notes")
+                            Text("game.detail.notes")
                                 .font(.headline)
                             Text(verbatim: notes)
                                 .foregroundStyle(.secondary)
@@ -71,14 +71,14 @@ struct GameDetailSheet: View {
             refreshInstalled()
         }
         .confirmationDialog(
-            "Remove \(recipe.title) from your library?",
+            "game.detail.uninstall.prompt \(recipe.title)",
             isPresented: $showUninstallConfirm,
             titleVisibility: .visible
         ) {
-            Button("Remove", role: .destructive) { uninstall() }
-            Button("Cancel", role: .cancel) {}
+            Button("game.detail.uninstall.confirm", role: .destructive) { uninstall() }
+            Button("game.detail.cancel", role: .cancel) {}
         } message: {
-            Text(verbatim: "The bottle and its files are kept on disk. Only the MacBottle record is removed.")
+            Text("game.detail.uninstall.message")
         }
     }
 
@@ -118,23 +118,24 @@ struct GameDetailSheet: View {
 
     private var metadataGrid: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
-            metadataRow("Compatibility", value: recipe.compatibility.rawValue.capitalized, tint: tintColor)
-            metadataRow("Renderer", value: recipe.renderer.rawValue)
-            metadataRow("DirectX", value: recipe.dxVersion.rawValue.uppercased())
-            metadataRow("Minimum macOS", value: recipe.minMacOS)
+            metadataRow("game.detail.metadata.compatibility",
+                        value: recipe.compatibility.rawValue.capitalized, tint: tintColor)
+            metadataRow("game.detail.metadata.renderer", value: recipe.renderer.rawValue)
+            metadataRow("game.detail.metadata.directx", value: recipe.dxVersion.rawValue.uppercased())
+            metadataRow("game.detail.metadata.minMacOS", value: recipe.minMacOS)
             if let installerKind = recipe.installer {
-                metadataRow("Installer", value: installerKind.rawValue.capitalized)
+                metadataRow("game.detail.metadata.installer", value: installerKind.rawValue.capitalized)
             }
             if !recipe.winetricks.isEmpty {
                 metadataRow(
-                    "Winetricks",
+                    "game.detail.metadata.winetricks",
                     value: recipe.winetricks.joined(separator: ", "),
                     monospaced: true
                 )
             }
             if !recipe.env.isEmpty {
                 metadataRow(
-                    "Environment",
+                    "game.detail.metadata.environment",
                     value: recipe.env.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "\n"),
                     monospaced: true
                 )
@@ -143,13 +144,13 @@ struct GameDetailSheet: View {
     }
 
     private func metadataRow(
-        _ label: String,
+        _ label: LocalizedStringKey,
         value: String,
         tint: Color? = nil,
         monospaced: Bool = false
     ) -> some View {
         GridRow {
-            Text(verbatim: label)
+            Text(label)
                 .foregroundStyle(.secondary)
                 .gridColumnAlignment(.trailing)
             Text(verbatim: value)
@@ -176,75 +177,80 @@ struct GameDetailSheet: View {
             EmptyView()
         case .creatingBottle:
             activePhaseCard(
-                title: "Creating bottle",
+                title: String(localized: "game.detail.phase.creatingBottle"),
                 systemImage: "shippingbox"
             )
         case .configuringBottle:
             activePhaseCard(
-                title: "Configuring bottle",
+                title: String(localized: "game.detail.phase.configuringBottle"),
                 systemImage: "gearshape.2"
             )
         case .downloadingSteamSetup:
             activePhaseCard(
-                title: "Downloading SteamSetup.exe",
+                title: String(localized: "game.detail.phase.downloadingSteamSetup"),
                 systemImage: "arrow.down.circle",
                 showsLinearProgress: true
             )
         case .nativeSeedingSteam:
             activePhaseCard(
-                title: "Native Download Bridge · Steam client",
+                title: String(localized: "game.detail.phase.nativeSeedingSteam"),
                 systemImage: "bolt.horizontal.circle",
                 showsLinearProgress: true
             )
         case .downloadingDepot:
             activePhaseCard(
-                title: "Native steamcmd · game depot",
+                title: String(localized: "game.detail.phase.downloadingDepot"),
                 systemImage: "externaldrive.badge.wifi",
                 showsLinearProgress: true
             )
         case .materializingDepot:
             activePhaseCard(
-                title: "Cloning depot into bottle",
+                title: String(localized: "game.detail.phase.materializingDepot"),
                 systemImage: "internaldrive",
                 showsLinearProgress: true
             )
         case .runningInstaller:
             VStack(alignment: .leading, spacing: 12) {
                 activePhaseCard(
-                    title: recipe.installer == .steam ? "Steam is updating (slow under Wine)" : "Installer running",
+                    title: recipe.installer == .steam
+                        ? String(localized: "game.detail.phase.runningInstallerSteam")
+                        : String(localized: "game.detail.phase.runningInstaller"),
                     systemImage: "gearshape.2",
                     indeterminateOnly: true
                 )
                 if recipe.installer == .steam {
-                    Text(
-                        "Client files were seeded via Native Download Bridge "
-                        + "(macOS network stack). Wine only runs Steam UI. "
-                        + "Close steam service.exe crash dialogs if they appear — usually harmless."
-                    )
+                    Text("game.detail.phase.steamHint")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Button("I finished installing — continue") {
+                Button("game.detail.phase.installerContinue") {
                     installer.markInstallerFinished()
                 }
                 .buttonStyle(.borderedProminent)
             }
         case .awaitingMainExe:
             VStack(alignment: .leading, spacing: 8) {
-                phaseRow(systemImage: "checkmark.seal", text: "Installer finished. Pick the main game executable.")
+                phaseRow(
+                    systemImage: "checkmark.seal",
+                    text: String(localized: "game.detail.phase.pickMainExePrompt")
+                )
                 if !installer.statusDetail.isEmpty {
                     Text(verbatim: installer.statusDetail)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Button("Locate main .exe") {
+                Button("game.detail.phase.locateMainExe") {
                     pickMainExe()
                 }
                 .buttonStyle(.bordered)
             }
         case .done:
-            phaseRow(systemImage: "checkmark.circle.fill", text: "Installed. You can launch it anytime.", tint: .green)
+            phaseRow(
+                systemImage: "checkmark.circle.fill",
+                text: String(localized: "game.detail.phase.done"),
+                tint: .green
+            )
         case .failed(let message):
             phaseRow(systemImage: "exclamationmark.triangle.fill", text: message, tint: .orange)
         }
@@ -304,23 +310,23 @@ struct GameDetailSheet: View {
     private var footer: some View {
         HStack {
             Spacer()
-            Button("Close") { dismiss() }
+            Button("game.detail.close") { dismiss() }
                 .keyboardShortcut(.cancelAction)
                 .disabled(installer.phase.isActive && installer.phase != .runningInstaller)
 
             if installedGame != nil {
-                Button("Uninstall", role: .destructive) { showUninstallConfirm = true }
+                Button("game.detail.uninstall", role: .destructive) { showUninstallConfirm = true }
                     .buttonStyle(.bordered)
                 Button {
                     play()
                 } label: {
-                    Label("Play", systemImage: "play.fill")
+                    Label("game.detail.play", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
             } else {
                 if installer.phase.isActive {
-                    Button("Cancel") {
+                    Button("game.detail.cancel") {
                         installer.cancelNativeDownload()
                     }
                     .buttonStyle(.bordered)
@@ -348,13 +354,13 @@ struct GameDetailSheet: View {
 
     private var activeButtonLabel: String {
         switch installer.phase {
-        case .creatingBottle: return "Creating bottle…"
-        case .configuringBottle: return "Configuring…"
-        case .downloadingSteamSetup: return "Downloading…"
-        case .nativeSeedingSteam: return "Seeding Steam…"
-        case .downloadingDepot: return "Depot download…"
-        case .materializingDepot: return "Cloning depot…"
-        case .runningInstaller: return "Starting Steam…"
+        case .creatingBottle: return String(localized: "game.detail.button.creatingBottle")
+        case .configuringBottle: return String(localized: "game.detail.button.configuring")
+        case .downloadingSteamSetup: return String(localized: "game.detail.button.downloading")
+        case .nativeSeedingSteam: return String(localized: "game.detail.button.seedingSteam")
+        case .downloadingDepot: return String(localized: "game.detail.button.depotDownload")
+        case .materializingDepot: return String(localized: "game.detail.button.cloningDepot")
+        case .runningInstaller: return String(localized: "game.detail.button.startingSteam")
         default: return installButtonLabel
         }
     }
@@ -368,10 +374,10 @@ struct GameDetailSheet: View {
 
     private var installButtonLabel: String {
         switch recipe.installer {
-        case .steam: return "Install (native depot)"
-        case .gog: return "Install from GOG installer"
-        case .custom: return "Install from .exe"
-        case .none: return "Install"
+        case .steam: return String(localized: "game.detail.install.nativeDepot")
+        case .gog: return String(localized: "game.detail.install.gog")
+        case .custom: return String(localized: "game.detail.install.exe")
+        case .none: return String(localized: "game.detail.install.default")
         }
     }
 
@@ -388,7 +394,7 @@ struct GameDetailSheet: View {
     private func play() {
         guard let installed = installedGame,
               let bottle = bottleVM.bottles.first(where: { $0.url == installed.bottleURL }) else {
-            installer.phase = .failed(message: "Backing bottle no longer exists.")
+            installer.phase = .failed(message: String(localized: "game.detail.error.backingBottleMissing"))
             return
         }
         if let winPath = installed.mainExe, let exeURL = resolveMacURL(forWinPath: winPath, bottle: bottle) {
@@ -402,14 +408,14 @@ struct GameDetailSheet: View {
                 )
             }
         } else {
-            installer.phase = .failed(message: "Main executable path is invalid.")
+            installer.phase = .failed(message: String(localized: "game.detail.error.mainExeInvalid"))
         }
     }
 
     private func pickMainExe() {
         guard let bottleURL = installer.bottleURL,
               let bottle = bottleVM.bottles.first(where: { $0.url == bottleURL }) else {
-            installer.phase = .failed(message: "Bottle is no longer available.")
+            installer.phase = .failed(message: String(localized: "game.detail.error.bottleUnavailable"))
             return
         }
 
@@ -427,8 +433,11 @@ struct GameDetailSheet: View {
                 panel.directoryURL = hint.deletingLastPathComponent()
             }
         }
-        panel.prompt = "Select main executable"
-        panel.message = "Choose the game's main .exe for \(recipe.title)."
+        panel.prompt = String(localized: "game.detail.pickMainExe.panelPrompt")
+        panel.message = String(
+            format: String(localized: "game.detail.pickMainExe.panelMessage %@"),
+            recipe.title
+        )
         if panel.runModal() == .OK, let url = panel.url {
             installer.registerMainExecutable(url, bottle: bottle)
             refreshInstalled()
@@ -447,25 +456,22 @@ struct GameDetailSheet: View {
 
     private var steamCredentialsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Native Depot Plane")
+            Text("game.detail.steam.header")
                 .font(.headline)
-            Text(
-                "Game files download through steamcmd on macOS (windows platform), "
-                + "then clone into the bottle. Wine only launches Steam/game."
-            )
+            Text("game.detail.steam.explanation")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Toggle("Anonymous (free / tools only)", isOn: $useAnonymousSteam)
+            Toggle("game.detail.steam.anonymous", isOn: $useAnonymousSteam)
                 .toggleStyle(.checkbox)
 
             if !useAnonymousSteam {
-                TextField("Steam username", text: $steamUsername)
+                TextField("game.detail.steam.username", text: $steamUsername)
                     .textFieldStyle(.roundedBorder)
-                SecureField("Steam password", text: $steamPassword)
+                SecureField("game.detail.steam.password", text: $steamPassword)
                     .textFieldStyle(.roundedBorder)
-                TextField("Steam Guard code (if asked)", text: $steamGuardCode)
+                TextField("game.detail.steam.guardCode", text: $steamGuardCode)
                     .textFieldStyle(.roundedBorder)
             }
 

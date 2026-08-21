@@ -91,10 +91,10 @@ final class BottleVM: @unchecked Sendable {
     @MainActor
     private static func presentCreationError(_ error: Error) {
         let alert = NSAlert()
-        alert.messageText = "Failed to create bottle"
+        alert.messageText = String(localized: "alert.createBottle.failed")
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .critical
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "button.ok"))
         alert.runModal()
     }
 }
