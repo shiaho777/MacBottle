@@ -55,7 +55,7 @@
 - ✅ v0.3:RecipeLint CI + Recipe UI
 - ✅ v0.5:远程配方同步(数据层 → 同步引擎 → diff UI;实际实现采用 raw CDN + `_index.json` 清单 + ETag,替代原计划的 GitHub Contents API)
 - 🔜 **配方健康度闭环**:失效反馈入口(Issue 模板联动)→ 兼容性矩阵标注(macOS × 芯片 × 验证状态)→ 评审标准文档化。护城河的可持续性靠信任闭环,不只靠同步机制。
-- 🔜 同步完整性加固:manifest 增加 sha256 校验或签名,收紧远程应用的信任模型。
+- ✅ 同步完整性加固:manifest 条目携带 SHA-256,客户端在解码前校验下载字节,损坏/污染响应以硬失败呈现;签名清单(release key)仍为后续项。
 
 ### Track C · 发布工程
 
