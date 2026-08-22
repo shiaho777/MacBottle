@@ -289,7 +289,7 @@ public class Wine {
             environment.removeValue(forKey: "WINEDLLOVERRIDES")
         }
 
-        DisplayPolicy.apply(for: profile, bottle: bottle)
+        await DisplayPolicy.apply(for: profile, bottle: bottle)
         let qos = RuntimeLaunchOptimizer.processQualityOfService(for: profile)
         let launchArgs = RuntimeLaunchOptimizer.startArguments(
             profile: profile,
