@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import CryptoKit
 import XCTest
 @testable import WhiskyKit
 
@@ -379,6 +380,158 @@ final class RecipeSyncTests: XCTestCase {
         let meta = cache.loadMeta()
         XCTAssertNil(meta.index)
         XCTAssertNil(meta.etag)
+    }
+
+    // MARK: - Checksum verification
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private func makeRecipe(id: String) -> Recipe {
+        Recipe(
+            id: id, title: "One",
+            dxVersion: .d3d11, minMacOS: "14.0",
+            renderer: .d3dmetal, compatibility: .gold
+        )
+    }
+
+    func testEntryRoundTripsOptionalSHA256() throws {
+        let withDigest = RecipeIndex.Entry(
+            id: "steam.1", path: "steam/1.json", sha: "a", size: 10,
+            sha256: "abc123"
+        )
+        let withoutDigest = RecipeIndex.Entry(
+            id: "steam.1", path: "steam/1.json", sha: "a", size: 10
+        )
+
+        let encodedWith = try JSONEncoder().encode(withDigest)
+        XCTAssertNotNil(String(data: encodedWith, encoding: .utf8))
+        XCTAssertTrue(
+            String(data: encodedWith, encoding: .utf8)?.contains("sha256") ?? false
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(RecipeIndex.Entry.self, from: encodedWith),
+            withDigest
+        )
+
+        let encodedWithout = try JSONEncoder().encode(withoutDigest)
+        XCTAssertTrue(
+            String(data: encodedWithout, encoding: .utf8)?.contains("sha256") != true
+        )
+        XCTAssertEqual(
+            try JSONDecoder().decode(RecipeIndex.Entry.self, from: encodedWithout),
+            withoutDigest
+        )
+    }
+
+    func testFetchRecipeAcceptsBytesMatchingDigest() async throws {
+        // swiftlint:disable:next force_try
+        let data = try! JSONEncoder().encode(makeRecipe(id: "steam.1"))
+        let entry = RecipeIndex.Entry(
+            id: "steam.1", path: "steam/1.json", sha: "a", size: data.count,
+            sha256: Self.sha256Hex(data)
+        )
+        let source = RemoteRecipeSource(
+            configuration: .init(),
+            fetcher: { _, _ in (data, nil) }
+        )
+
+        let fetched = try await source.fetchRecipe(entry)
+        XCTAssertEqual(fetched.id, "steam.1")
+    }
+
+    func testFetchRecipeRejectsCorruptedBytesBeforeDecoding() async {
+        // swiftlint:disable:next force_try
+        let data = try! JSONEncoder().encode(makeRecipe(id: "steam.1"))
+        let entry = RecipeIndex.Entry(
+            id: "steam.1", path: "steam/1.json", sha: "a", size: data.count,
+            sha256: Self.sha256Hex(data)
+        )
+        let source = RemoteRecipeSource(
+            configuration: .init(),
+            fetcher: { _, _ in (data.dropLast(), nil) }
+        )
+
+        do {
+            _ = try await source.fetchRecipe(entry)
+            XCTFail("expected checksum mismatch")
+        } catch let error as RemoteRecipeError {
+            guard case .recipeChecksumMismatch = error else {
+                XCTFail("unexpected error: \(error)")
+                return
+            }
+        } catch {
+            XCTFail("unexpected error type: \(error)")
+        }
+    }
+
+    func testFetchRecipeSkipsVerificationWhenDigestAbsent() async throws {
+        // swiftlint:disable:next force_try
+        let data = try! JSONEncoder().encode(makeRecipe(id: "steam.1"))
+        let entry = RecipeIndex.Entry(
+            id: "steam.1", path: "steam/1.json", sha: "a", size: data.count
+        )
+        let source = RemoteRecipeSource(
+            configuration: .init(),
+            fetcher: { _, _ in (data, nil) }
+        )
+
+        let fetched = try await source.fetchRecipe(entry)
+        XCTAssertEqual(fetched.id, "steam.1")
+    }
+
+    func testServiceApplyFailsOnChecksumMismatch() async throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-svc-checksum-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        let cache = RecipeCache(root: temp)
+        // swiftlint:disable:next force_try
+        let recipeData = try! JSONEncoder().encode(makeRecipe(id: "steam.1"))
+        let wrongDigest = Self.sha256Hex(Data("other bytes".utf8))
+        let remote = RecipeIndex(
+            generatedAt: "new",
+            recipes: [
+                .init(
+                    id: "steam.1", path: "steam/1.json", sha: "a",
+                    size: recipeData.count, sha256: wrongDigest
+                )
+            ]
+        )
+        // swiftlint:disable:next force_try
+        let indexData = try! JSONEncoder().encode(remote)
+        let source = RemoteRecipeSource(
+            configuration: .init(),
+            fetcher: { url, _ in
+                url.lastPathComponent == "_index.json"
+                    ? (indexData, "W/\"new\"")
+                    : (recipeData, nil)
+            }
+        )
+        let service = RecipeSyncService(source: source, cache: cache)
+
+        let check = try await service.check(knownRecipes: [:])
+        let outcomes = try await service.apply(
+            changes: check.changes,
+            remoteIndex: check.remoteIndex,
+            newETag: check.newETag
+        )
+
+        XCTAssertEqual(outcomes.count, 1)
+        XCTAssertFalse(outcomes[0].success)
+        guard case .recipeChecksumMismatch = outcomes[0].error as? RemoteRecipeError else {
+            XCTFail("expected checksum mismatch, got \(String(describing: outcomes[0].error))")
+            return
+        }
+
+        XCTAssertNil(cache.loadRecipe(id: "steam.1"))
+        let meta = cache.loadMeta()
+        XCTAssertNil(meta.index)
+        XCTAssertNil(meta.etag)
+
+        let second = try await service.check(knownRecipes: [:])
+        XCTAssertEqual(second.changes.map(\.kind), [.added])
     }
 
     // MARK: Fixture helpers

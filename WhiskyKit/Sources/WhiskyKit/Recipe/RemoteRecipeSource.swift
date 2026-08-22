@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import CryptoKit
 import Foundation
 import os.log
 
@@ -47,12 +48,18 @@ public struct RecipeIndex: Codable, Sendable, Equatable {
         public let sha: String
         /// File size in bytes, for progress bars.
         public let size: Int
+        /// SHA-256 hex digest of the raw file bytes. When present the
+        /// client refuses to accept a download whose bytes do not hash
+        /// to this value. Optional so manifests generated before this
+        /// field existed keep working; those simply skip verification.
+        public let sha256: String?
 
-        public init(id: String, path: String, sha: String, size: Int) {
+        public init(id: String, path: String, sha: String, size: Int, sha256: String? = nil) {
             self.id = id
             self.path = path
             self.sha = sha
             self.size = size
+            self.sha256 = sha256
         }
     }
 
@@ -76,6 +83,7 @@ public enum RemoteRecipeError: Error, LocalizedError {
     case indexMalformed(underlying: Error)
     case recipeUnreachable(id: String, underlying: Error)
     case recipeMalformed(id: String, underlying: Error)
+    case recipeChecksumMismatch(id: String, expected: String, actual: String)
     case notModified
 
     public var errorDescription: String? {
@@ -88,6 +96,8 @@ public enum RemoteRecipeError: Error, LocalizedError {
             return "Could not fetch recipe \(id): \(err.localizedDescription)"
         case .recipeMalformed(let id, let err):
             return "Recipe \(id) was unreadable: \(err.localizedDescription)"
+        case .recipeChecksumMismatch(let id, let expected, let actual):
+            return "Recipe \(id) failed its integrity check: expected sha256 \(expected), got \(actual)"
         case .notModified:
             return "Recipe index has not changed."
         }
@@ -184,9 +194,12 @@ public final class RemoteRecipeSource: Sendable {
         }
     }
 
-    /// Fetch a single recipe file identified by its index entry. The sha
-    /// is not verified against the downloaded bytes here; `RecipeCache`
-    /// is the right place to enforce integrity if we ever need it.
+    /// Fetch a single recipe file identified by its index entry. When the
+    /// entry carries a `sha256` digest the downloaded bytes are verified
+    /// against it before decoding; a mismatch throws
+    /// `.recipeChecksumMismatch` so corrupted or poisoned responses never
+    /// reach the cache. Entries without a digest (manifests generated
+    /// before the field existed) skip verification.
     public func fetchRecipe(_ entry: RecipeIndex.Entry) async throws -> Recipe {
         let url = configuration.recipeURL(for: entry.path)
         let data: Data
@@ -196,11 +209,24 @@ public final class RemoteRecipeSource: Sendable {
             throw RemoteRecipeError.recipeUnreachable(id: entry.id, underlying: error)
         }
 
+        if let expected = entry.sha256 {
+            let actual = Self.sha256Hex(of: data)
+            guard actual == expected.lowercased() else {
+                throw RemoteRecipeError.recipeChecksumMismatch(
+                    id: entry.id, expected: expected, actual: actual
+                )
+            }
+        }
+
         do {
             return try JSONDecoder().decode(Recipe.self, from: data)
         } catch {
             throw RemoteRecipeError.recipeMalformed(id: entry.id, underlying: error)
         }
+    }
+
+    static func sha256Hex(of data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: - Default URLSession-backed fetcher

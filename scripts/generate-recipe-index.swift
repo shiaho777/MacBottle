@@ -4,9 +4,10 @@
 //  MacBottle
 //
 //  Walks WhiskyKit/Sources/WhiskyKit/Recipes/ and produces a manifest
-//  (`_index.json`) enumerating every recipe with its git blob sha. The
-//  manifest is consumed by the client at runtime (`RemoteRecipeSource`)
-//  to decide what needs downloading.
+//  (`_index.json`) enumerating every recipe with its git blob sha and a
+//  SHA-256 digest of the raw bytes. The manifest is consumed by the
+//  client at runtime (`RemoteRecipeSource`) to decide what needs
+//  downloading and to verify the bytes it receives.
 //
 //  Usage:
 //      swift scripts/generate-recipe-index.swift
@@ -28,6 +29,7 @@ struct IndexEntry: Codable {
     let path: String
     let sha: String
     let size: Int
+    let sha256: String
 }
 
 struct Manifest: Codable {
@@ -74,6 +76,24 @@ func shell(_ command: String, arguments: [String]) throws -> String {
 /// the sha stored in GitHub's API without requiring a commit to exist.
 func gitBlobSHA(of file: String) throws -> String {
     return try shell("git", arguments: ["hash-object", file])
+}
+
+/// SHA-256 hex digest of the raw file bytes. The runtime client
+/// (`RemoteRecipeSource`) verifies downloads against this value, so it
+/// must hash exactly the bytes on disk. macOS ships `shasum`, Linux
+/// images ship `sha256sum`; both print `"<hex>  <filename>"`.
+func sha256Hex(of file: String) throws -> String {
+    if let digest = try? shell("shasum", arguments: ["-a", "256", file]) {
+        return String(digest.split(separator: " ").first ?? "")
+    }
+    let digest = try shell("sha256sum", arguments: [file])
+    guard let hex = digest.split(separator: " ").first else {
+        throw NSError(
+            domain: "generate-recipe-index", code: 3,
+            userInfo: [NSLocalizedDescriptionKey: "unrecognized sha256sum output for \(file)"]
+        )
+    }
+    return String(hex)
 }
 
 // MARK: - Main
@@ -126,9 +146,17 @@ while let relative = enumerator.nextObject() as? String {
         continue
     }
 
+    let sha256: String
+    do {
+        sha256 = try sha256Hex(of: repoRelative)
+    } catch {
+        failures.append("\(relative): sha256 failed")
+        continue
+    }
+
     let size = (try? fileManager.attributesOfItem(atPath: absolute)[.size] as? Int) ?? data.count
 
-    entries.append(IndexEntry(id: recipeID.id, path: relative, sha: sha, size: size))
+    entries.append(IndexEntry(id: recipeID.id, path: relative, sha: sha, size: size, sha256: sha256))
 }
 
 if !failures.isEmpty {
