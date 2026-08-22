@@ -170,17 +170,16 @@ The complete design rationale lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTUR
 
 ## Roadmap
 
-| Version | Core deliverable |
-| -- | -- |
-| v0.1 | Brand switch + a compilable, runnable `.app` (Whisky/CrossOver packaging) |
-| v0.2 | Recipe system — schema, loader, applier, example recipes |
-| v0.3 | CI schema-lint + PR template + architecture docs + Recipe UI |
-| v0.4 | Wine engine abstraction; `CrossOverEngine` as first implementation |
-| v0.5 | Remote recipe sync (data layer → sync engine → diff UI) |
-| v0.6 | User-switchable engines; second implementation (pure upstream Wine or GPTK2) |
-| v1.0 | Formal release, GitHub Release |
+The plan runs as four parallel tracks — **engine & distribution**, **recipe ecosystem**, **release engineering**, and **platform & branding** — with version numbers as checkpoints:
 
-The full plan — including the v0.5 sub-phases and the explicit non-goals (no virtualization, no DRM/anti-cheat workarounds, no game content) — is in [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
+| Version | Status | Core deliverable |
+| -- | -- | -- |
+| v0.1 – v0.5 | ✅ Done | Brand switch, runnable app, recipe system, CI + docs + Recipe UI, engine abstraction, remote recipe sync |
+| v0.6 | 🚧 Wrapping up | User-switchable engines; a second engine implementation is evaluated separately on the engine track |
+| v0.7 | Planned | Self-owned engine distribution (off archived upstream infrastructure); release engineering: real update feed, signed & notarized builds |
+| v1.0 | Goal | Formal release, gated by an explicit definition of done |
+
+The full plan — including the track breakdown and the explicit non-goals (no virtualization, no DRM/anti-cheat workarounds, no game content) — is in [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
 
 ---
 
