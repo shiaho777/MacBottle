@@ -24,41 +24,33 @@ public enum DisplayPolicy {
     public static let desktopKey = #"Control Panel\\Desktop"#
 
     @discardableResult
-    public static func apply(for profile: RuntimeProfile, bottle: Bottle) -> Bool {
+    public static func apply(for profile: RuntimeProfile, bottle: Bottle) async -> Bool {
         switch profile {
         case .classic32:
-            return applyClassic32(bottle: bottle)
+            return await applyClassic32(bottle: bottle)
         case .modern64, .installer, .generic:
             return false
         }
     }
 
+    /// Classic 32-bit titles misrender under Retina scaling, so force
+    /// RetinaMode=n and a sane DPI. Values are written through `wine reg`
+    /// instead of editing `user.reg` directly: the launch path runs
+    /// alongside a prewarmed (or still-live) wineserver that holds the
+    /// registry in memory, and a plain file edit can be clobbered when
+    /// that server flushes.
     @discardableResult
-    public static func applyClassic32(bottle: Bottle) -> Bool {
+    public static func applyClassic32(bottle: Bottle) async -> Bool {
         var changed = false
         do {
-            if try WineRegistryFile.setStringValue(
-                bottle: bottle,
-                keyPath: macDriverKey,
-                name: "RetinaMode",
-                value: "n"
-            ) {
+            if try await Wine.retinaMode(bottle: bottle) {
+                try await Wine.changeRetinaMode(bottle: bottle, retinaMode: false)
                 changed = true
             }
-            let currentDPI = WineRegistryFile.dwordValue(
-                bottle: bottle,
-                keyPath: desktopKey,
-                name: "LogPixels"
-            )
+            let currentDPI = try await Wine.dpiResolution(bottle: bottle)
             if currentDPI == nil || (currentDPI ?? 0) > 96 {
-                if try WineRegistryFile.setDwordValue(
-                    bottle: bottle,
-                    keyPath: desktopKey,
-                    name: "LogPixels",
-                    value: 96
-                ) {
-                    changed = true
-                }
+                try await Wine.changeDpiResolution(bottle: bottle, dpi: 96)
+                changed = true
             }
             if changed {
                 let bottleName = bottle.settings.name
