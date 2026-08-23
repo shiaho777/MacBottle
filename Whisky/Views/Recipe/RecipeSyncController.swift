@@ -154,7 +154,12 @@ final class RecipeSyncController {
             let outcomes = try await service.apply(
                 changes: selected,
                 remoteIndex: context.remoteIndex,
-                newETag: context.newETag
+                newETag: context.newETag,
+                progress: { [weak self] completed, total in
+                    Task { @MainActor in
+                        self?.applyProgress = (completed, total)
+                    }
+                }
             )
             applyProgress = (outcomes.count, selected.count)
 

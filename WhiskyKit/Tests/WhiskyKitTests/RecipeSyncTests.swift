@@ -534,6 +534,72 @@ final class RecipeSyncTests: XCTestCase {
         XCTAssertEqual(second.changes.map(\.kind), [.added])
     }
 
+    // MARK: - Apply progress
+
+    func testApplyReportsProgressAfterEachChange() async throws {
+        let temp = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-svc-progress-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: temp) }
+
+        let cache = RecipeCache(root: temp)
+        let remote = RecipeIndex(
+            generatedAt: "new",
+            recipes: [
+                .init(id: "steam.1", path: "steam/1.json", sha: "a", size: 10),
+                .init(id: "steam.2", path: "steam/2.json", sha: "b", size: 20)
+            ]
+        )
+        let service = stubbedService(
+            cache: cache,
+            index: remote,
+            recipesByFile: [
+                "1.json": Recipe(
+                    id: "steam.1", title: "One",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                ),
+                "2.json": Recipe(
+                    id: "steam.2", title: "Two",
+                    dxVersion: .d3d11, minMacOS: "14.0",
+                    renderer: .d3dmetal, compatibility: .gold
+                )
+            ],
+            failingFiles: ["2.json"]
+        )
+
+        let check = try await service.check(knownRecipes: [:])
+        let progressBox = ProgressRecorder()
+        _ = try await service.apply(
+            changes: check.changes,
+            remoteIndex: check.remoteIndex,
+            newETag: check.newETag,
+            progress: { completed, total in
+                progressBox.record(completed, total)
+            }
+        )
+
+        let events = progressBox.events
+        XCTAssertEqual(events.map(\.0), [1, 2])
+        XCTAssertTrue(events.allSatisfy { $0.1 == 2 })
+    }
+
+    private final class ProgressRecorder: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [(Int, Int)] = []
+
+        func record(_ completed: Int, _ total: Int) {
+            lock.lock()
+            items.append((completed, total))
+            lock.unlock()
+        }
+
+        var events: [(Int, Int)] {
+            lock.lock()
+            defer { lock.unlock() }
+            return items
+        }
+    }
+
     // MARK: Fixture helpers
 
     private func seedCacheWithStaleEntry(at root: URL) -> RecipeCache {
