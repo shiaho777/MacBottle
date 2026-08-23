@@ -30,12 +30,10 @@ struct RecipeSection: View {
     @Bindable var program: Program
     @Binding var isExpanded: Bool
 
-    /// Recipes are bundle resources and never change at runtime, so we
-    /// snapshot once and sort for a stable picker order.
-    private let recipes: [Recipe] = RecipeStore.shared
-        .loadAll()
-        .values
-        .sorted { $0.title.lowercased() < $1.title.lowercased() }
+    /// Sorted for a stable picker order. Reloaded on appear and whenever
+    /// the store changes (remote sync apply), so newly synced recipes are
+    /// pickable without recreating the view.
+    @State private var recipes: [Recipe] = []
 
     var body: some View {
         Section("recipe.section.header", isExpanded: $isExpanded) {
@@ -57,6 +55,19 @@ struct RecipeSection: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .task {
+            reload()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macbottleRecipesChanged)) { _ in
+            reload()
+        }
+    }
+
+    private func reload() {
+        recipes = RecipeStore.shared
+            .loadAll()
+            .values
+            .sorted { $0.title.lowercased() < $1.title.lowercased() }
     }
 
     private var recipeIDBinding: Binding<String?> {
