@@ -226,9 +226,10 @@ public final class ProgramRunLogStore {
         handle.write(line: "Capture Mode: \(debugMode)\n")
         handle.write(line: "---- begin process output ----\n\n")
 
-        var index = loadIndexStatic(bottleKey: bottleKey, programKey: programKey)
-        index.runs.insert(record, at: 0)
-        try saveIndexStatic(index, bottleKey: bottleKey, programKey: programKey)
+        try Self.mutateIndex(bottleKey: bottleKey, programKey: programKey) { index in
+            index.runs.insert(record, at: 0)
+            return true
+        }
 
         return ProgramRunCapture(record: record, fileHandle: handle, fileURL: fileURL)
     }
@@ -261,25 +262,26 @@ public final class ProgramRunLogStore {
         bump()
     }
     public func attachHostProcess(runID: UUID, processID: Int32) {
+        func updateIndex(record: ProgramRunRecord) {
+            try? Self.mutateIndex(
+                bottleKey: record.bottleKey, programKey: record.programKey
+            ) { index in
+                guard let idx = index.runs.firstIndex(where: { $0.id == runID }) else { return false }
+                index.runs[idx] = record
+                return true
+            }
+        }
         if let session = sessions[runID] {
             var record = session.record
             record.hostProcessID = processID
             session.update(record: record)
-            var index = loadIndex(bottleKey: record.bottleKey, programKey: record.programKey)
-            if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
-                index.runs[idx] = record
-                try? saveIndex(index, bottleKey: record.bottleKey, programKey: record.programKey)
-            }
+            updateIndex(record: record)
             bump()
             return
         }
         guard var record = findRecordInIndexes(runID: runID) else { return }
         record.hostProcessID = processID
-        var index = loadIndex(bottleKey: record.bottleKey, programKey: record.programKey)
-        if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
-            index.runs[idx] = record
-            try? saveIndex(index, bottleKey: record.bottleKey, programKey: record.programKey)
-        }
+        updateIndex(record: record)
         bump()
     }
 
@@ -303,13 +305,16 @@ public final class ProgramRunLogStore {
             record.byteCount = size.intValue
         }
 
-        var index = loadIndex(bottleKey: record.bottleKey, programKey: record.programKey)
-        if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
-            index.runs[idx] = record
-        } else {
-            index.runs.insert(record, at: 0)
+        try? Self.mutateIndex(
+            bottleKey: record.bottleKey, programKey: record.programKey
+        ) { index in
+            if let idx = index.runs.firstIndex(where: { $0.id == runID }) {
+                index.runs[idx] = record
+            } else {
+                index.runs.insert(record, at: 0)
+            }
+            return true
         }
-        try? saveIndex(index, bottleKey: record.bottleKey, programKey: record.programKey)
 
         if let session = sessions[runID] {
             session.update(record: record)
@@ -441,16 +446,21 @@ public final class ProgramRunLogStore {
 
         for (_, group) in grouped {
             guard let first = group.first else { continue }
-            var index = loadIndex(bottleKey: first.bottleKey, programKey: first.programKey)
             let ids = Set(group.map(\.id))
             for record in group {
                 let url = logFileURL(for: record)
                 try? fileManager.removeItem(at: url)
                 sessions[record.id] = nil
             }
-            index.runs.removeAll { ids.contains($0.id) }
-            try? saveIndex(index, bottleKey: first.bottleKey, programKey: first.programKey)
-            if index.runs.isEmpty {
+            var remaining = 0
+            try? Self.mutateIndex(
+                bottleKey: first.bottleKey, programKey: first.programKey
+            ) { index in
+                index.runs.removeAll { ids.contains($0.id) }
+                remaining = index.runs.count
+                return true
+            }
+            if remaining == 0 {
                 let dir = Self.programDirectory(bottleKey: first.bottleKey, programKey: first.programKey)
                 try? fileManager.removeItem(at: dir)
             }
@@ -571,22 +581,21 @@ public final class ProgramRunLogStore {
             guard fileManager.fileExists(atPath: dir.path(percentEncoded: false), isDirectory: &isDir),
                   isDir.boolValue else { continue }
             let programKey = dir.lastPathComponent
-            var index = loadIndex(bottleKey: bottleKey, programKey: programKey)
-            var changed = false
-            for idx in index.runs.indices where index.runs[idx].status == .running {
-                var record = index.runs[idx]
-                record.endedAt = Date()
-                record.exitCode = 137
-                record.status = .failed
-                index.runs[idx] = record
-                if let session = sessions[record.id] {
-                    session.update(record: record)
-                    session.append(line: "\n---- force stopped (runtime interrupted) ----\n")
+            try? Self.mutateIndex(bottleKey: bottleKey, programKey: programKey) { index in
+                var changed = false
+                for idx in index.runs.indices where index.runs[idx].status == .running {
+                    var record = index.runs[idx]
+                    record.endedAt = Date()
+                    record.exitCode = 137
+                    record.status = .failed
+                    index.runs[idx] = record
+                    if let session = sessions[record.id] {
+                        session.update(record: record)
+                        session.append(line: "\n---- force stopped (runtime interrupted) ----\n")
+                    }
+                    changed = true
                 }
-                changed = true
-            }
-            if changed {
-                try? saveIndex(index, bottleKey: bottleKey, programKey: programKey)
+                return changed
             }
         }
         for session in sessions.values where session.record.bottleKey == bottleKey && session.isLive {
@@ -612,27 +621,26 @@ public final class ProgramRunLogStore {
             guard fileManager.fileExists(atPath: dir.path(percentEncoded: false), isDirectory: &isDir),
                   isDir.boolValue else { continue }
             let programKey = dir.lastPathComponent
-            var index = loadIndex(bottleKey: bottleKey, programKey: programKey)
-            var changed = false
-            for idx in index.runs.indices where index.runs[idx].status == .running {
-                var record = index.runs[idx]
-                if shouldKeepRunning(record) {
-                    continue
+            try? Self.mutateIndex(bottleKey: bottleKey, programKey: programKey) { index in
+                var changed = false
+                for idx in index.runs.indices where index.runs[idx].status == .running {
+                    var record = index.runs[idx]
+                    if shouldKeepRunning(record) {
+                        continue
+                    }
+                    record.endedAt = Date()
+                    record.status = .failed
+                    if record.exitCode == nil {
+                        record.exitCode = -1
+                    }
+                    index.runs[idx] = record
+                    if let session = sessions[record.id] {
+                        session.update(record: record)
+                    }
+                    changed = true
+                    appendStaleNote(for: record)
                 }
-                record.endedAt = Date()
-                record.status = .failed
-                if record.exitCode == nil {
-                    record.exitCode = -1
-                }
-                index.runs[idx] = record
-                if let session = sessions[record.id] {
-                    session.update(record: record)
-                }
-                changed = true
-                appendStaleNote(for: record)
-            }
-            if changed {
-                try? saveIndex(index, bottleKey: bottleKey, programKey: programKey)
+                return changed
             }
         }
         reconcileLiveSessions(bottleKey: bottleKey)
@@ -713,20 +721,62 @@ public final class ProgramRunLogStore {
     private func loadIndex(bottleKey: String, programKey: String) -> ProgramRunIndexFile {
         Self.loadIndexStatic(bottleKey: bottleKey, programKey: programKey)
     }
-    private func saveIndex(_ index: ProgramRunIndexFile, bottleKey: String, programKey: String) throws {
-        try Self.saveIndexStatic(index, bottleKey: bottleKey, programKey: programKey)
+
+    nonisolated public static func readTailText(url: URL, maxBytes: Int) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        if size <= maxBytes {
+            try? handle.seek(toOffset: 0)
+        } else {
+            try? handle.seek(toOffset: size - UInt64(maxBytes))
+        }
+        guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
+        return String(bytes: data, encoding: .utf8)
     }
+
+    private func bump() {
+        revision &+= 1
+    }
+}
+
+extension ProgramRunLogStore {
+    /// Serializes whole read-modify-write sequences on `index.json`.
+    /// `prepareRunCapture` mutates off the main actor while the store's
+    /// own methods mutate on it; without this lock, two concurrent
+    /// launches (or a launch racing a finish/cleanup) each load the same
+    /// index and the second save silently drops the first record.
+    nonisolated private static let indexLock = NSLock()
+
+    /// Runs `mutation` against the on-disk index atomically: load, mutate,
+    /// and save all happen under `indexLock`. The closure returns whether
+    /// anything changed; unchanged indexes are not rewritten.
+    nonisolated private static func mutateIndex(
+        bottleKey: String,
+        programKey: String,
+        _ mutation: (inout ProgramRunIndexFile) -> Bool
+    ) throws {
+        indexLock.lock()
+        defer { indexLock.unlock() }
+        var index = loadIndexStatic(bottleKey: bottleKey, programKey: programKey)
+        if mutation(&index) {
+            try saveIndexStatic(index, bottleKey: bottleKey, programKey: programKey)
+        }
+    }
+
     nonisolated private static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         return encoder
     }
+
     nonisolated private static func makeDecoder() -> JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
     }
+
     nonisolated private static func loadIndexStatic(bottleKey: String, programKey: String) -> ProgramRunIndexFile {
         let url = indexURL(bottleKey: bottleKey, programKey: programKey)
         guard let data = try? Data(contentsOf: url),
@@ -735,6 +785,7 @@ public final class ProgramRunLogStore {
         }
         return index
     }
+
     nonisolated private static func saveIndexStatic(
         _ index: ProgramRunIndexFile,
         bottleKey: String,
@@ -769,22 +820,5 @@ public final class ProgramRunLogStore {
         let result = String(scalars)
         if result.isEmpty { return "program" }
         return String(result.prefix(48))
-    }
-
-    nonisolated public static func readTailText(url: URL, maxBytes: Int) -> String? {
-        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? handle.close() }
-        let size = (try? handle.seekToEnd()) ?? 0
-        if size <= maxBytes {
-            try? handle.seek(toOffset: 0)
-        } else {
-            try? handle.seek(toOffset: size - UInt64(maxBytes))
-        }
-        guard let data = try? handle.readToEnd(), !data.isEmpty else { return nil }
-        return String(bytes: data, encoding: .utf8)
-    }
-
-    private func bump() {
-        revision &+= 1
     }
 }
