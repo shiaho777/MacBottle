@@ -114,9 +114,11 @@ public final class RecipeSyncService: @unchecked Sendable {
     public func apply(
         changes accepted: [RecipeChange],
         remoteIndex: RecipeIndex,
-        newETag: String?
+        newETag: String?,
+        progress: (@Sendable (Int, Int) -> Void)? = nil
     ) async throws -> [ApplyOutcome] {
         var outcomes: [ApplyOutcome] = []
+        let total = accepted.count
 
         for change in accepted {
             do {
@@ -153,6 +155,7 @@ public final class RecipeSyncService: @unchecked Sendable {
                 )
                 outcomes.append(ApplyOutcome(change: change, success: false, error: error))
             }
+            progress?(outcomes.count, total)
         }
 
         // Rebuild the accepted baseline incrementally: only changes that
