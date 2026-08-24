@@ -499,9 +499,11 @@ struct GameDetailSheet: View {
             }
 
             if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
-                Text(verbatim: "AppID \(appID)")
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
+                Text(verbatim: String(
+                    format: String(localized: "game.detail.steam.appid %@"), appID
+                ))
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
             }
         }
         .padding(12)
