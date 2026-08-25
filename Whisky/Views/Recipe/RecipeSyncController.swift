@@ -168,7 +168,12 @@ final class RecipeSyncController {
                 phase = .done
             } else {
                 phase = .failed(
-                    message: "Applied \(outcomes.count - failed.count) of \(outcomes.count); \(failed.count) failed."
+                    message: String(
+                        format: String(localized: "sync.apply.partialResult"),
+                        outcomes.count - failed.count,
+                        outcomes.count,
+                        failed.count
+                    )
                 )
             }
 

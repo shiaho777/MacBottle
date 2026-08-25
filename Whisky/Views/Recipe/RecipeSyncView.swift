@@ -45,14 +45,14 @@ struct RecipeSyncView: View {
     private var header: some View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Recipe updates available")
+                Text("sync.title.updatesAvailable")
                     .font(.headline)
                 Text(verbatim: summaryLine)
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button(allSelected ? "Deselect all" : "Select all") {
+            Button(allSelected ? "sync.action.deselectAll" : "sync.action.selectAll") {
                 if allSelected {
                     controller.deselectAll()
                 } else {
@@ -85,14 +85,17 @@ struct RecipeSyncView: View {
                     total: Double(max(controller.applyProgress.total, 1))
                 )
                 .frame(maxWidth: 200)
-                Text(verbatim: "Downloading \(controller.applyProgress.completed) of "
-                    + "\(controller.applyProgress.total)…")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(verbatim: String(
+                    format: String(localized: "sync.progress.downloading"),
+                    controller.applyProgress.completed,
+                    controller.applyProgress.total
+                ))
+                .font(.caption)
+                .foregroundStyle(.secondary)
             } else if case .done = controller.phase {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                Text("All changes applied.")
+                Text("sync.progress.allApplied")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if case .failed(let message) = controller.phase {
@@ -128,7 +131,10 @@ struct RecipeSyncView: View {
         let added = pending.result.changes.filter { $0.kind == .added }.count
         let updated = pending.result.changes.filter { $0.kind == .updated }.count
         let removed = pending.result.changes.filter { $0.kind == .removed }.count
-        return "\(added) added · \(updated) updated · \(removed) removed"
+        return String(
+            format: String(localized: "sync.summary.line"),
+            added, updated, removed
+        )
     }
 
     private var allSelected: Bool {
@@ -146,13 +152,13 @@ struct RecipeSyncView: View {
     }
 
     private var cancelLabel: LocalizedStringKey {
-        isDone ? "Close" : "Cancel"
+        isDone ? "sync.action.close" : "sync.action.cancel"
     }
 
-    private var primaryActionLabel: LocalizedStringKey {
+    private var primaryActionLabel: String {
         controller.selectedIDs.count == pending.result.changes.count
-            ? "Sync all"
-            : "Sync selected (\(controller.selectedIDs.count))"
+            ? String(localized: "sync.action.syncAll")
+            : String(format: String(localized: "sync.action.syncSelected"), controller.selectedIDs.count)
     }
 }
 
@@ -230,9 +236,9 @@ private struct KindBadge: View {
 
     private var label: String {
         switch kind {
-        case .added:   return "Added"
-        case .updated: return "Updated"
-        case .removed: return "Removed"
+        case .added:   return String(localized: "sync.kind.added")
+        case .updated: return String(localized: "sync.kind.updated")
+        case .removed: return String(localized: "sync.kind.removed")
         }
     }
 
