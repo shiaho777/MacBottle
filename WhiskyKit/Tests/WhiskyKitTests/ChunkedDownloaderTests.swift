@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import CryptoKit
 import XCTest
 @testable import WhiskyKit
 
@@ -140,6 +141,75 @@ final class ChunkedDownloaderTests: XCTestCase {
 
         XCTAssertEqual(try Data(contentsOf: destination), payload)
         XCTAssertFalse(FileManager.default.fileExists(atPath: partial.path))
+    }
+
+    // MARK: - Checksum verification
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func testMatchingChecksumAcceptsDownload() async throws {
+        let payload = makePayload(1)
+        RangeStub.shared.payload = payload
+
+        let destination = workRoot.appending(path: "checked.bin")
+        let downloader = makeDownloader(chunkThreshold: 64 * 1024 * 1024, preferredChunkSize: 2 * 1024 * 1024)
+
+        try await downloader.download(jobs: [
+            DownloadJob(url: stubURL, destination: destination,
+                        expectedSize: Int64(payload.count),
+                        expectedSha256: Self.sha256Hex(payload))
+        ])
+
+        XCTAssertEqual(try Data(contentsOf: destination), payload)
+    }
+
+    func testChecksumMismatchFailsAndDiscardsFile() async throws {
+        let payload = makePayload(1)
+        RangeStub.shared.payload = payload
+
+        let destination = workRoot.appending(path: "corrupt.bin")
+        let downloader = makeDownloader(chunkThreshold: 64 * 1024 * 1024, preferredChunkSize: 2 * 1024 * 1024)
+
+        do {
+            try await downloader.download(jobs: [
+                DownloadJob(url: stubURL, destination: destination,
+                            expectedSize: Int64(payload.count),
+                            expectedSha256: String(repeating: "0", count: 64))
+            ])
+            XCTFail("expected checksum mismatch to throw")
+        } catch let error as DownloadError {
+            guard case .checksumMismatch = error else {
+                XCTFail("unexpected error: \(error)")
+                return
+            }
+        }
+
+        XCTAssertFalse(
+            FileManager.default.fileExists(atPath: destination.path),
+            "a file that failed verification must not be left behind"
+        )
+    }
+
+    func testSameSizeCorruptFileIsRedownloaded() async throws {
+        let payload = makePayload(1)
+        RangeStub.shared.payload = payload
+
+        let destination = workRoot.appending(path: "stale.bin")
+        // Same size as the real payload but wrong content: the old
+        // size-only shortcut would trust it and skip the download.
+        try Data(count: payload.count).write(to: destination)
+
+        let downloader = makeDownloader(chunkThreshold: 64 * 1024 * 1024, preferredChunkSize: 2 * 1024 * 1024)
+
+        try await downloader.download(jobs: [
+            DownloadJob(url: stubURL, destination: destination,
+                        expectedSize: Int64(payload.count),
+                        expectedSha256: Self.sha256Hex(payload))
+        ])
+
+        XCTAssertEqual(try Data(contentsOf: destination), payload)
     }
 }
 

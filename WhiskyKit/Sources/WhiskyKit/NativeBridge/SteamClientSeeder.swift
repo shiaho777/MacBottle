@@ -110,7 +110,8 @@ public final class SteamClientSeeder: @unchecked Sendable {
             DownloadJob(
                 url: SteamClientSeeder.packageBaseURL.appending(path: pkg.fileName),
                 destination: packagesDir.appending(path: pkg.fileName),
-                expectedSize: pkg.size
+                expectedSize: pkg.size,
+                expectedSha256: pkg.sha2
             )
         }
 
