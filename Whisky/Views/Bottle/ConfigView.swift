@@ -103,8 +103,8 @@ struct ConfigView: View {
                 }
                 Picker("config.enhancedSync", selection: $bottle.settings.enhancedSync) {
                     Text("config.enhancedSync.none").tag(EnhancedSync.none)
-                    Text("config.enhacnedSync.esync").tag(EnhancedSync.esync)
-                    Text("config.enhacnedSync.msync").tag(EnhancedSync.msync)
+                    Text("config.enhancedSync.esync").tag(EnhancedSync.esync)
+                    Text("config.enhancedSync.msync").tag(EnhancedSync.msync)
                 }
                 Picker("config.engineBinding", selection: bottleEngineSelection) {
                     Text("config.engineBinding.auto").tag(LaunchEnginePolicy.autoEngineToken)

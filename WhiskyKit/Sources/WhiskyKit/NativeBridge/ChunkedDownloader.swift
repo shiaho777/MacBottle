@@ -16,17 +16,35 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import CryptoKit
 import Foundation
+
+public enum DownloadError: Error, LocalizedError {
+    case checksumMismatch(file: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .checksumMismatch(let file):
+            return "Downloaded file failed its SHA-256 integrity check: \(file)"
+        }
+    }
+}
 
 public struct DownloadJob: Sendable {
     public let url: URL
     public let destination: URL
     public let expectedSize: Int64
+    /// Optional SHA-256 hex digest of the complete file. When present,
+    /// both resumed pre-existing files and freshly downloaded bytes are
+    /// verified; a mismatch discards the file and fails the job instead
+    /// of accepting corrupted content.
+    public let expectedSha256: String?
 
-    public init(url: URL, destination: URL, expectedSize: Int64) {
+    public init(url: URL, destination: URL, expectedSize: Int64, expectedSha256: String? = nil) {
         self.url = url
         self.destination = destination
         self.expectedSize = expectedSize
+        self.expectedSha256 = expectedSha256
     }
 }
 
@@ -92,7 +110,8 @@ public actor ChunkedDownloader {
                     let bytes = try await self.downloadOne(
                         job.url,
                         to: job.destination,
-                        expectedSize: job.expectedSize
+                        expectedSize: job.expectedSize,
+                        expectedSha256: job.expectedSha256
                     )
                     return (bytes, job.destination.lastPathComponent)
                 }
@@ -120,7 +139,8 @@ public actor ChunkedDownloader {
     private func downloadOne(
         _ url: URL,
         to destination: URL,
-        expectedSize: Int64
+        expectedSize: Int64,
+        expectedSha256: String?
     ) async throws -> Int64 {
         let fileManager = FileManager.default
         try fileManager.createDirectory(
@@ -131,7 +151,16 @@ public actor ChunkedDownloader {
         if let size = fileSize(at: destination),
            expectedSize > 0,
            size == expectedSize {
-            return expectedSize
+            // Size alone does not prove content: a previous interrupted
+            // or tampered run can leave same-sized garbage. Verify before
+            // trusting the shortcut, and redownload on mismatch.
+            if let sha256 = expectedSha256 {
+                if Self.sha256Hex(of: destination) == sha256.lowercased() {
+                    return expectedSize
+                }
+            } else {
+                return expectedSize
+            }
         }
 
         let partial = destination.appendingPathExtension("partial")
@@ -144,7 +173,8 @@ public actor ChunkedDownloader {
                 url: url,
                 destination: destination,
                 partial: partial,
-                totalSize: totalSize
+                totalSize: totalSize,
+                expectedSha256: expectedSha256
             )
             return size
         }
@@ -175,6 +205,12 @@ public actor ChunkedDownloader {
             try fileManager.removeItem(at: destination)
         }
         try fileManager.moveItem(at: partial, to: destination)
+
+        if let sha256 = expectedSha256,
+           Self.sha256Hex(of: destination) != sha256.lowercased() {
+            try? fileManager.removeItem(at: destination)
+            throw DownloadError.checksumMismatch(file: destination.lastPathComponent)
+        }
         return finalSize
     }
 
@@ -265,7 +301,8 @@ public actor ChunkedDownloader {
         url: URL,
         destination: URL,
         partial: URL,
-        totalSize: Int64
+        totalSize: Int64,
+        expectedSha256: String?
     ) async throws -> Int64 {
         let fileManager = FileManager.default
         let workDir = partial.deletingLastPathComponent()
@@ -353,6 +390,12 @@ public actor ChunkedDownloader {
         if finalSize != totalSize {
             throw URLError(.cannotParseResponse)
         }
+        if let sha256 = expectedSha256,
+           Self.sha256Hex(of: partial) != sha256.lowercased() {
+            try? fileManager.removeItem(at: partial)
+            try? fileManager.removeItem(at: workDir)
+            throw DownloadError.checksumMismatch(file: destination.lastPathComponent)
+        }
 
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
@@ -393,6 +436,19 @@ public actor ChunkedDownloader {
             return nil
         }
         return size.int64Value
+    }
+
+    /// Streams the file through SHA-256 in bounded chunks; an empty
+    /// digest means the file could not be read, which callers treat as a
+    /// mismatch rather than a pass.
+    static func sha256Hex(of file: URL) -> String {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return "" }
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try? handle.read(upToCount: copyBufferSize), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 }
 

@@ -57,9 +57,11 @@ struct EnvironmentArgView: View {
                 }
                 environmentKeys = keys.sorted(by: { $0.key < $1.key })
             }
-            .onDisappear {
+            // Persist on every edit: onDisappear alone loses changes when
+            // the app quits or the view is torn down unexpectedly.
+            .onChange(of: environmentKeys) { _, keys in
                 program.settings.environment.removeAll()
-                for key in environmentKeys where !key.key.isEmpty {
+                for key in keys where !key.key.isEmpty {
                     program.settings.environment[key.key] = key.value
                 }
             }

@@ -99,9 +99,11 @@ public struct DepotStore: Sendable {
             options: [.skipsHiddenFiles]
         ) else { return }
 
+        let basePath = sourceRoot.path(percentEncoded: false)
         for case let fileURL as URL in enumerator {
-            let relative = fileURL.path
-                .replacingOccurrences(of: sourceRoot.path, with: "")
+            let filePath = fileURL.path(percentEncoded: false)
+            guard filePath.hasPrefix(basePath) else { continue }
+            let relative = String(filePath.dropFirst(basePath.count))
                 .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             guard !relative.isEmpty else { continue }
             let destination = destinationRoot.appending(path: relative)
