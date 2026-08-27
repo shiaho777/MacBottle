@@ -44,7 +44,7 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
                 "DXVK_STATE_CACHE": "1"
             ]
         )
-        XCTAssertEqual(env["WINEDEBUG"], "-all")
+        XCTAssertEqual(env["WINEDEBUG"], ProgramRunLogStore.performanceWineDebugChannels)
         XCTAssertEqual(env["GST_DEBUG"], "0")
         XCTAssertNil(env["ROSETTA_ADVERTISE_AVX"])
         XCTAssertEqual(env["WINE_DISABLE_KERNEL_WRITEWATCH"], "1")
