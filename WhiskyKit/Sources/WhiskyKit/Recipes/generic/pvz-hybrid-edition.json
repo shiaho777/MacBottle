@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "id": "generic.pvz-hybrid-edition",
+  "title": "Plants vs. Zombies: Hybrid Edition (植物大战僵尸杂交版)",
+  "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/3590/header.jpg",
+  "dx_version": "d3d9",
+  "min_macos": "14.0",
+  "renderer": "wined3d",
+  "installer": "custom",
+  "main_exe": "Program Files (x86)/pvzHE/pvzHE-Launcher.exe",
+  "winetricks": [],
+  "env": {},
+  "registry": [],
+  "compatibility": "bronze",
+  "notes": "Fan-made mod of the original single-threaded PopCap engine (GDI/DDraw renderer), so GPU upgrades do not help. **Launch: start the game from `pvzHE-Launcher.exe` and wait 30–40 s** — the launcher re-extracts game files and loads resources on every start. If the window shows only a title bar or a blank body, drag or resize the window once to force a redraw. **Do not click rapidly**: input bursts can hang the game. If the screen freezes white, the legacy Microsoft Pinyin IME is the usual culprit — switch to an English input source (the same freeze family exists on real Windows).\n\n民间魔改作品,基于原版 PopCap 单线程引擎(GDI/DDraw 渲染),显卡再好也没有帮助。**启动:从 `pvzHE-Launcher.exe` 进入后等待 30–40 秒** —— 启动器每次都会重新释放游戏文件并加载资源。若窗口只有标题栏或一片空白,拖动或缩放一次窗口即可强制重绘。**不要快速连点**:输入风暴会把游戏卡死。白屏卡死多半是旧版微软拼音输入法钩子所致,切换到英文输入法即可(真 Windows 上也有同样的毛病)。"
+}
