@@ -81,7 +81,7 @@ final class DisplayPolicyTests: XCTestCase {
             bottleDXVKEnabled: false,
             base: ["WINEPREFIX": "/tmp"]
         )
-        XCTAssertEqual(env["WINEDEBUG"], "-all")
+        XCTAssertEqual(env["WINEDEBUG"], ProgramRunLogStore.performanceWineDebugChannels)
         XCTAssertEqual(env["WINE_DISABLE_KERNEL_WRITEWATCH"], "1")
     }
 

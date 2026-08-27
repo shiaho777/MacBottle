@@ -308,7 +308,7 @@ public class Wine {
                 if ProgramRunLogStore.verboseWineDebugEnabled {
                     environment["WINEDEBUG"] = ProgramRunLogStore.verboseWineDebugChannels
                 } else {
-                    environment["WINEDEBUG"] = "-all"
+                    environment["WINEDEBUG"] = ProgramRunLogStore.performanceWineDebugChannels
                 }
             }
         } else {

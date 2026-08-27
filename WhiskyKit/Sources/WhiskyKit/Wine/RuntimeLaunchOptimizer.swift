@@ -179,7 +179,7 @@ public enum RuntimeLaunchOptimizer {
         bottleDXVKEnabled: Bool
     ) {
         if env["WINEDEBUG"] == nil || env["WINEDEBUG"] == "fixme-all" {
-            env["WINEDEBUG"] = "-all"
+            env["WINEDEBUG"] = ProgramRunLogStore.performanceWineDebugChannels
         }
         if env["GST_DEBUG"] == nil || env["GST_DEBUG"] == "1" {
             env["GST_DEBUG"] = "0"

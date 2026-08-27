@@ -142,6 +142,8 @@ public final class ProgramRunLogStore {
     nonisolated public static let verboseWineDebugDefaultsKey = "macbottle.verboseWineDebug"
     nonisolated public static let verboseWineDebugChannels =
         "+timestamp,+tid,+err,+seh,+loaddll,+module,+process,+thread,+pid,fixme-all"
+    nonisolated public static let performanceWineDebugChannels =
+        "fixme-all,err+all,warn+seh"
 
     nonisolated public static var verboseWineDebugEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: verboseWineDebugDefaultsKey) }
@@ -222,7 +224,7 @@ public final class ProgramRunLogStore {
         handle.write(line: "Run ID: \(runID.uuidString)\n")
         let debugMode = verboseWineDebugEnabled
             ? "verbose (\(verboseWineDebugChannels))"
-            : "performance (WINEDEBUG=-all)"
+            : "performance (\(performanceWineDebugChannels))"
         handle.write(line: "Capture Mode: \(debugMode)\n")
         handle.write(line: "---- begin process output ----\n\n")
 
