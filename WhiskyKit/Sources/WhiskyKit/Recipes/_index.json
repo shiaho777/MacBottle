@@ -1,6 +1,13 @@
 {
-  "generated_at" : "2026-08-22T07:01:21Z",
+  "generated_at" : "2026-08-27T02:24:35Z",
   "recipes" : [
+    {
+      "id" : "generic.pvz-hybrid-edition",
+      "path" : "generic\/pvz-hybrid-edition.json",
+      "sha" : "ccfdbcd37d56ec3fe292b7dd16a3468a5b2af38f",
+      "sha256" : "16bf1c8eabcf966da70ca98038d67b923c2bfd4bbb217039163de47414468855",
+      "size" : 1577
+    },
     {
       "id" : "gog.1207658924",
       "path" : "gog\/1207658924.json",
