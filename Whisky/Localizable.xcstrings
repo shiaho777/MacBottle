@@ -22013,6 +22013,22 @@
         }
       }
     },
+    "bottle.launch.silentExit %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exited %lld seconds after launch with no output. Check the run log for details."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动后 %lld 秒即退出，且没有产生任何输出。详情请查看运行日志。"
+          }
+        }
+      }
+    },
     "bottle.launch.viewLogs": {
       "localizations": {
         "en": {

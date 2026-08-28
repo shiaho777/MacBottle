@@ -391,12 +391,13 @@ public class Wine {
                 }
             }
             heartbeatTask?.cancel()
-            if let runID {
-                await MainActor.run {
-                    ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: exitCode)
-                }
-            }
-            BottleProcessRegistry.shared.unregisterFinished(for: bottle)
+            await ProgramRunFinalizer.finalize(
+                runID: runID,
+                capture: capture,
+                programURL: url,
+                bottle: bottle,
+                exitCode: exitCode
+            )
         }
 
         if wait {

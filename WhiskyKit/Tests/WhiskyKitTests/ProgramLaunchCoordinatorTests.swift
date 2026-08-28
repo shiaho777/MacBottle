@@ -73,4 +73,27 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle))
         coordinator.dismiss()
     }
+
+    func testSilentExitMessageFlagsQuickEmptyExit() {
+        let message = ProgramLaunchCoordinator.silentExitFailureMessage(
+            secondsToExit: 4,
+            processOutputByteCount: 0
+        )
+        XCTAssertNotNil(message)
+    }
+
+    func testSilentExitMessageIgnoresOutputAndSlowExits() {
+        XCTAssertNil(ProgramLaunchCoordinator.silentExitFailureMessage(
+            secondsToExit: 4,
+            processOutputByteCount: 128
+        ))
+        XCTAssertNil(ProgramLaunchCoordinator.silentExitFailureMessage(
+            secondsToExit: 30,
+            processOutputByteCount: 0
+        ))
+        XCTAssertNil(ProgramLaunchCoordinator.silentExitFailureMessage(
+            secondsToExit: -1,
+            processOutputByteCount: 0
+        ))
+    }
 }
