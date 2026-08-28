@@ -42,6 +42,12 @@ public extension Process {
                 Logger.wineKit.info("Running process \(name) (file-capture)")
             }
             fileHandle.writeInfo(for: self)
+        } else if quiet, let fileHandle {
+            (stream, cleanupAfterFailedSpawn) = makeFileCaptureStream(name: name, fileHandle: fileHandle)
+            if systemLog {
+                Logger.wineKit.info("Running process \(name) (quiet, file capture)")
+            }
+            fileHandle.writeInfo(for: self)
         } else if quiet {
             (stream, cleanupAfterFailedSpawn) = makeQuietStream(name: name, fileHandle: fileHandle)
             if systemLog {

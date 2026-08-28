@@ -133,6 +133,7 @@ public struct ProgramRunCapture: @unchecked Sendable {
     public let record: ProgramRunRecord
     public let fileHandle: FileHandle
     public let fileURL: URL
+    public let outputStartOffset: UInt64
 }
 
 @MainActor
@@ -227,13 +228,19 @@ public final class ProgramRunLogStore {
             : "performance (\(performanceWineDebugChannels))"
         handle.write(line: "Capture Mode: \(debugMode)\n")
         handle.write(line: "---- begin process output ----\n\n")
+        let outputStartOffset = handle.offsetInFile
 
         try Self.mutateIndex(bottleKey: bottleKey, programKey: programKey) { index in
             index.runs.insert(record, at: 0)
             return true
         }
 
-        return ProgramRunCapture(record: record, fileHandle: handle, fileURL: fileURL)
+        return ProgramRunCapture(
+            record: record,
+            fileHandle: handle,
+            fileURL: fileURL,
+            outputStartOffset: outputStartOffset
+        )
     }
     public func beginRun(
         programURL: URL,
