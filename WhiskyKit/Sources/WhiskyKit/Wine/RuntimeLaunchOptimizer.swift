@@ -221,10 +221,6 @@ public enum RuntimeLaunchOptimizer {
         env.removeValue(forKey: "DXVK_STATE_CACHE")
         env.removeValue(forKey: "DXVK_HUD")
         env.removeValue(forKey: "DXVK_FRAME_RATE")
-        mergeDLLOverrides(
-            &env,
-            additions: "d3d8,d3d9,d3d10,d3d10core,d3d11,dxgi=b;d3d12=d"
-        )
     }
 
     private static func applyModern64(
@@ -240,10 +236,6 @@ public enum RuntimeLaunchOptimizer {
         env["WINEDEBUG"] = env["WINEDEBUG"] ?? "-all"
         env.removeValue(forKey: "DXVK_ASYNC")
         env.removeValue(forKey: "ROSETTA_ADVERTISE_AVX")
-        mergeDLLOverrides(
-            &env,
-            additions: "d3d8,d3d9,d3d10,d3d10core,d3d11,dxgi=b;d3d12=d"
-        )
     }
 
     private static func mergeDLLOverrides(
