@@ -75,6 +75,37 @@ public final class ProgramLaunchCoordinator {
         !launchingKeys.contains(Self.programKey(programURL))
     }
 
+    nonisolated public static func silentExitFailureMessage(
+        secondsToExit: TimeInterval,
+        processOutputByteCount: UInt64,
+        quietWindow: TimeInterval = 5
+    ) -> String? {
+        guard processOutputByteCount == 0,
+              secondsToExit >= 0,
+              secondsToExit < quietWindow else {
+            return nil
+        }
+        return String(
+            format: String(localized: "bottle.launch.silentExit %lld"),
+            Int(secondsToExit.rounded())
+        )
+    }
+
+    nonisolated public static func silentExitFailureMessage(capture: ProgramRunCapture) -> String? {
+        guard let attrs = try? FileManager.default.attributesOfItem(
+            atPath: capture.fileURL.path(percentEncoded: false)
+        ), let size = (attrs[.size] as? NSNumber)?.uint64Value else {
+            return nil
+        }
+        let outputBytes = size > capture.outputStartOffset
+            ? size - capture.outputStartOffset
+            : 0
+        return silentExitFailureMessage(
+            secondsToExit: Date().timeIntervalSince(capture.record.startedAt),
+            processOutputByteCount: outputBytes
+        )
+    }
+
     public func beginWarmup(bottle: Bottle) {
         let key = Self.bottleKey(bottle)
         guard !warmBottleKeys.contains(key) else { return }
@@ -138,6 +169,15 @@ public final class ProgramLaunchCoordinator {
         lastErrorMessage = message
         phase = .failed(programName: programName, message: message)
         scheduleClear(after: 6)
+    }
+
+    public func reportSilentExit(programURL: URL, message: String) {
+        guard isLaunching(programURL: programURL) else { return }
+        finishLaunchFailure(
+            programURL: programURL,
+            programName: programURL.lastPathComponent,
+            message: message
+        )
     }
 
     private func scheduleLaunchWatchdog(programURL: URL, programName: String) {

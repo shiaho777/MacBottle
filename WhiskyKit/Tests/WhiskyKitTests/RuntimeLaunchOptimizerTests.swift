@@ -56,10 +56,35 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
             bottleDXVKEnabled: true
         ))
         XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("winemenubuilder.exe=d") == true)
-        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("d3d9") == true)
-        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("=b") == true)
-        XCTAssertTrue(env["WINEDLLOVERRIDES"]?.contains("d3d12=d") == true)
+        XCTAssertFalse(env["WINEDLLOVERRIDES"]?.contains("=b") == true)
+        XCTAssertFalse(env["WINEDLLOVERRIDES"]?.contains("d3d12=d") == true)
         XCTAssertTrue(env["MVK_CONFIG_FAST_MATH_ENABLED"] == "1")
+    }
+
+    func testInstallerDoesNotForceRendererOverrides() {
+        let env = RuntimeLaunchOptimizer.environment(
+            profile: .installer,
+            bottleDXVKEnabled: false,
+            base: ["WINEPREFIX": "/tmp/bottle"]
+        )
+        XCTAssertEqual(env["WINEDEBUG"], ProgramRunLogStore.performanceWineDebugChannels)
+        XCTAssertFalse(env["WINEDLLOVERRIDES"]?.contains("=b") == true)
+        XCTAssertFalse(env["WINEDLLOVERRIDES"]?.contains("d3d12=d") == true)
+    }
+
+    func testUserDXVKOverridesSurviveClassic32Optimization() {
+        let env = RuntimeLaunchOptimizer.environment(
+            profile: .classic32,
+            bottleDXVKEnabled: true,
+            base: [
+                "WINEPREFIX": "/tmp/bottle",
+                "WINEDLLOVERRIDES": "dxgi,d3d9,d3d10core,d3d11=n,b"
+            ]
+        )
+        XCTAssertEqual(
+            env["WINEDLLOVERRIDES"],
+            "dxgi,d3d9,d3d10core,d3d11=n,b;winemenubuilder.exe=d;winedbg.exe=d;winemine.exe=d"
+        )
     }
 
     func testModern64KeepsUserDXVKSettings() {
