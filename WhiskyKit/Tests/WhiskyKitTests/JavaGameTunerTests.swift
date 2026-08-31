@@ -77,6 +77,10 @@ final class JavaGameTunerTests: XCTestCase {
         XCTAssertTrue(target.contains("-Xmx4096M"))
         XCTAssertTrue(target.contains("-XX:+UseG1GC"))
         XCTAssertTrue(target.contains("-XX:MaxGCPauseMillis=40"))
+        // Experimental-gated flags (G1NewSizePercent et al) must never
+        // appear: without an unlock flag HotSpot refuses to start.
+        XCTAssertFalse(target.contains("G1NewSizePercent"))
+        XCTAssertFalse(target.contains("G1ReservePercent"))
         // Every non-heap pool has a hard ceiling.
         XCTAssertTrue(target.contains("-XX:ReservedCodeCacheSize=128m"))
         XCTAssertTrue(target.contains("-XX:MaxMetaspaceSize=256m"))
