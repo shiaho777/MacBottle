@@ -39,7 +39,33 @@ enum ProgramRunFinalizer {
                     )
                 }
             }
+            if let capture {
+                recordThroughputEvidence(
+                    runID: runID,
+                    capture: capture,
+                    programURL: programURL,
+                    exitCode: exitCode
+                )
+            }
         }
         BottleProcessRegistry.shared.unregisterFinished(for: bottle)
+    }
+
+    private static func recordThroughputEvidence(
+        runID: UUID,
+        capture: ProgramRunCapture,
+        programURL: URL,
+        exitCode: Int32?
+    ) {
+        let programKey = ProgramRunLogStore.programKey(for: programURL)
+        let posture = GameBoostRegistry.profile(for: programKey)?.posture ?? .balanced
+        let sessionSeconds = Date().timeIntervalSince(capture.record.startedAt)
+        _ = FrameThroughputObserver.record(
+            runID: runID,
+            programKey: programKey,
+            sessionSeconds: sessionSeconds,
+            exitCode: exitCode,
+            posture: posture
+        )
     }
 }

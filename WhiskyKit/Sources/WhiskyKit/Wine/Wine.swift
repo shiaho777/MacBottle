@@ -22,7 +22,7 @@ import os.log
 
 public class Wine {
     /// URL to the installed `DXVK` folder
-    private static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
+    static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
     public static var wineBinary: URL {
         let wine64 = WhiskyWineInstaller.binFolder.appending(path: "wine64")
         if FileManager.default.fileExists(atPath: wine64.path(percentEncoded: false)) {
@@ -60,7 +60,7 @@ public class Wine {
     }
 
     /// Run a `wine` process with the given arguments and environment variables returning a stream of output
-    private static func runWineProcess(
+    static func runWineProcess(
         name: String? = nil, args: [String], environment: [String: String] = [:],
         fileHandle: FileHandle?,
         qualityOfService: QualityOfService = .userInitiated,
@@ -185,6 +185,26 @@ public class Wine {
             return
         }
 
+        // ZeroPath: the readiness oracle can prove the prefix is
+        // boot-complete from on-disk evidence alone. When it does, the
+        // "prewarm" is genuinely instant — nothing to spawn at all.
+        let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
+        let engine = WineEngineRegistry.shared.current
+        let engineBuildID = "\(engine.identifier)-\(engine.installedVersion()?.description ?? "unknown")"
+        let baseline = PrefixReadinessOracle.loadBaseline(bottleKey: bottleKey)
+        let verdict = PrefixReadinessOracle.verdict(
+            bottleURL: bottle.url,
+            saved: baseline,
+            engineBuildID: engineBuildID
+        )
+        if verdict.isReady {
+            Logger.wineKit.info("ZeroPath: prewarm skipped (readiness proven)")
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.markWarm(bottle: bottle)
+            }
+            return
+        }
+
         do {
             let process = Process()
             process.executableURL = wineserverBinary
@@ -219,7 +239,6 @@ public class Wine {
         }
     }
 
-    // swiftlint:disable:next function_body_length
     public static func runProgram(
         at url: URL,
         args: [String] = [],
@@ -231,10 +250,61 @@ public class Wine {
         autoSelectEngine: Bool = true,
         captureRunLog: Bool = true
     ) async throws {
-        Task(priority: .utility) {
-            await ensureBottleReady(bottle)
+        // Plan (PE scan, engine decision, readiness fingerprint) and
+        // warmup (wineserver spawn) touch disjoint state; racing them
+        // hides the warmup latency behind the planning work instead of
+        // paying both serially.
+        async let warmup: Void = ensureBottleReady(bottle)
+        let launchContext = await planLaunch(
+            url: url,
+            bottle: bottle,
+            recipe: recipe,
+            applyDXVK: applyDXVK,
+            autoSelectEngine: autoSelectEngine,
+            environment: environment
+        )
+        await warmup
+        defer {
+            if autoSelectEngine {
+                LaunchEnginePolicy.restoreUserSelection(for: launchContext.engineDecision)
+            }
         }
 
+        try await executeLaunch(
+            url: url,
+            args: args,
+            bottle: bottle,
+            environment: launchContext.resolvedEnvironment,
+            wait: wait,
+            applyDXVK: applyDXVK,
+            recipe: recipe,
+            autoSelectEngine: autoSelectEngine,
+            captureRunLog: captureRunLog,
+            context: launchContext
+        )
+    }
+
+    struct ZeroPathLaunchContext {
+        var engineDecision: LaunchEnginePolicy.AppliedLaunch?
+        var launchEngine: any WineEngine
+        var profile: RuntimeProfile
+        var plan: DoubleLaunchPlan
+        var bottleKey: String
+        var engineBuildID: String
+        var launchStart: Date
+        var displayIntents: [WineIntentEnvelope]
+        var resolvedEnvironment: [String: String]
+    }
+
+    // swiftlint:disable:next function_parameter_count
+    private static func planLaunch(
+        url: URL,
+        bottle: Bottle,
+        recipe: Recipe?,
+        applyDXVK: Bool,
+        autoSelectEngine: Bool,
+        environment: [String: String]
+    ) async -> ZeroPathLaunchContext {
         let engineDecision: LaunchEnginePolicy.AppliedLaunch?
         if autoSelectEngine {
             engineDecision = LaunchEnginePolicy.applyForLaunch(
@@ -251,11 +321,6 @@ public class Wine {
         // switch between here and spawn, and this launch must run under
         // exactly the engine that was selected for it.
         let launchEngine = engineDecision?.engine ?? WineEngineRegistry.shared.current
-        defer {
-            if autoSelectEngine {
-                LaunchEnginePolicy.restoreUserSelection(for: engineDecision)
-            }
-        }
 
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
 
@@ -277,7 +342,7 @@ public class Wine {
                 ProgramLaunchCoordinator.shared.isDXVKReady(bottle: bottle)
             }
             if !dxvkReady {
-                try enableDXVK(bottle: bottle)
+                try? enableDXVK(bottle: bottle)
                 await MainActor.run {
                     ProgramLaunchCoordinator.shared.markDXVKReady(bottle: bottle)
                 }
@@ -289,7 +354,73 @@ public class Wine {
             environment.removeValue(forKey: "WINEDLLOVERRIDES")
         }
 
-        await DisplayPolicy.apply(for: profile, bottle: bottle)
+        // ---- ZeroPath: predict prefix readiness, skip boot-check ----
+        let launchStart = Date()
+        let engineBuildID = "\(launchEngine.identifier)-\(launchEngine.installedVersion()?.description ?? "unknown")"
+        let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
+        let plan = DoubleLaunchExecutor.plan(
+            bottle: bottle,
+            fingerprintSaved: PrefixReadinessOracle.loadBaseline(bottleKey: bottleKey),
+            engineBuildID: engineBuildID
+        )
+        var displayIntents: [WineIntentEnvelope] = []
+        if plan.readinessSkipped {
+            if profile == .classic32 {
+                displayIntents = LaunchPathPreflight.applyClassic32(bottle: bottle)
+            }
+            Logger.wineKit.info("ZeroPath: readiness proven, launching directly")
+        } else {
+            await DisplayPolicy.apply(for: profile, bottle: bottle)
+        }
+        if plan.doubleLaunch {
+            environment = DoubleLaunchExecutor.injecting(
+                record: .init(doubleLaunch: true, readinessSkipped: false),
+                into: environment
+            )
+        }
+        // ---- Game Boost: per-program performance posture ----
+        let programKey = ProgramRunLogStore.programKey(for: url)
+        if let boost = GameBoostRegistry.profile(for: programKey) {
+            // Overlay merges only keys the user did not set explicitly:
+            // a hand-tuned variable on the program or bottle always wins.
+            for (key, value) in boost.environmentOverlay() where environment[key] == nil {
+                environment[key] = value
+            }
+            Logger.wineKit.info("GameBoost: \(boost.posture.rawValue) posture applied to \(url.lastPathComponent)")
+        }
+        // ---- end Game Boost ----
+
+        let context = ZeroPathLaunchContext(
+            engineDecision: engineDecision,
+            launchEngine: launchEngine,
+            profile: profile,
+            plan: plan,
+            bottleKey: bottleKey,
+            engineBuildID: engineBuildID,
+            launchStart: launchStart,
+            displayIntents: displayIntents,
+            resolvedEnvironment: environment
+        )
+        return context
+    }
+
+    // swiftlint:disable:next function_body_length function_parameter_count
+    private static func executeLaunch(
+        url: URL,
+        args: [String],
+        bottle: Bottle,
+        environment: [String: String],
+        wait: Bool,
+        applyDXVK: Bool,
+        recipe: Recipe?,
+        autoSelectEngine: Bool,
+        captureRunLog: Bool,
+        context: ZeroPathLaunchContext
+    ) async throws {
+        let profile = context.profile
+        var environment = environment
+        let plan = context.plan
+
         let qos = RuntimeLaunchOptimizer.processQualityOfService(for: profile)
         let launchArgs = RuntimeLaunchOptimizer.startArguments(
             profile: profile,
@@ -329,18 +460,22 @@ public class Wine {
             quiet: quiet,
             fileCaptureOnly: fileCaptureOnly,
             capture: capture,
-            engine: launchEngine
+            engine: context.launchEngine
         )
 
         let runID = capture?.record.id
         let logFileURL = capture?.fileURL
+        let readyViaZeroPath = plan.readinessSkipped
+        let dispatchSeconds = Date().timeIntervalSince(context.launchStart)
         let consume: () async -> Void = {
             var exitCode: Int32?
             var heartbeatTask: Task<Void, Never>?
+            var sawProcessStart = false
 
             for await output in stream {
                 switch output {
                 case .started(let process):
+                    sawProcessStart = true
                     BottleProcessRegistry.shared.register(process, bottle: bottle)
                     if let runID {
                         let pid = process.processIdentifier
@@ -355,6 +490,12 @@ public class Wine {
                         let trackedLogURL = logFileURL
                         heartbeatTask = Task.detached {
                             var tick = 0
+                            // One handle for the whole run: reopening the
+                            // log file every 10 s forced the kernel to
+                            // re-resolve the path and pay open/close
+                            // syscall pairs for the lifetime of the game.
+                            var handle: FileHandle?
+                            defer { try? handle?.close() }
                             while !Task.isCancelled {
                                 try? await Task.sleep(for: .seconds(10))
                                 guard !Task.isCancelled else { return }
@@ -364,12 +505,12 @@ public class Wine {
                                 tick += 1
                                 let line = "[heartbeat] still running (tick \(tick), pid \(trackedPID))\n"
                                 if let trackedLogURL {
-                                    if let handle = try? FileHandle(forWritingTo: trackedLogURL) {
-                                        defer { try? handle.close() }
-                                        _ = try? handle.seekToEnd()
-                                        if let data = line.data(using: .utf8) {
-                                            try? handle.write(contentsOf: data)
-                                        }
+                                    if handle == nil {
+                                        handle = try? FileHandle(forWritingTo: trackedLogURL)
+                                        _ = try? handle?.seekToEnd()
+                                    }
+                                    if let data = line.data(using: .utf8) {
+                                        try? handle?.write(contentsOf: data)
                                     }
                                 }
                                 if tick == 1 || tick % 3 == 0 {
@@ -398,6 +539,43 @@ public class Wine {
                 bottle: bottle,
                 exitCode: exitCode
             )
+            // ZeroPath bookkeeping: once a launch has provably reached
+            // the running state, the prefix state it ran against is the
+            // confirmed-good baseline. On the double (confirming) pass
+            // this re-execs the program; on later passes the intent
+            // re-check repairs any wineserver flush clobber.
+            if sawProcessStart, processStillHealthy(exitCode: exitCode) {
+                DoubleLaunchExecutor.armBaseline(bottle: bottle, engineBuildID: context.engineBuildID)
+            }
+            LaunchLatencyTelemetry.record(LaunchLatencyEvent(
+                bottleKey: context.bottleKey,
+                startedAt: context.launchStart,
+                readinessSeconds: readyViaZeroPath ? 0 : dispatchSeconds,
+                dispatchSeconds: dispatchSeconds
+            ))
+            LaunchLatencyTelemetry.logSummary()
+            if !context.displayIntents.isEmpty {
+                _ = LaunchPathPreflight.confirmIntent(bottle: bottle, intents: context.displayIntents)
+            }
+            if plan.doubleLaunch && sawProcessStart {
+                Logger.wineKit.info("ZeroPath: confirming pass complete, relaunching")
+                var relaunchEnvironment = environment
+                DoubleLaunchExecutor.markExecApplied(
+                    record: .init(doubleLaunch: true, readinessSkipped: false),
+                    environment: &relaunchEnvironment
+                )
+                try? await Wine.runProgram(
+                    at: url,
+                    args: args,
+                    bottle: bottle,
+                    environment: relaunchEnvironment,
+                    wait: wait,
+                    applyDXVK: applyDXVK,
+                    recipe: recipe,
+                    autoSelectEngine: autoSelectEngine,
+                    captureRunLog: captureRunLog
+                )
+            }
         }
 
         if wait {
@@ -408,6 +586,11 @@ public class Wine {
         Task(priority: .userInitiated) {
             await consume()
         }
+    }
+
+    private static func processStillHealthy(exitCode: Int32?) -> Bool {
+        guard let exitCode else { return true }
+        return exitCode == 0
     }
 
     /// Spawn the wine process for a program launch, finalizing the run
@@ -517,172 +700,6 @@ public class Wine {
         return cmd
     }
 
-    /// Run a `wineserver` command with the given arguments and return the output result
-    private static func runWineserver(_ args: [String], bottle: Bottle) async throws -> String {
-        var result: [ProcessOutput] = []
-
-        for await output in try Self.runWineserverProcess(args: args, bottle: bottle, environment: [:]) {
-            result.append(output)
-        }
-
-        return result.compactMap { output -> String? in
-            switch output {
-            case .started, .terminated:
-                return nil
-            case .message(let message), .error(let message):
-                return message
-            }
-        }.joined()
-    }
-
-    @discardableResult
-    /// Run a `wine` command with the given arguments and return the output result
-    public static func runWine(
-        _ args: [String], bottle: Bottle?, environment: [String: String] = [:]
-    ) async throws -> String {
-        var result: [String] = []
-        let fileHandle = try makeFileHandle()
-        fileHandle.writeApplicationInfo()
-        var environment = environment
-
-        if let bottle = bottle {
-            fileHandle.writeInfo(for: bottle)
-            environment = constructWineEnvironment(for: bottle, environment: environment)
-        }
-
-        let stream: AsyncStream<ProcessOutput>
-        do {
-            stream = try runWineProcess(args: args, environment: environment, fileHandle: fileHandle)
-        } catch {
-            try? fileHandle.close()
-            throw error
-        }
-        for await output in stream {
-            switch output {
-            case .started, .terminated:
-                break
-            case .message(let message), .error(let message):
-                result.append(message)
-            }
-        }
-
-        return result.joined()
-    }
-
-    public static func wineVersion() async throws -> String {
-        var output = try await runWine(["--version"], bottle: nil)
-        output.replace("wine-", with: "")
-
-        // Deal with WineCX version names
-        if let index = output.firstIndex(where: { $0.isWhitespace }) {
-            return String(output.prefix(upTo: index))
-        }
-        return output.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    @discardableResult
-    public static func runBatchFile(url: URL, bottle: Bottle) async throws -> String {
-        return try await runWine(["cmd", "/c", url.path(percentEncoded: false)], bottle: bottle)
-    }
-
-    public static func killBottle(bottle: Bottle) async throws {
-        BottleForceStop.forceStop(bottle: bottle, reason: "killBottle")
-    }
-
-    public static func enableDXVK(bottle: Bottle) throws {
-        try FileManager.default.replaceDLLs(
-            in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "system32"),
-            withContentsIn: Wine.dxvkFolder.appending(path: "x64")
-        )
-        try FileManager.default.replaceDLLs(
-            in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "syswow64"),
-            withContentsIn: Wine.dxvkFolder.appending(path: "x32")
-        )
-    }
-
-    private static func baseHostEnvironment() -> [String: String] {
-        var env = ProcessInfo.processInfo.environment
-        let stripKeys = [
-            "DYLD_INSERT_LIBRARIES",
-            "DYLD_LIBRARY_PATH",
-            "DYLD_FRAMEWORK_PATH",
-            "DYLD_FALLBACK_LIBRARY_PATH",
-            "DYLD_VERSIONED_LIBRARY_PATH",
-            "DYLD_VERSIONED_FRAMEWORK_PATH",
-            "LD_LIBRARY_PATH",
-            "LD_PRELOAD"
-        ]
-        for key in stripKeys {
-            env.removeValue(forKey: key)
-        }
-        for key in Array(env.keys) where key.hasPrefix("DYLD_") {
-            env.removeValue(forKey: key)
-        }
-
-        let wineBin = WhiskyWineInstaller.binFolder.path
-        let pathParts = (env["PATH"] ?? "")
-            .split(separator: ":")
-            .map(String.init)
-            .filter { !$0.isEmpty }
-        if pathParts.contains(wineBin) {
-            env["PATH"] = pathParts.joined(separator: ":")
-        } else if pathParts.isEmpty {
-            env["PATH"] = "\(wineBin):/usr/bin:/bin:/usr/sbin:/sbin"
-        } else {
-            env["PATH"] = ([wineBin] + pathParts).joined(separator: ":")
-        }
-
-        if env["HOME"]?.isEmpty != false {
-            env["HOME"] = NSHomeDirectory()
-        }
-        if env["TMPDIR"]?.isEmpty != false {
-            env["TMPDIR"] = FileManager.default.temporaryDirectory.path
-        }
-        if env["USER"]?.isEmpty != false {
-            env["USER"] = NSUserName()
-        }
-        if env["LOGNAME"]?.isEmpty != false {
-            env["LOGNAME"] = NSUserName()
-        }
-        if env["SHELL"]?.isEmpty != false {
-            env["SHELL"] = "/bin/zsh"
-        }
-        return env
-    }
-
-    /// Construct an environment merging the bottle values with the given values
-    private static func constructWineEnvironment(
-        for bottle: Bottle,
-        environment: [String: String] = [:],
-        executableURL: URL? = nil
-    ) -> [String: String] {
-        var result = baseHostEnvironment()
-        result["WINEPREFIX"] = bottle.url.path
-        result["WINEDEBUG"] = "-all"
-        result["GST_DEBUG"] = "0"
-        bottle.settings.environmentVariables(wineEnv: &result)
-        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: executableURL)
-        result = RuntimeLaunchOptimizer.environment(
-            profile: profile,
-            bottleDXVKEnabled: bottle.settings.dxvk,
-            base: result
-        )
-        guard !environment.isEmpty else { return result }
-        result.merge(environment, uniquingKeysWith: { $1 })
-        return result
-    }
-
-    private static func constructWineServerEnvironment(
-        for bottle: Bottle, environment: [String: String] = [:]
-    ) -> [String: String] {
-        var result = baseHostEnvironment()
-        result["WINEPREFIX"] = bottle.url.path
-        result["WINEDEBUG"] = "-all"
-        result["GST_DEBUG"] = "0"
-        guard !environment.isEmpty else { return result }
-        result.merge(environment, uniquingKeysWith: { $1 })
-        return result
-    }
 }
 
 enum WineInterfaceError: Error {
@@ -729,119 +746,5 @@ extension Wine {
                   modified < cutoff else { continue }
             try? fileManager.removeItem(at: file)
         }
-    }
-}
-
-extension Wine {
-    private enum RegistryKey: String {
-        case currentVersion = #"HKLM\Software\Microsoft\Windows NT\CurrentVersion"#
-        case macDriver = #"HKCU\Software\Wine\Mac Driver"#
-        case desktop = #"HKCU\Control Panel\Desktop"#
-    }
-
-    private static func addRegistryKey(
-        bottle: Bottle, key: String, name: String, data: String, type: RegistryType
-    ) async throws {
-        try await runWine(
-            ["reg", "add", key, "-v", name, "-t", type.rawValue, "-d", data, "-f"],
-            bottle: bottle
-        )
-    }
-
-    private static func queryRegistryKey(
-        bottle: Bottle, key: String, name: String, type: RegistryType
-    ) async throws -> String? {
-        let output = try await runWine(["reg", "query", key, "-v", name], bottle: bottle)
-        let lines = output.split(omittingEmptySubsequences: true, whereSeparator: \.isNewline)
-
-        guard let line = lines.first(where: { $0.contains(type.rawValue) }) else { return nil }
-        let array = line.split(omittingEmptySubsequences: true, whereSeparator: \.isWhitespace)
-        guard let value = array.last else { return nil }
-        return String(value)
-    }
-
-    public static func changeBuildVersion(bottle: Bottle, version: Int) async throws {
-        try await addRegistryKey(bottle: bottle, key: RegistryKey.currentVersion.rawValue,
-                                name: "CurrentBuild", data: "\(version)", type: .string)
-        try await addRegistryKey(bottle: bottle, key: RegistryKey.currentVersion.rawValue,
-                                name: "CurrentBuildNumber", data: "\(version)", type: .string)
-    }
-
-    public static func winVersion(bottle: Bottle) async throws -> WinVersion {
-        let output = try await Wine.runWine(["winecfg", "-v"], bottle: bottle)
-        let lines = output.split(whereSeparator: \.isNewline)
-
-        if let lastLine = lines.last {
-            let winString = String(lastLine)
-
-            if let version = WinVersion(rawValue: winString) {
-                return version
-            }
-        }
-
-        throw WineInterfaceError.invalidResponse
-    }
-
-    public static func buildVersion(bottle: Bottle) async throws -> String? {
-        return try await Wine.queryRegistryKey(
-            bottle: bottle, key: RegistryKey.currentVersion.rawValue,
-            name: "CurrentBuild", type: .string
-        )
-    }
-
-    public static func retinaMode(bottle: Bottle) async throws -> Bool {
-        let values: Set<String> = ["y", "n"]
-        guard let output = try await Wine.queryRegistryKey(
-            bottle: bottle, key: RegistryKey.macDriver.rawValue, name: "RetinaMode", type: .string
-        ), values.contains(output) else {
-            try await changeRetinaMode(bottle: bottle, retinaMode: false)
-            return false
-        }
-        return output == "y"
-    }
-
-    public static func changeRetinaMode(bottle: Bottle, retinaMode: Bool) async throws {
-        try await Wine.addRegistryKey(
-            bottle: bottle, key: RegistryKey.macDriver.rawValue, name: "RetinaMode", data: retinaMode ? "y" : "n",
-            type: .string
-        )
-    }
-
-    public static func dpiResolution(bottle: Bottle) async throws -> Int? {
-        guard let output = try await Wine.queryRegistryKey(bottle: bottle, key: RegistryKey.desktop.rawValue,
-                                                     name: "LogPixels", type: .dword
-        ) else { return nil }
-
-        let noPrefix = output.replacingOccurrences(of: "0x", with: "")
-        let int = Int(noPrefix, radix: 16)
-        guard let int = int else { return nil }
-        return int
-    }
-
-    public static func changeDpiResolution(bottle: Bottle, dpi: Int) async throws {
-        try await Wine.addRegistryKey(
-            bottle: bottle, key: RegistryKey.desktop.rawValue, name: "LogPixels", data: String(dpi),
-            type: .dword
-        )
-    }
-
-    @discardableResult
-    public static func control(bottle: Bottle) async throws -> String {
-        return try await Wine.runWine(["control"], bottle: bottle)
-    }
-
-    @discardableResult
-    public static func regedit(bottle: Bottle) async throws -> String {
-        return try await Wine.runWine(["regedit"], bottle: bottle)
-    }
-
-    @discardableResult
-    public static func cfg(bottle: Bottle) async throws -> String {
-        return try await Wine.runWine(["winecfg"], bottle: bottle)
-    }
-
-    @discardableResult
-    public static func changeWinVersion(bottle: Bottle, win: WinVersion) async throws -> String {
-        return try await Wine.runWine(["winecfg", "-v", win.rawValue], bottle: bottle)
     }
 }
