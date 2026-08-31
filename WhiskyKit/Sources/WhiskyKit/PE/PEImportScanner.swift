@@ -139,16 +139,15 @@ public enum PEImportScanner {
     private static func scanUncached(url: URL) -> PEImportProfile? {
         do {
             let peFile = try PEFile(url: url)
-            let handle = try FileHandle(forReadingFrom: url)
-            defer { try? handle.close() }
+            guard let mapped = MappedPEView(url: url) else { return nil }
 
             var origins: [String: PEImportOrigin] = [:]
-            let importDLLs = scanImportDirectory(peFile: peFile, handle: handle)
+            let importDLLs = scanImportDirectory(peFile: peFile, mapped: mapped)
             for dll in importDLLs {
                 origins[dll.lowercased()] = .importTable
             }
 
-            let delayDLLs = scanDelayLoadDirectory(peFile: peFile, handle: handle)
+            let delayDLLs = scanDelayLoadDirectory(peFile: peFile, mapped: mapped)
             for dll in delayDLLs {
                 let key = dll.lowercased()
                 if origins[key] == nil {
@@ -167,7 +166,7 @@ public enum PEImportScanner {
 
             var fallbackDLLs: [String] = []
             if apis.isEmpty {
-                fallbackDLLs = scanFallbackStrings(handle: handle)
+                fallbackDLLs = scanFallbackStrings(mapped: mapped)
                 for dll in fallbackDLLs {
                     let key = dll.lowercased()
                     if origins[key] == nil {
@@ -191,9 +190,9 @@ public enum PEImportScanner {
         }
     }
 
-    private static func scanImportDirectory(peFile: PEFile, handle: FileHandle) -> [String] {
+    private static func scanImportDirectory(peFile: PEFile, mapped: MappedPEView) -> [String] {
         guard peFile.optionalHeader != nil else { return [] }
-        guard let importRVA = dataDirectoryRVA(handle: handle, index: importDirectoryIndex),
+        guard let importRVA = dataDirectoryRVA(mapped: mapped, index: importDirectoryIndex),
               importRVA > 0 else {
             return []
         }
@@ -202,16 +201,16 @@ public enum PEImportScanner {
         }
 
         var dlls: [String] = []
-        var descriptorOffset = UInt64(fileOffset)
+        var descriptorOffset = Int(fileOffset)
         for _ in 0..<512 {
-            let originalFirstThunk = handle.extract(UInt32.self, offset: descriptorOffset) ?? 0
-            let nameRVA = handle.extract(UInt32.self, offset: descriptorOffset + 12) ?? 0
-            let firstThunk = handle.extract(UInt32.self, offset: descriptorOffset + 16) ?? 0
+            let originalFirstThunk = mapped.scalar(UInt32.self, at: descriptorOffset)
+            let nameRVA = mapped.scalar(UInt32.self, at: descriptorOffset + 12)
+            let firstThunk = mapped.scalar(UInt32.self, at: descriptorOffset + 16)
             if nameRVA == 0 && firstThunk == 0 && originalFirstThunk == 0 {
                 break
             }
-            if let nameOffset = rvaToFileOffset(rva: nameRVA, sections: peFile.sections),
-               let name = readCString(handle: handle, offset: UInt64(nameOffset)) {
+            if let nameOffset = rvaToFileOffset(rva: nameRVA ?? 0, sections: peFile.sections),
+               let name = mapped.cString(at: Int(nameOffset), maxLength: 260) {
                 dlls.append(name)
             }
             descriptorOffset += 20
@@ -219,9 +218,9 @@ public enum PEImportScanner {
         return dlls
     }
 
-    private static func scanDelayLoadDirectory(peFile: PEFile, handle: FileHandle) -> [String] {
+    private static func scanDelayLoadDirectory(peFile: PEFile, mapped: MappedPEView) -> [String] {
         guard peFile.optionalHeader != nil else { return [] }
-        guard let delayRVA = dataDirectoryRVA(handle: handle, index: delayImportDirectoryIndex),
+        guard let delayRVA = dataDirectoryRVA(mapped: mapped, index: delayImportDirectoryIndex),
               delayRVA > 0 else {
             return []
         }
@@ -230,19 +229,19 @@ public enum PEImportScanner {
         }
 
         var dlls: [String] = []
-        var descriptorOffset = UInt64(fileOffset)
+        var descriptorOffset = Int(fileOffset)
         for _ in 0..<512 {
-            let attributes = handle.extract(UInt32.self, offset: descriptorOffset) ?? 0
-            let nameRVA = handle.extract(UInt32.self, offset: descriptorOffset + 4) ?? 0
-            let moduleHandleRVA = handle.extract(UInt32.self, offset: descriptorOffset + 8) ?? 0
-            let iatRVA = handle.extract(UInt32.self, offset: descriptorOffset + 12) ?? 0
-            let intRVA = handle.extract(UInt32.self, offset: descriptorOffset + 16) ?? 0
+            let attributes = mapped.scalar(UInt32.self, at: descriptorOffset)
+            let nameRVA = mapped.scalar(UInt32.self, at: descriptorOffset + 4)
+            let moduleHandleRVA = mapped.scalar(UInt32.self, at: descriptorOffset + 8)
+            let iatRVA = mapped.scalar(UInt32.self, at: descriptorOffset + 12)
+            let intRVA = mapped.scalar(UInt32.self, at: descriptorOffset + 16)
             if attributes == 0 && nameRVA == 0 && moduleHandleRVA == 0 && iatRVA == 0 && intRVA == 0 {
                 break
             }
-            if nameRVA != 0,
+            if nameRVA != 0, let nameRVA,
                let nameOffset = rvaToFileOffset(rva: nameRVA, sections: peFile.sections),
-               let name = readCString(handle: handle, offset: UInt64(nameOffset)) {
+               let name = mapped.cString(at: Int(nameOffset), maxLength: 260) {
                 dlls.append(name)
             }
             descriptorOffset += 32
@@ -250,17 +249,17 @@ public enum PEImportScanner {
         return dlls
     }
 
-    private static func dataDirectoryRVA(handle: FileHandle, index: UInt32) -> UInt32? {
-        guard let peOffset = handle.extract(UInt32.self, offset: 0x3C) else { return nil }
-        let coffOffset = UInt64(peOffset) + 4
-        let sizeOfOptionalHeader = handle.extract(UInt16.self, offset: coffOffset + 16) ?? 0
-        guard sizeOfOptionalHeader > 0 else { return nil }
+    private static func dataDirectoryRVA(mapped: MappedPEView, index: UInt32) -> UInt32? {
+        guard let peOffset = mapped.scalar(UInt32.self, at: 0x3C) else { return nil }
+        let coffOffset = Int(peOffset) + 4
+        let sizeOfOptionalHeader = mapped.scalar(UInt16.self, at: coffOffset + 16)
+        guard let sizeOfOptionalHeader, sizeOfOptionalHeader > 0 else { return nil }
 
         let optionalOffset = coffOffset + 20
-        let magic = handle.extract(UInt16.self, offset: optionalOffset) ?? 0
+        let magic = mapped.scalar(UInt16.self, at: optionalOffset)
 
-        let numberOfRvaAndSizesOffset: UInt64
-        let dataDirectoryBase: UInt64
+        let numberOfRvaAndSizesOffset: Int
+        let dataDirectoryBase: Int
         if magic == PEFile.Magic.pe32Plus.rawValue {
             numberOfRvaAndSizesOffset = optionalOffset + 108
             dataDirectoryBase = optionalOffset + 112
@@ -271,11 +270,11 @@ public enum PEImportScanner {
             return nil
         }
 
-        let numberOfRvaAndSizes = handle.extract(UInt32.self, offset: numberOfRvaAndSizesOffset) ?? 0
+        let numberOfRvaAndSizes = mapped.scalar(UInt32.self, at: numberOfRvaAndSizesOffset) ?? 0
         guard index < numberOfRvaAndSizes else { return nil }
 
-        let entryOffset = dataDirectoryBase + UInt64(index) * 8
-        return handle.extract(UInt32.self, offset: entryOffset)
+        let entryOffset = dataDirectoryBase + Int(index) * 8
+        return mapped.scalar(UInt32.self, at: entryOffset)
     }
 
     private static func rvaToFileOffset(rva: UInt32, sections: [PEFile.Section]) -> UInt32? {
@@ -303,24 +302,60 @@ public enum PEImportScanner {
         return String(bytes: bytes, encoding: .ascii) ?? String(bytes: bytes, encoding: .utf8)
     }
 
-    private static func scanFallbackStrings(handle: FileHandle) -> [String] {
-        do {
-            try handle.seek(toOffset: 0)
-            guard let data = try handle.read(upToCount: 4 * 1024 * 1024) else { return [] }
-            var found: [String] = []
-            for name in graphicsDLLMap.keys {
-                let needles = [name, name.uppercased()]
-                for needle in needles {
-                    guard let pattern = needle.data(using: .ascii) else { continue }
-                    if data.range(of: pattern) != nil {
-                        found.append(name)
-                        break
-                    }
+    private static func scanFallbackStrings(mapped: MappedPEView) -> [String] {
+        let probeLength = min(mapped.count, 4 * 1024 * 1024)
+        guard var probe = mapped.bytes(at: 0, count: probeLength) else { return [] }
+        let names = Array(graphicsDLLMap.keys)
+        let needles = names.flatMap { [$0.asciiBytes, $0.uppercased().asciiBytes] }
+        let hits = ContiguousArray(probe).firstRanges(of: needles)
+        probe.removeAll(keepingCapacity: false)
+        let matchedNames = Set(hits.map { $0 / 2 })
+        return matchedNames.sorted().map { names[$0] }
+    }
+}
+
+private extension String {
+    var asciiBytes: [UInt8] {
+        Array(utf8)
+    }
+}
+
+private extension ContiguousArray where Element == UInt8 {
+    /// Strided single-pass multi-needle search. Instead of scanning the
+    /// 4 MB probe once per needle (36 full passes for the graphics DLL
+    /// table, ~3.3 s on a PyInstaller launcher), every byte position is
+    /// examined exactly once and matched against a first-byte index of
+    /// all needles — O(n + total needle length) overall.
+    func firstRanges(of needles: [[UInt8]]) -> [Int] {
+        guard !needles.isEmpty, !isEmpty else { return [] }
+        let byFirstByte: [UInt8: [Int]] = Dictionary(
+            grouping: needles.indices,
+            by: { needles[$0][0] }
+        )
+        var hits: [Int] = []
+        var cursor = 0
+        let lastStart = count - 1
+        while cursor <= lastStart {
+            let byte = self[cursor]
+            guard let candidates = byFirstByte[byte] else {
+                cursor += 1
+                continue
+            }
+            for needleIndex in candidates {
+                let needle = needles[needleIndex]
+                if cursor + needle.count > count { continue }
+                var probe = 1
+                while probe < needle.count, self[cursor + probe] == needle[probe] {
+                    probe += 1
+                }
+                if probe == needle.count {
+                    hits.append(needleIndex)
+                    cursor += needle.count - 1
+                    break
                 }
             }
-            return found
-        } catch {
-            return []
+            cursor += 1
         }
+        return hits
     }
 }
