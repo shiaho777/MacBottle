@@ -350,6 +350,11 @@ public class Wine {
                     ProgramLaunchCoordinator.shared.markDXVKReady(bottle: bottle)
                 }
             }
+            // Per-game dxvk.conf: queue depth 1 + honest UMA budget.
+            _ = DXVKGameConf.apply(
+                posture: .responsive(physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory),
+                executable: url
+            )
         }
 
         var environment = environment
