@@ -261,7 +261,8 @@ public class Wine {
             recipe: recipe,
             applyDXVK: applyDXVK,
             autoSelectEngine: autoSelectEngine,
-            environment: environment
+            environment: environment,
+            args: args
         )
         await warmup
         defer {
@@ -294,6 +295,7 @@ public class Wine {
         var launchStart: Date
         var displayIntents: [WineIntentEnvelope]
         var resolvedEnvironment: [String: String]
+        var jvmDetected: Bool
     }
 
     // swiftlint:disable:next function_parameter_count
@@ -303,7 +305,8 @@ public class Wine {
         recipe: Recipe?,
         applyDXVK: Bool,
         autoSelectEngine: Bool,
-        environment: [String: String]
+        environment: [String: String],
+        args: [String]
     ) async -> ZeroPathLaunchContext {
         let engineDecision: LaunchEnginePolicy.AppliedLaunch?
         if autoSelectEngine {
@@ -390,6 +393,29 @@ public class Wine {
         }
         // ---- end Game Boost ----
 
+        // ---- JVM game posture: Java进程资源占用 ----
+        var jvmDetected = false
+        if JavaGameTuner.detect(
+            executable: url,
+            importProfile: engineDecision?.decision.importProfile,
+            args: args
+        ) != .none {
+            jvmDetected = true
+            let heap = JavaGameTuner.recommendedHeapMegabytes(
+                physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory
+            )
+            for (key, value) in JavaGameTuner.environmentPosture(
+                existingJavaOptions: environment["_JAVA_OPTIONS"],
+                heapMegabytes: heap
+            ) {
+                environment[key] = value
+            }
+            Logger.wineKit.info(
+                "JavaTuner: JVM launch detected, heap target \(heap)M"
+            )
+        }
+        // ---- end JVM posture ----
+
         let context = ZeroPathLaunchContext(
             engineDecision: engineDecision,
             launchEngine: launchEngine,
@@ -399,7 +425,8 @@ public class Wine {
             engineBuildID: engineBuildID,
             launchStart: launchStart,
             displayIntents: displayIntents,
-            resolvedEnvironment: environment
+            resolvedEnvironment: environment,
+            jvmDetected: jvmDetected
         )
         return context
     }
@@ -421,7 +448,9 @@ public class Wine {
         var environment = environment
         let plan = context.plan
 
-        let qos = RuntimeLaunchOptimizer.processQualityOfService(for: profile)
+        let qos = context.jvmDetected
+            ? JavaGameTuner.hostQualityOfService()
+            : RuntimeLaunchOptimizer.processQualityOfService(for: profile)
         let launchArgs = RuntimeLaunchOptimizer.startArguments(
             profile: profile,
             executable: url,
@@ -631,73 +660,6 @@ public class Wine {
             }
             throw error
         }
-    }
-
-    public static func generateRunCommand(
-        at url: URL, bottle: Bottle, args: String, environment: [String: String]
-    ) -> String {
-        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
-        let extra = args.split { $0.isWhitespace }.map(String.init)
-        let startBits = RuntimeLaunchOptimizer.startArguments(
-            profile: profile,
-            executable: url,
-            extraArgs: extra
-        )
-        let startCmd = startBits.map { $0.posixQuoted }.joined(separator: " ")
-        var wineCmd = "\(wineBinary.path.posixQuoted) \(startCmd)"
-        let env = constructWineEnvironment(
-            for: bottle,
-            environment: environment,
-            executableURL: url
-        )
-        for environment in env {
-            guard let key = sanitizedEnvKey(environment.key) else { continue }
-            wineCmd = "\(key)=\(environment.value.posixQuoted) " + wineCmd
-        }
-
-        return wineCmd
-    }
-
-    /// Shell `KEY=value` prefixes need valid identifiers; user-entered
-    /// variable names may contain anything.
-    private static func sanitizedEnvKey(_ key: String) -> String? {
-        let allowed = CharacterSet(charactersIn:
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
-        var scalars = String.UnicodeScalarView()
-        for scalar in key.unicodeScalars {
-            scalars.append(allowed.contains(scalar) ? scalar : "_")
-        }
-        var sanitized = String(scalars)
-        if let first = sanitized.first, first.isNumber {
-            sanitized = "_" + sanitized
-        }
-        return sanitized.count > 1 ? sanitized : nil
-    }
-
-    public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
-        let wineName = wineBinary.lastPathComponent
-        var cmd = """
-        export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
-        export WINE=\"\(wineName)\"
-        """
-
-        let env = constructWineEnvironment(for: bottle)
-        for environment in env {
-            cmd += "\nexport \(environment.key)=\"\(environment.value)\""
-        }
-
-        let driveC = bottle.url.appending(path: "drive_c").path
-        cmd += """
-
-        cd "\(driveC)"
-        clear
-        echo "MacBottle bottle: \(bottle.settings.name)"
-        echo "Wine: $($WINE --version 2>/dev/null)"
-        echo "WINEPREFIX: $WINEPREFIX"
-        echo "Commands: wine, winecfg, wineboot, regedit"
-        """
-
-        return cmd
     }
 
 }

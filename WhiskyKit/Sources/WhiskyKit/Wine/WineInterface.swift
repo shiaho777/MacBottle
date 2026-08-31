@@ -188,3 +188,73 @@ extension Wine {
         return result
     }
 }
+
+extension Wine {
+    public static func generateRunCommand(
+        at url: URL, bottle: Bottle, args: String, environment: [String: String]
+    ) -> String {
+        let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
+        let extra = args.split { $0.isWhitespace }.map(String.init)
+        let startBits = RuntimeLaunchOptimizer.startArguments(
+            profile: profile,
+            executable: url,
+            extraArgs: extra
+        )
+        let startCmd = startBits.map { $0.posixQuoted }.joined(separator: " ")
+        var wineCmd = "\(wineBinary.path.posixQuoted) \(startCmd)"
+        let env = constructWineEnvironment(
+            for: bottle,
+            environment: environment,
+            executableURL: url
+        )
+        for environment in env {
+            guard let key = sanitizedEnvKey(environment.key) else { continue }
+            wineCmd = "\(key)=\(environment.value.posixQuoted) " + wineCmd
+        }
+
+        return wineCmd
+    }
+
+    /// Shell `KEY=value` prefixes need valid identifiers; user-entered
+    /// variable names may contain anything.
+    private static func sanitizedEnvKey(_ key: String) -> String? {
+        let allowed = CharacterSet(charactersIn:
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
+        var scalars = String.UnicodeScalarView()
+        for scalar in key.unicodeScalars {
+            scalars.append(allowed.contains(scalar) ? scalar : "_")
+        }
+        var sanitized = String(scalars)
+        if let first = sanitized.first, first.isNumber {
+            sanitized = "_" + sanitized
+        }
+        return sanitized.count > 1 ? sanitized : nil
+    }
+
+    public static func generateTerminalEnvironmentCommand(bottle: Bottle) -> String {
+        let wineName = wineBinary.lastPathComponent
+        var cmd = """
+        export PATH=\"\(WhiskyWineInstaller.binFolder.path):$PATH\"
+        export WINE=\"\(wineName)\"
+        """
+
+        let env = constructWineEnvironment(for: bottle)
+        for environment in env {
+            cmd += "\nexport \(environment.key)=\"\(environment.value)\""
+        }
+
+        let driveC = bottle.url.appending(path: "drive_c").path
+        cmd += """
+
+        cd "\(driveC)"
+        clear
+        echo "MacBottle bottle: \(bottle.settings.name)"
+        echo "Wine: $($WINE --version 2>/dev/null)"
+        echo "WINEPREFIX: $WINEPREFIX"
+        echo "Commands: wine, winecfg, wineboot, regedit"
+        """
+
+        return cmd
+    }
+
+}
