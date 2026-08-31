@@ -103,8 +103,11 @@ public final class ProgramRunLogSession: Identifiable {
 
     fileprivate func append(line: String) {
         lines.append(line)
-        if lines.count > 8000 {
-            lines.removeFirst(lines.count - 8000)
+        // The UI renders only the tail; 2 000 lines covers any visible
+        // scrollback. Full fidelity lives on disk via the capture file,
+        // so the in-RAM copy is a viewport, not an archive.
+        if lines.count > 2000 {
+            lines.removeFirst(lines.count - 2000)
         }
         text.append(line)
         if text.count > 2_000_000 {
@@ -119,8 +122,8 @@ public final class ProgramRunLogSession: Identifiable {
     fileprivate func replaceText(_ value: String) {
         text = value
         lines = value.split(separator: "\n", omittingEmptySubsequences: false).map { String($0) + "\n" }
-        if lines.count > 8000 {
-            lines = Array(lines.suffix(8000))
+        if lines.count > 2000 {
+            lines = Array(lines.suffix(2000))
         }
     }
 }

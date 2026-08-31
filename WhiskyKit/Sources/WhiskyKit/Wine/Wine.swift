@@ -212,7 +212,12 @@ public class Wine {
             process.environment = constructWineServerEnvironment(for: bottle)
             process.standardOutput = FileHandle.nullDevice
             process.standardError = FileHandle.nullDevice
-            process.qualityOfService = .utility
+            // wineserver is the IPC hub every wine call round-trips —
+            // per-frame present() and every input event included. A
+            // .utility band here demotes the entire bottle's response
+            // chain; the scheduler keeps it in the interactive band
+            // with the game instead.
+            process.qualityOfService = .userInteractive
             try process.run()
             BottleProcessRegistry.shared.register(process, bottle: bottle)
 
