@@ -83,6 +83,10 @@ final class JavaGameTunerTests: XCTestCase {
         XCTAssertTrue(target.contains("-XX:MaxDirectMemorySize=256M"))
         // Idle reclamation shrinks committed heap back down.
         XCTAssertTrue(target.contains("-XX:G1PeriodicGCInterval=15000"))
+        // Boolean flags must use the +/- form or the JVM refuses to start.
+        XCTAssertTrue(target.contains("-XX:+G1PeriodicGCInvokesConcurrent"))
+        // Boolean flags must use the +/- form or the JVM refuses to start.
+        XCTAssertTrue(target.contains("-XX:+G1PeriodicGCInvokesConcurrent"))
     }
 
     func testUserJavaOptionsArePreservedVerbatim() {
