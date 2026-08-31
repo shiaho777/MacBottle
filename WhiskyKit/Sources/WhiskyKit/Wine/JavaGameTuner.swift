@@ -123,7 +123,7 @@ public enum JavaGameTuner {
             "-Xss1m",
             "-XX:+UseStringDeduplication",
             "-XX:G1PeriodicGCInterval=15000",
-            "-XX:G1PeriodicGCInvokesConcurrent"
+            "-XX:+G1PeriodicGCInvokesConcurrent"
         ].joined(separator: " ")
     }
 
