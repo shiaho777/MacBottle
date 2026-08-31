@@ -105,6 +105,9 @@ public enum JavaGameTuner {
     ///   714 MB → 590 MB
     /// - worst-case process ceiling: ~12 GB (unbounded) → 2.3 GB
     ///
+    /// Every flag here is a supported (non-experimental) option on
+    /// Java 8+ — an experimental-gated flag without its unlock makes
+    /// HotSpot refuse to start, which is a JVM-fatal failure class.
     /// `G1PeriodicGC*` reclaims committed heap while the game sits in
     /// menus/lobbies; `UseStringDeduplication` trims duplicate block
     /// strings (the single largest heap population in modded Minecraft).
@@ -115,8 +118,6 @@ public enum JavaGameTuner {
             "-Xmx\(heapMegabytes)M",
             "-XX:+UseG1GC",
             "-XX:MaxGCPauseMillis=40",
-            "-XX:G1NewSizePercent=20",
-            "-XX:G1ReservePercent=20",
             "-XX:MaxMetaspaceSize=256m",
             "-XX:ReservedCodeCacheSize=128m",
             "-XX:MaxDirectMemorySize=256M",
