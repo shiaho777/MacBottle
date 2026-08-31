@@ -87,11 +87,39 @@ public enum PEImportScanner {
     private static let delayImportDirectoryIndex: UInt32 = 13
     private static let cacheLock = NSLock()
     nonisolated(unsafe) private static var profileCache: [String: CachedProfile] = [:]
+    nonisolated(unsafe) private static var cacheInsertionOrder: [String] = []
+
+    /// Scans are tiny (a page or two each); the cap exists so a session
+    /// that touches hundreds of installers cannot grow the dictionary
+    /// without bound. Oldest-inserted entries fall out first — insertion
+    /// order is enough because re-inserting an evicted path is one cheap
+    /// rescan.
+    static let profileCacheLimit = 256
 
     private struct CachedProfile {
         let modificationDate: Date
         let fileSize: UInt64
         let profile: PEImportProfile
+    }
+
+    private static func insertIntoCache(
+        path: String,
+        modificationDate: Date,
+        fileSize: UInt64,
+        profile: PEImportProfile
+    ) {
+        profileCache[path] = CachedProfile(
+            modificationDate: modificationDate,
+            fileSize: fileSize,
+            profile: profile
+        )
+        cacheInsertionOrder.append(path)
+        while cacheInsertionOrder.count > profileCacheLimit {
+            let oldest = cacheInsertionOrder.removeFirst()
+            if oldest != path {
+                profileCache.removeValue(forKey: oldest)
+            }
+        }
     }
 
     public static func scan(url: URL) -> PEImportProfile? {
@@ -116,7 +144,8 @@ public enum PEImportScanner {
 
         if let modificationDate, let fileSize {
             cacheLock.lock()
-            profileCache[path] = CachedProfile(
+            insertIntoCache(
+                path: path,
                 modificationDate: modificationDate,
                 fileSize: fileSize,
                 profile: profile
@@ -133,6 +162,7 @@ public enum PEImportScanner {
             profileCache.removeValue(forKey: url.path(percentEncoded: false))
         } else {
             profileCache.removeAll(keepingCapacity: false)
+            cacheInsertionOrder.removeAll(keepingCapacity: false)
         }
     }
 

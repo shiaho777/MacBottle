@@ -66,16 +66,23 @@ final class JavaGameTunerTests: XCTestCase {
         // Quarter of RAM clamped to [2, 8] GB (decimal megabytes).
         XCTAssertEqual(JavaGameTuner.recommendedHeapMegabytes(physicalMemoryBytes: 8_000_000_000), 2048)
         XCTAssertEqual(JavaGameTuner.recommendedHeapMegabytes(physicalMemoryBytes: 16_000_000_000), 4000)
-        XCTAssertEqual(JavaGameTuner.recommendedHeapMegabytes(physicalMemoryBytes: 128_000_000_000), 8192)
+        XCTAssertEqual(JavaGameTuner.recommendedHeapMegabytes(physicalMemoryBytes: 128_000_000_000), 4096)
         XCTAssertEqual(JavaGameTuner.recommendedHeapMegabytes(physicalMemoryBytes: 4_000_000_000), 2048)
     }
 
-    func testRecommendedTargetStartsHeapAtMax() {
+    func testRecommendedTargetCapsEveryPool() {
         let target = JavaGameTuner.recommendedJVMTarget(heapMegabytes: 4096)
-        XCTAssertTrue(target.contains("-Xms4096M"))
+        // Heap grows into the workload instead of pre-committing.
+        XCTAssertTrue(target.contains("-Xms512M"))
         XCTAssertTrue(target.contains("-Xmx4096M"))
         XCTAssertTrue(target.contains("-XX:+UseG1GC"))
         XCTAssertTrue(target.contains("-XX:MaxGCPauseMillis=40"))
+        // Every non-heap pool has a hard ceiling.
+        XCTAssertTrue(target.contains("-XX:ReservedCodeCacheSize=128m"))
+        XCTAssertTrue(target.contains("-XX:MaxMetaspaceSize=256m"))
+        XCTAssertTrue(target.contains("-XX:MaxDirectMemorySize=256M"))
+        // Idle reclamation shrinks committed heap back down.
+        XCTAssertTrue(target.contains("-XX:G1PeriodicGCInterval=15000"))
     }
 
     func testUserJavaOptionsArePreservedVerbatim() {
@@ -92,8 +99,10 @@ final class JavaGameTunerTests: XCTestCase {
             heapMegabytes: 4096
         )
         let options = posture["_JAVA_OPTIONS"] ?? ""
-        XCTAssertTrue(options.contains("-Xms4096M"))
+        XCTAssertTrue(options.contains("-Xmx4096M"))
+        XCTAssertTrue(options.contains("-Xms512M"))
         XCTAssertTrue(options.contains("MaxGCPauseMillis=40"))
+        XCTAssertTrue(options.contains("MaxDirectMemorySize=256M"))
     }
 
     private func makeImage(withImport dll: String) throws -> URL {

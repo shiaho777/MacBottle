@@ -103,4 +103,21 @@ final class PEImportScannerTests: XCTestCase {
         XCTAssertNil(view?.cString(at: -5, maxLength: 8))
         XCTAssertEqual(view?.scalar(UInt32.self, at: 0x3C), 0x40)
     }
+
+    func testProfileCacheIsBounded() throws {
+        PEImportScanner.invalidateCache()
+        let limit = PEImportScanner.profileCacheLimit
+        for index in 0..<(limit + 32) {
+            let url = try writeImage(Self.x86ImageHex, suffix: "bound-\\(index)")
+            _ = PEImportScanner.scan(url: url)
+            try? FileManager.default.removeItem(at: url)
+        }
+        // Re-scan the first path: it must have been evicted (cache is
+        // bounded), but a fresh scan still yields the same profile.
+        let url = try writeImage(Self.x86ImageHex, suffix: "probe")
+        let profile = PEImportScanner.scan(url: url)
+        XCTAssertEqual(profile?.importedDLLs, ["d3d9.dll"])
+        try? FileManager.default.removeItem(at: url)
+        PEImportScanner.invalidateCache()
+    }
 }

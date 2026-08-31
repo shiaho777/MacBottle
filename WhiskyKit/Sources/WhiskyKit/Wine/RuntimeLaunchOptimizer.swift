@@ -34,6 +34,25 @@ private struct RuntimeProfileCacheEntry {
 public enum RuntimeLaunchOptimizer {
     private static let profileCacheLock = NSLock()
     nonisolated(unsafe) private static var profileCache: [String: RuntimeProfileCacheEntry] = [:]
+    nonisolated(unsafe) private static var profileCacheOrder: [String] = []
+
+    /// Same rationale as the PE scanner's cache cap: bounded memory
+    /// regardless of how many executables a session touches.
+    static let profileCacheLimit = 256
+
+    private static func insertIntoProfileCache(
+        path: String,
+        entry: RuntimeProfileCacheEntry
+    ) {
+        profileCache[path] = entry
+        profileCacheOrder.append(path)
+        while profileCacheOrder.count > profileCacheLimit {
+            let oldest = profileCacheOrder.removeFirst()
+            if oldest != path {
+                profileCache.removeValue(forKey: oldest)
+            }
+        }
+    }
 
     public static func profile(for peFile: PEFile?) -> RuntimeProfile {
         guard let peFile else { return .generic }
@@ -79,7 +98,10 @@ public enum RuntimeLaunchOptimizer {
         }
 
         profileCacheLock.lock()
-        profileCache[path] = RuntimeProfileCacheEntry(modificationDate: mod, size: size, profile: resolved)
+        insertIntoProfileCache(
+            path: path,
+            entry: RuntimeProfileCacheEntry(modificationDate: mod, size: size, profile: resolved)
+        )
         profileCacheLock.unlock()
         return resolved
     }
