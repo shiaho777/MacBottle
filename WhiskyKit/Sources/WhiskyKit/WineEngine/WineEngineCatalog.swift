@@ -22,6 +22,7 @@ import os.log
 public enum WineEngineCatalog {
     public static let modernIdentifier = "crossover"
     public static let d3dMetalIdentifier = "crossover-d3dmetal"
+    public static let arm64Identifier = "upstream-arm64"
 
     public static var enginesRoot: URL {
         CrossOverEngine.applicationFolder.appending(path: "Engines")
@@ -29,6 +30,10 @@ public enum WineEngineCatalog {
 
     public static var d3dMetalLibraryRoot: URL {
         enginesRoot.appending(path: d3dMetalIdentifier)
+    }
+
+    public static var arm64LibraryRoot: URL {
+        enginesRoot.appending(path: arm64Identifier)
     }
 
     public static func modernEngine() -> CrossOverEngine {
@@ -43,8 +48,19 @@ public enum WineEngineCatalog {
         )
     }
 
+    /// A user-imported native Apple Silicon Wine build. Not installed
+    /// until the user imports one (Settings → engine → Import); a native
+    /// aarch64 build removes the Rosetta translation layer entirely.
+    public static func arm64Engine() -> LocalPathEngine {
+        LocalPathEngine(
+            identifier: arm64Identifier,
+            displayName: "Upstream Wine (ARM64)",
+            libraryRoot: arm64LibraryRoot
+        )
+    }
+
     public static func allEngines() -> [any WineEngine] {
-        [modernEngine(), d3dMetalEngine()]
+        [modernEngine(), d3dMetalEngine(), arm64Engine()]
     }
 
     public static func engine(id: String) -> (any WineEngine)? {

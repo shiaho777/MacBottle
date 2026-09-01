@@ -108,10 +108,10 @@ struct ConfigView: View {
                 }
                 Picker("config.engineBinding", selection: bottleEngineSelection) {
                     Text("config.engineBinding.auto").tag(LaunchEnginePolicy.autoEngineToken)
-                    Text(WineEngineCatalog.describe(WineEngineCatalog.modernEngine()))
-                        .tag(WineEngineCatalog.modernIdentifier)
-                    Text(WineEngineCatalog.describe(WineEngineCatalog.d3dMetalEngine()))
-                        .tag(WineEngineCatalog.d3dMetalIdentifier)
+                    ForEach(WineEngineCatalog.allEngines(), id: \.identifier) { engine in
+                        Text(WineEngineCatalog.describe(engine))
+                            .tag(engine.identifier)
+                    }
                 }
                 Text("config.engineBinding.help")
                     .font(.caption)
