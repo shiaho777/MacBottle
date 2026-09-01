@@ -1,0 +1,80 @@
+--- a/dlls/ntdll/unix/signal_arm64.c	2026-09-01 21:04:15
++++ b/dlls/ntdll/unix/signal_arm64.c	2026-09-01 21:21:16
+@@ -799,10 +799,18 @@
+     "ldr x18, [x18, " scratch "]\n\t"
+ 
+ extern void __wine_macos_x18_trampoline(void);
++/* Resume a signal return into PE code with a valid TEB in x18 without
++ * consulting the pthread TSD.  Older macOS kept the direct TSD array at the
++ * pthread pointer, so the previous trampoline could reload x18 from it in a
++ * few instructions; on macOS 26 the direct array no longer mirrors
++ * pthread_getspecific() (keys moved to an indirect table), so the reload read
++ * a null slot and every TEB access faulted forever.  Instead, the signal
++ * handler pushes {teb, resume_pc} onto the interrupted (PE) stack and points
++ * the resumed PC at this trampoline; the pair is popped here.  Windows ARM64
++ * PE code has no red zone, so the 16 bytes below the interrupted SP are free. */
+ __ASM_GLOBAL_FUNC( __wine_macos_x18_trampoline,
+-                   LOAD_TEB_X18( "x16" )          /* x18 = TEB (clobbers x16) */
+-                   "ldr x16, [x18, #0x2f8]\n\t"    /* x16 = arm64_thread_data->signal_resume_pc */
+-                   "br x16" )                       /* resume; only x16 is clobbered */
++                   "ldp x18, x16, [sp], #16\n\t"   /* x18 = TEB, x16 = resume pc */
++                   "br x16" )                        /* resume; only x16 is clobbered */
+ 
+ /* stash the TEB in this thread's TSD slot (idempotent, async-signal-safe: a
+  * single store to the direct TSD array) */
+@@ -816,21 +824,10 @@
+ {
+     struct thread_data *data = get_thread_data();
+     ULONG_PTR pc = PC_sig( sigcontext );
++    ULONG_PTR sp;
+     if (!data || !data->teb) return;
+     /* keep TPIDR_EL0 == TEB current for this thread */
+     set_teb_register( data );
+-    /* If a signal interrupted the x18 trampoline itself, do NOT overwrite the
+-     * single signal_resume_pc slot (that would lose the real resume target).
+-     * Resuming mid-trampoline is also unsafe — the just-taken sigreturn zeroed
+-     * x18 again, so the trampoline's remaining instructions would dereference a
+-     * null pthread-self.  Restart the trampoline from its first instruction
+-     * (which reloads x18 from the TSD) and keep the original resume_pc. */
+-    if (pc > (ULONG_PTR)__wine_macos_x18_trampoline &&
+-        pc <  (ULONG_PTR)__wine_macos_x18_trampoline + 0x18)
+-    {
+-        PC_sig( sigcontext ) = (ULONG_PTR)__wine_macos_x18_trampoline;
+-        return;
+-    }
+     /* For a fault taken inside a syscall where x18 is still a valid TEB
+      * (>= 4GB on this port), the resume is unix code (or the syscall
+      * dispatcher, which reloads x18 itself); x18 is irrelevant there and a
+@@ -840,7 +837,13 @@
+      * need the trampoline — so only skip the valid-x18 in-syscall case. */
+     if (is_inside_syscall( data, SP_sig( sigcontext ) ) &&
+         REGn_sig( 18, sigcontext ) >= 0x100000000ull) return;
+-    arm64_thread_data( data )->signal_resume_pc = (void *)PC_sig( sigcontext );
++    /* A signal interrupting the trampoline itself just pushes a fresh pair for
++     * the interrupted pc; the trampoline's own loads cannot fault (both words
++     * were pushed moments ago), so no special casing is needed. */
++    sp = (SP_sig( sigcontext ) - 16) & ~15ul;
++    *(ULONG_PTR *)(sp + 0) = (ULONG_PTR)data->teb;
++    *(ULONG_PTR *)(sp + 8) = pc;
++    SP_sig( sigcontext ) = sp;
+     PC_sig( sigcontext ) = (ULONG_PTR)__wine_macos_x18_trampoline;
+ }
+ 
+@@ -1308,7 +1311,7 @@
+          * (base += teb) and retry - this also heals every subsequent use of
+          * the register and is addressing-mode agnostic.  Genuine NULL derefs
+          * keep faulting: their base register is 0, which is excluded. */
+-        else if (d && d->teb && (ULONG_PTR)siginfo->si_addr < 0x2000 &&
++        else if (d && d->teb && (ULONG_PTR)siginfo->si_addr < 0x8000 &&
+                  !is_inside_syscall( d, SP_sig( sigcontext ) ))
+         {
+             ULONG_PTR si = (ULONG_PTR)siginfo->si_addr;
+@@ -1321,7 +1324,7 @@
+                 {
+                     ULONG_PTR base = REGn_sig( rn, sigcontext );
+                     LONG_PTR diff = (LONG_PTR)(si - base);
+-                    if (base && base < 0x2000 && diff >= -0x100 && diff < 0x1000)
++                    if (base && base < 0x8000 && diff >= -0x8000 && diff < 0x8000)
+                     {
+                         REGn_sig( rn, sigcontext ) = base + (ULONG_PTR)d->teb;
+                         redirect_user_resume( sigcontext );
