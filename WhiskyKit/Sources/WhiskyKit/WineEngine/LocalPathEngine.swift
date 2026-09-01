@@ -85,18 +85,23 @@ public struct LocalPathEngine: WineEngine, Sendable, Equatable {
     }
 
     public var supportsD3DMetalBridge: Bool {
-        let unix = libraryRoot
-            .appending(path: "Wine")
-            .appending(path: "lib")
-            .appending(path: "wine")
-            .appending(path: "x86_64-unix")
-        let d3d11 = unix.appending(path: "d3d11.so")
-        let external = libraryRoot
+        let framework = libraryRoot
             .appending(path: "Wine")
             .appending(path: "lib")
             .appending(path: "external")
             .appending(path: "D3DMetal.framework")
-        return FileManager.default.fileExists(atPath: d3d11.path)
-            && FileManager.default.fileExists(atPath: external.path)
+        guard FileManager.default.fileExists(atPath: framework.path) else {
+            return false
+        }
+        return WineArchitecture.all.contains {
+            let unix = libraryRoot
+                .appending(path: "Wine")
+                .appending(path: "lib")
+                .appending(path: "wine")
+                .appending(path: $0.unixDirectoryName)
+            return FileManager.default.fileExists(
+                atPath: unix.appending(path: "d3d11.so").path
+            )
+        }
     }
 }

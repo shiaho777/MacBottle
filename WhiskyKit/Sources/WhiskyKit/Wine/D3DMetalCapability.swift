@@ -189,13 +189,15 @@ public enum D3DMetalCapability {
     }
 
     private static func hasLinkedUnixModules(wineRoot: URL) -> Bool {
-        let unix = wineRoot
-            .appending(path: "lib")
-            .appending(path: "wine")
-            .appending(path: "x86_64-unix")
         let modules = ["d3d11.so", "d3d12.so", "d3d10.so"]
-        return modules.contains {
-            FileManager.default.fileExists(atPath: unix.appending(path: $0).path)
+        return WineArchitecture.all.contains { architecture in
+            let unix = wineRoot
+                .appending(path: "lib")
+                .appending(path: "wine")
+                .appending(path: architecture.unixDirectoryName)
+            return modules.contains {
+                FileManager.default.fileExists(atPath: unix.appending(path: $0).path)
+            }
         }
     }
 }
