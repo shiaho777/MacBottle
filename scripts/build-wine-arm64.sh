@@ -11,6 +11,7 @@
 set -euo pipefail
 
 WORK="${1:-$HOME/wine-arm64-build}"
+THISDIR="$(cd "$(dirname "$0")/.." && pwd)"
 JOBS=$(( $(sysctl -n hw.ncpu) - 2 ))
 PORT_REPO="https://github.com/citi94/wine-macos-arm64.git"
 PORT_BRANCH="macos-arm64-port"
@@ -28,6 +29,13 @@ TOOLCHAIN="$WORK/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-macos-universal"
 
 if [[ ! -d wine-src ]]; then
     git clone --depth 1 --branch "$PORT_BRANCH" "$PORT_REPO" wine-src
+fi
+
+# Apply macOS 26 compatibility patches (TSD-backed x18 restore broke when
+# Apple moved the pthread direct-TSD array; see scripts/patches/ and issue #97).
+if [[ ! -f "$WORK/.patches-applied" ]]; then
+    (cd "$WORK/wine-src" && for patch in "$THISDIR"/scripts/patches/*.patch; do patch -p1 < "$patch"; done)
+    touch "$WORK/.patches-applied"
 fi
 
 if [[ ! -d build-tools/Makefile ]]; then
