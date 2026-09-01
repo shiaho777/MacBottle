@@ -129,19 +129,23 @@ public enum WineEngineCatalog {
 
         for backup in backups {
             let wine64 = backup.appending(path: "Wine").appending(path: "bin").appending(path: "wine64")
-            let d3d11 = backup
-                .appending(path: "Wine")
-                .appending(path: "lib")
-                .appending(path: "wine")
-                .appending(path: "x86_64-unix")
-                .appending(path: "d3d11.so")
             let framework = backup
                 .appending(path: "Wine")
                 .appending(path: "lib")
                 .appending(path: "external")
                 .appending(path: "D3DMetal.framework")
+            let hasD3D11 = WineArchitecture.all.contains { architecture in
+                let unix = backup
+                    .appending(path: "Wine")
+                    .appending(path: "lib")
+                    .appending(path: "wine")
+                    .appending(path: architecture.unixDirectoryName)
+                return FileManager.default.fileExists(
+                    atPath: unix.appending(path: "d3d11.so").path
+                )
+            }
             if FileManager.default.fileExists(atPath: wine64.path),
-               FileManager.default.fileExists(atPath: d3d11.path),
+               hasD3D11,
                FileManager.default.fileExists(atPath: framework.path) {
                 return backup
             }

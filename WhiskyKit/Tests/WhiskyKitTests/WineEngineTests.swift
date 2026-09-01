@@ -93,6 +93,90 @@ final class WineEngineTests: XCTestCase {
         XCTAssertTrue(ids.contains(WineEngineCatalog.d3dMetalIdentifier))
     }
 
+    // MARK: - Architecture detection
+
+    private func makeEngineTree(
+        architectures: [WineArchitecture],
+        withD3D11: Bool = false
+    ) throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-arch-\(UUID().uuidString)")
+        for architecture in architectures {
+            let unixDir = root
+                .appending(path: "Wine")
+                .appending(path: "lib")
+                .appending(path: "wine")
+                .appending(path: architecture.unixDirectoryName)
+            try FileManager.default.createDirectory(at: unixDir, withIntermediateDirectories: true)
+            if withD3D11 {
+                try Data("stub".utf8).write(to: unixDir.appending(path: "d3d11.so"))
+            }
+        }
+        return root
+    }
+
+    func testArchitectureDetectionReadsUnixDirectories() throws {
+        let empty = try makeEngineTree(architectures: [])
+        XCTAssertTrue(WineArchitecture.available(in: empty).isEmpty)
+
+        let x64Only = try makeEngineTree(architectures: [.x8664])
+        XCTAssertEqual(WineArchitecture.available(in: x64Only), [.x8664])
+
+        let armOnly = try makeEngineTree(architectures: [.aarch64])
+        XCTAssertEqual(WineArchitecture.available(in: armOnly), [.aarch64])
+
+        let both = try makeEngineTree(architectures: [.x8664, .aarch64])
+        XCTAssertEqual(Set(WineArchitecture.available(in: both)), [.x8664, .aarch64])
+        try? FileManager.default.removeItem(at: both)
+    }
+
+    func testD3DMetalBridgeDetectionAcceptsAarch64Layout() throws {
+        let armEngine = LocalPathEngine(
+            identifier: "test-arm",
+            displayName: "Test ARM",
+            libraryRoot: try makeEngineTreeWithD3DMetal(architectures: [.aarch64])
+        )
+        XCTAssertTrue(armEngine.supportsD3DMetalBridge, "aarch64-unix + framework must pass")
+
+        let x64Engine = LocalPathEngine(
+            identifier: "test-x64",
+            displayName: "Test x64",
+            libraryRoot: try makeEngineTreeWithD3DMetal(architectures: [.x8664])
+        )
+        XCTAssertTrue(x64Engine.supportsD3DMetalBridge, "x86_64 layout must still pass")
+
+        let bareEngine = LocalPathEngine(
+            identifier: "test-bare",
+            displayName: "Test Bare",
+            libraryRoot: try makeEngineTreeWithD3DMetal(architectures: [])
+        )
+        XCTAssertFalse(bareEngine.supportsD3DMetalBridge, "no framework must fail")
+        try? FileManager.default.removeItem(at: armEngine.libraryRoot)
+        try? FileManager.default.removeItem(at: x64Engine.libraryRoot)
+        try? FileManager.default.removeItem(at: bareEngine.libraryRoot)
+    }
+
+    private func makeEngineTreeWithD3DMetal(architectures: [WineArchitecture]) throws -> URL {
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-arch-d3dm-\(UUID().uuidString)")
+        for architecture in architectures {
+            let unixDir = root
+                .appending(path: "Wine")
+                .appending(path: "lib")
+                .appending(path: "wine")
+                .appending(path: architecture.unixDirectoryName)
+            try FileManager.default.createDirectory(at: unixDir, withIntermediateDirectories: true)
+            try Data("stub".utf8).write(to: unixDir.appending(path: "d3d11.so"))
+        }
+        let external = root
+            .appending(path: "Wine")
+            .appending(path: "lib")
+            .appending(path: "external")
+            .appending(path: "D3DMetal.framework")
+        try FileManager.default.createDirectory(at: external, withIntermediateDirectories: true)
+        return root
+    }
+
     func testRegistrySwapsEngine() {
         let registry = WineEngineRegistry()
         let fake = FakeEngine()
