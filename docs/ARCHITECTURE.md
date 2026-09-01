@@ -154,6 +154,31 @@ saved selection restored afterwards.
 `WineEngineRegistry.shared.current`, so every existing call site keeps
 working. New code should call the registry directly.
 
+### Architecture generalization and the ARM64 engine slot
+
+The engine layer is architecture-parametric. `WineArchitecture` detects
+`<arch>-unix` module directories (`x86_64-unix`, `aarch64-unix`) instead of
+hardcoding one, and `WineEngineCatalog` registers a third slot,
+`upstream-arm64`, resolved at `Engines/upstream-arm64`. A native aarch64
+Wine build matters because the current x86_64 engine pays a measured 36×
+Rosetta translation tax on x86_64 payloads (same Java workload: 0.06s
+native ARM64 JVM vs 2.17s inside the bottle) — every launch, every frame.
+
+`EngineImportService` installs a user-provided build (folder or tar.gz)
+into that slot: it validates `Wine/bin` plus at least one `<arch>-unix`
+directory, stages the copy, writes `WhiskyWineVersion.plist` when the
+build lacks one (probing `wine --version`), and swaps atomically. The
+Settings import button and both engine pickers enumerate `allEngines()`,
+so new slots appear without further UI work.
+
+`scripts/build-wine-arm64.sh` builds a native aarch64 Wine from the
+public macOS ARM64 port (llvm-mingw toolchain, JIT-entitlement signing)
+and packages it as `wine-arm64.tar.gz` ready for the import channel. As
+of macOS 26 the built runtime still blocks at prefix init (an in-ntdll
+exception loop consistent with post-macOS-15 W^X/x18 hardening); issue
+#97 tracks the runtime enablement. The channel itself is fully functional
+and tested.
+
 ## Launch experience layer
 
 The `WhiskyKit/Wine/` folder hosts the pieces that make launches reliable
