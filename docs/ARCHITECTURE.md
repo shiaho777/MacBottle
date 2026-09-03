@@ -173,11 +173,15 @@ so new slots appear without further UI work.
 
 `scripts/build-wine-arm64.sh` builds a native aarch64 Wine from the
 public macOS ARM64 port (llvm-mingw toolchain, JIT-entitlement signing)
-and packages it as `wine-arm64.tar.gz` ready for the import channel. As
-of macOS 26 the built runtime still blocks at prefix init (an in-ntdll
-exception loop consistent with post-macOS-15 W^X/x18 hardening); issue
-#97 tracks the runtime enablement. The channel itself is fully functional
-and tested.
+and packages it as `wine-arm64.tar.gz` ready for the import channel. Two
+macOS 26 compatibility patches (`scripts/patches/`) make the runtime
+actually boot: the x18 TEB restore no longer reads the pthread direct-TSD
+array (Apple moved keys to an indirect table, so the asm fast path read
+null), and the deferred x18-repair window covers TEB-offset-sized
+addresses up to 0x8000. With them, `wineboot --init` and `wine cmd` run
+and 64K-aligned PEs execute. Remaining gap: 4K-aligned MSVC images pay an
+unbounded W^X page-flip cost when .text and .data share a 16K host page
+(issue #100).
 
 ## Launch experience layer
 
