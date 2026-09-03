@@ -30,3 +30,20 @@ Build commands:
         cpuloop.c -o cpuloop-64k.exe
 
 Run the PE build in a prefix of the ARM64 engine (`wine C:\\bench\\cpuloop-64k.exe`).
+
+## Phase breakdown (heap-touch residual)
+
+`heapphase.c` splits the 3.1× into phases (8-round averages, 128 MiB/round):
+
+| phase | native | ARM64 Wine | ratio |
+|-------|-------:|-----------:|------:|
+| alloc (16384×8 KiB) | 1.6 ms | 6.6 ms | 4.1× |
+| memset | 3.8 ms | 6.3 ms | 1.7× |
+| walk (stride 64) | ~0 | ~0 | — |
+| free | 0.8 ms | 2.9 ms | 3.6× |
+
+Isolated alloc/free throughput (200k×4 KiB, `alloconly.c`): 15 ns/op native vs
+34 ns/op under Wine (2.2×). The per-op delta (~19 ns) is msvcrt/NTDLL user-space
+heap implementation cost — no wineserver round-trips involved (a syscall RTT
+would be ~10 µs). JVMs manage their own heaps (TLAB), so this residual barely
+affects real Java startup; optimizing it is wine-upstream territory.
