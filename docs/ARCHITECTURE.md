@@ -181,7 +181,13 @@ null), and the deferred x18-repair window covers TEB-offset-sized
 addresses up to 0x8000. With them, `wineboot --init` and `wine cmd` run
 and 64K-aligned PEs execute. Remaining gap: 4K-aligned MSVC images pay an
 unbounded W^X page-flip cost when .text and .data share a 16K host page
-(issue #100).
+(issue #100). Measured A/B with 64K-aligned PEs (`scripts/benchmarks/`,
+M4 Pro / macOS 26): the same cpu-loop workload runs in 0.36–0.39 s
+natively and 0.46–0.47 s under the ARM64 engine — a 1.25× ratio versus
+the 36× Rosetta tax, i.e. ≈99% of the translation gap removed at the
+execution-engine level. The memory-side benchmark (heap allocate/touch/
+walk) still shows 3.1× from wine's PE-heap and page-protection paths and
+marks the next optimization front.
 
 ## Launch experience layer
 
