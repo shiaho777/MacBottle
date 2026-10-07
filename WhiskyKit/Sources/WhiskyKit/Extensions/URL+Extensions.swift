@@ -34,6 +34,74 @@ extension String {
     public var posixQuoted: String {
         "'" + replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
+
+    /// Split a launch string the way a program argument list is typed.
+    ///
+    /// Whitespace separates tokens. Double quotes group a token, including
+    /// spaces. Inside quotes, `\"` and `\\` decode to a quote and a
+    /// backslash. A backslash anywhere else stays a backslash, because
+    /// Windows paths use it as a separator.
+    public func commandLineTokens() -> [String] {
+        var tokens: [String] = []
+        var current = ""
+        var inQuotes = false
+        var started = false
+        let chars = Array(self)
+        var index = 0
+        while index < chars.count {
+            let character = chars[index]
+            if inQuotes {
+                if character == "\\" {
+                    let nextIndex = index + 1
+                    if nextIndex < chars.count {
+                        let next = chars[nextIndex]
+                        if next == "\"" || next == "\\" {
+                            current.append(next)
+                            index += 2
+                            started = true
+                            continue
+                        }
+                    }
+                    current.append(character)
+                    index += 1
+                    started = true
+                    continue
+                }
+                if character == "\"" {
+                    inQuotes = false
+                    started = true
+                    index += 1
+                    continue
+                }
+                current.append(character)
+                started = true
+                index += 1
+                continue
+            }
+            if character == "\"" {
+                inQuotes = true
+                started = true
+                index += 1
+                continue
+            }
+            if character.isWhitespace {
+                if started {
+                    tokens.append(current)
+                    current = ""
+                    started = false
+                }
+                index += 1
+                continue
+            }
+            current.append(character)
+            started = true
+            index += 1
+        }
+        if started {
+            tokens.append(current)
+        }
+        return tokens
+    }
 }
 
 extension URL {
