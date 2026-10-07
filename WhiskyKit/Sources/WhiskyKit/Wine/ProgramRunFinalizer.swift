@@ -31,11 +31,13 @@ enum ProgramRunFinalizer {
                 ProgramRunLogStore.shared.finishRun(runID: runID, exitCode: exitCode)
             }
             if let capture,
+               let launchID = capture.launchID,
                let message = ProgramLaunchCoordinator.silentExitFailureMessage(capture: capture) {
                 await MainActor.run {
                     ProgramLaunchCoordinator.shared.reportSilentExit(
                         programURL: programURL,
-                        message: message
+                        message: message,
+                        launchID: launchID
                     )
                 }
             }

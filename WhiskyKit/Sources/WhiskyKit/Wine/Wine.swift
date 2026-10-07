@@ -467,7 +467,7 @@ public class Wine {
             extraArgs: args
         )
 
-        let capture: ProgramRunCapture?
+        var capture: ProgramRunCapture?
         if captureRunLog {
             let prepared = try ProgramRunLogStore.prepareRunCapture(programURL: url, bottle: bottle)
             capture = prepared
@@ -506,6 +506,10 @@ public class Wine {
         let logFileURL = capture?.fileURL
         let readyViaZeroPath = plan.readinessSkipped
         let dispatchSeconds = Date().timeIntervalSince(context.launchStart)
+        let launchID = await MainActor.run {
+            ProgramLaunchCoordinator.shared.currentLaunchID(for: url)
+        }
+        capture?.launchID = launchID
         let consume: () async -> Void = {
             var exitCode: Int32?
             var heartbeatTask: Task<Void, Never>?

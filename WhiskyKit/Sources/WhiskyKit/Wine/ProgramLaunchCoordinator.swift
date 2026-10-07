@@ -38,10 +38,15 @@ public final class ProgramLaunchCoordinator {
     public private(set) var lastErrorMessage: String?
 
     private var launchingKeys = Set<String>()
+    private var launchIDs: [String: UUID] = [:]
     private var warmBottleKeys = Set<String>()
     private var warmingBottleKeys = Set<String>()
     private var dxvkReadyKeys = Set<String>()
     private var clearTask: Task<Void, Never>?
+
+    /// How long the launching banner stays up before it is retired.
+    /// The in-flight lock is not tied to this interval.
+    static var launchBannerTimeout: Duration = .seconds(8)
 
     private init() {}
 
@@ -150,6 +155,7 @@ public final class ProgramLaunchCoordinator {
         guard !launchingKeys.contains(key) else { return false }
         clearTask?.cancel()
         launchingKeys.insert(key)
+        launchIDs[key] = UUID()
         activeProgramURL = programURL
         activeBottleURL = bottle.url
         lastErrorMessage = nil
@@ -158,8 +164,16 @@ public final class ProgramLaunchCoordinator {
         return true
     }
 
+    public func currentLaunchID(for programURL: URL) -> UUID? {
+        launchIDs[Self.programKey(programURL)]
+    }
+
     public func finishLaunchSuccess(programURL: URL, programName: String) {
-        launchingKeys.remove(Self.programKey(programURL))
+        let key = Self.programKey(programURL)
+        launchingKeys.remove(key)
+        if case .failed = phase, activeProgramURL.map(Self.programKey) == key {
+            return
+        }
         phase = .launched(programName: programName)
         scheduleClear(after: 2.5)
     }
@@ -171,8 +185,9 @@ public final class ProgramLaunchCoordinator {
         scheduleClear(after: 6)
     }
 
-    public func reportSilentExit(programURL: URL, message: String) {
-        guard isLaunching(programURL: programURL) else { return }
+    public func reportSilentExit(programURL: URL, message: String, launchID: UUID) {
+        let key = Self.programKey(programURL)
+        guard launchIDs[key] == launchID else { return }
         finishLaunchFailure(
             programURL: programURL,
             programName: programURL.lastPathComponent,
@@ -182,10 +197,10 @@ public final class ProgramLaunchCoordinator {
 
     private func scheduleLaunchWatchdog(programURL: URL, programName: String) {
         let key = Self.programKey(programURL)
+        let timeout = Self.launchBannerTimeout
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(8))
+            try? await Task.sleep(for: timeout)
             guard launchingKeys.contains(key) else { return }
-            launchingKeys.remove(key)
             if case .launching = phase {
                 phase = .launched(programName: programName)
                 scheduleClear(after: 2.0)
