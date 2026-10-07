@@ -82,6 +82,133 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         XCTAssertNotNil(message)
     }
 
+    func testSilentExitAfterSpawnSuccessStaysFailed() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottleURL = URL(fileURLWithPath: "/tmp/macbottle-silent-\(UUID().uuidString)")
+        let programURL = bottleURL.appending(path: "drive_c/game.exe")
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        bottle.settings.name = "Silent"
+
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        let launchID = coordinator.currentLaunchID(for: programURL)
+        XCTAssertNotNil(launchID)
+        coordinator.finishLaunchSuccess(programURL: programURL, programName: "game.exe")
+        XCTAssertFalse(coordinator.isLaunching(programURL: programURL))
+
+        coordinator.reportSilentExit(
+            programURL: programURL,
+            message: "exited before producing output",
+            launchID: launchID ?? UUID()
+        )
+        if case .failed(let name, let message) = coordinator.phase {
+            XCTAssertEqual(name, "game.exe")
+            XCTAssertEqual(message, "exited before producing output")
+        } else {
+            XCTFail("expected failed phase, got \(coordinator.phase)")
+        }
+        coordinator.dismiss()
+    }
+
+    func testSuccessDoesNotOverwriteSilentFailure() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottleURL = URL(fileURLWithPath: "/tmp/macbottle-order-\(UUID().uuidString)")
+        let programURL = bottleURL.appending(path: "drive_c/game.exe")
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        bottle.settings.name = "Order"
+
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        let launchID = coordinator.currentLaunchID(for: programURL) ?? UUID()
+        coordinator.reportSilentExit(
+            programURL: programURL,
+            message: "died",
+            launchID: launchID
+        )
+        coordinator.finishLaunchSuccess(programURL: programURL, programName: "game.exe")
+        if case .failed = coordinator.phase {
+        } else {
+            XCTFail("expected failed phase to survive success, got \(coordinator.phase)")
+        }
+        coordinator.dismiss()
+    }
+
+    func testStaleSilentExitDoesNotFailANewerLaunch() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottleURL = URL(fileURLWithPath: "/tmp/macbottle-stale-\(UUID().uuidString)")
+        let programURL = bottleURL.appending(path: "drive_c/game.exe")
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        bottle.settings.name = "Stale"
+
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        let firstID = coordinator.currentLaunchID(for: programURL) ?? UUID()
+        coordinator.finishLaunchSuccess(programURL: programURL, programName: "game.exe")
+
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        coordinator.reportSilentExit(
+            programURL: programURL,
+            message: "old process died",
+            launchID: firstID
+        )
+        if case .launching = coordinator.phase {
+        } else {
+            XCTFail("expected the new launch to stay in flight, got \(coordinator.phase)")
+        }
+        XCTAssertTrue(coordinator.isLaunching(programURL: programURL))
+        coordinator.finishLaunchSuccess(programURL: programURL, programName: "game.exe")
+        coordinator.dismiss()
+    }
+
+    func testBannerTimeoutKeepsTheInFlightLock() async {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let previous = ProgramLaunchCoordinator.launchBannerTimeout
+        ProgramLaunchCoordinator.launchBannerTimeout = .milliseconds(40)
+        defer { ProgramLaunchCoordinator.launchBannerTimeout = previous }
+
+        let bottleURL = URL(fileURLWithPath: "/tmp/macbottle-banner-\(UUID().uuidString)")
+        let programURL = bottleURL.appending(path: "drive_c/game.exe")
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        bottle.settings.name = "Banner"
+
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        try? await Task.sleep(for: .milliseconds(120))
+        XCTAssertTrue(coordinator.isLaunching(programURL: programURL))
+        XCTAssertFalse(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        if case .launched(let name) = coordinator.phase {
+            XCTAssertEqual(name, "game.exe")
+        } else {
+            XCTFail("expected the banner to retire as launched, got \(coordinator.phase)")
+        }
+        coordinator.finishLaunchSuccess(programURL: programURL, programName: "game.exe")
+        coordinator.dismiss()
+    }
+
     func testSilentExitMessageIgnoresOutputAndSlowExits() {
         XCTAssertNil(ProgramLaunchCoordinator.silentExitFailureMessage(
             secondsToExit: 4,

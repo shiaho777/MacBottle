@@ -137,6 +137,7 @@ public struct ProgramRunCapture: @unchecked Sendable {
     public let fileHandle: FileHandle
     public let fileURL: URL
     public let outputStartOffset: UInt64
+    public var launchID: UUID?
 }
 
 @MainActor
@@ -242,7 +243,8 @@ public final class ProgramRunLogStore {
             record: record,
             fileHandle: handle,
             fileURL: fileURL,
-            outputStartOffset: outputStartOffset
+            outputStartOffset: outputStartOffset,
+            launchID: nil
         )
     }
     public func beginRun(
