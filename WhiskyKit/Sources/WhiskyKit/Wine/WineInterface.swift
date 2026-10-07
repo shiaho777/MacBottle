@@ -194,7 +194,7 @@ extension Wine {
         at url: URL, bottle: Bottle, args: String, environment: [String: String]
     ) -> String {
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
-        let extra = args.split { $0.isWhitespace }.map(String.init)
+        let extra = args.commandLineTokens()
         let startBits = RuntimeLaunchOptimizer.startArguments(
             profile: profile,
             executable: url,
