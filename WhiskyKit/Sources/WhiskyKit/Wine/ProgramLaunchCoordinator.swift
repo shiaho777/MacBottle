@@ -171,7 +171,7 @@ public final class ProgramLaunchCoordinator {
     public func finishLaunchSuccess(programURL: URL, programName: String) {
         let key = Self.programKey(programURL)
         launchingKeys.remove(key)
-        if case .failed = phase, activeProgramURL.map(Self.programKey) == key {
+        if case .failed = phase, let activeProgramURL, Self.programKey(activeProgramURL) == key {
             return
         }
         phase = .launched(programName: programName)
