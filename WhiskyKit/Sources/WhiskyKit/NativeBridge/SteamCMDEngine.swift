@@ -208,7 +208,7 @@ public final class SteamCMDEngine: @unchecked Sendable {
             "@sSteamCmdForcePlatformBitness 64",
             "@ShutdownOnFailedCommand 1",
             "@NoPromptForPassword 1",
-            "force_install_dir \(installDir.path)"
+            "force_install_dir \(scriptQuoted(installDir.path(percentEncoded: false)))"
         ]
         if let code = credentials.steamGuardCode, !code.isEmpty, !credentials.isAnonymous {
             lines.append("set_steam_guard_code \(scriptQuoted(code))")
