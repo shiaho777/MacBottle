@@ -22,7 +22,7 @@ import UniformTypeIdentifiers
 
 struct ProgramView: View {
     @Bindable var program: Program
-    @State private var programLoading = false
+    @State private var launchCoordinator = ProgramLaunchCoordinator.shared
     @State private var cachedIconImage: Image?
     @State private var showProgramLogs = false
     @AppStorage("configSectionExapnded") private var configSectionExpanded = true
@@ -64,45 +64,40 @@ struct ProgramView: View {
             .padding(MacBottleTheme.pagePadding)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .bottomBar {
-            HStack(spacing: 10) {
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
                 Button {
-                    program.pinned.toggle()
-                } label: {
-                    Label(
-                        program.pinned ? "program.unpin" : "program.pinToHome",
-                        systemImage: program.pinned ? "pin.slash" : "pin"
-                    )
-                }
-                Button("button.showInFinder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([program.url])
-                }
-                Button("button.createShortcut") {
-                    createShortcut()
-                }
-                Button("program.runLogs") {
-                    showProgramLogs = true
-                }
-                Spacer()
-                if programLoading {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-                Button {
-                    programLoading = true
                     program.run()
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(1200))
-                        programLoading = false
-                    }
                 } label: {
                     Label("programs.run", systemImage: "play.fill")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(programLoading)
+                .disabled(launchCoordinator.isLaunching(programURL: program.url))
+                .keyboardShortcut("r", modifiers: .command)
+                .help("programs.run")
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button(
+                        program.pinned ? "program.unpin" : "program.pinToHome",
+                        systemImage: program.pinned ? "pin.slash" : "pin"
+                    ) {
+                        program.pinned.toggle()
+                    }
+                    Button("button.showInFinder", systemImage: "folder") {
+                        NSWorkspace.shared.activateFileViewerSelecting([program.url])
+                    }
+                    Button("button.createShortcut", systemImage: "arrow.up.forward.app") {
+                        createShortcut()
+                    }
+                    Divider()
+                    Button("program.runLogs", systemImage: "doc.text") {
+                        showProgramLogs = true
+                    }
+                } label: {
+                    Label("bottle.more", systemImage: "ellipsis.circle")
+                }
+            }
         }
         .sheet(isPresented: $showProgramLogs) {
             NavigationStack {

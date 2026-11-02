@@ -81,7 +81,7 @@ struct WhiskyWineDownloadView: View {
                 }
             }
         }
-        .frame(width: 440, height: 280)
+        .frame(width: 520, height: 360)
         .onAppear {
             canReuseLegacy = EngineRecovery.canRecover()
         }

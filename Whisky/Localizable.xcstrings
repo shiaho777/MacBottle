@@ -26837,6 +26837,41 @@
         }
       }
     },
+    "winetricks.loading": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Loading Winetricks catalog…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在加载 Winetricks 目录…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在載入 Winetricks 目錄…" } }
+      }
+    },
+    "winetricks.category": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Category" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "分类" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "分類" } }
+      }
+    },
+    "winetricks.search": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Search verbs" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "搜索组件" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "搜尋元件" } }
+      }
+    },
+    "winetricks.empty.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No matching verbs" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有匹配的组件" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有符合的元件" } }
+      }
+    },
+    "winetricks.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Try another category or search term." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "试试其他分类或关键词。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "試試其他分類或關鍵字。" } }
+      }
+    },
     "winetricks.title": {
       "localizations": {
         "ar": {
