@@ -125,6 +125,13 @@ public final class RecipeCache: @unchecked Sendable {
             do {
                 let data = try Data(contentsOf: url)
                 let recipe = try decoder.decode(Recipe.self, from: data)
+                let problems = RecipeValidator.errors(for: recipe)
+                guard problems.isEmpty else {
+                    Logger.wineKit.error(
+                        "MacBottle: cached recipe \(recipe.id) failed validation: \(problems.joined(separator: "; "))"
+                    )
+                    continue
+                }
                 result[recipe.id] = recipe
             } catch {
                 Logger.wineKit.error(
@@ -139,8 +146,12 @@ public final class RecipeCache: @unchecked Sendable {
     public func loadRecipe(id: String) -> Recipe? {
         lock.lock(); defer { lock.unlock() }
         let url = recipeURL(for: id)
-        guard let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(Recipe.self, from: data)
+        guard let data = try? Data(contentsOf: url),
+              let recipe = try? JSONDecoder().decode(Recipe.self, from: data),
+              RecipeValidator.errors(for: recipe).isEmpty else {
+            return nil
+        }
+        return recipe
     }
 
     public func storeRecipe(_ recipe: Recipe) throws {

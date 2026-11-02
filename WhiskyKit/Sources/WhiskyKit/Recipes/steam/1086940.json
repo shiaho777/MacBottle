@@ -5,7 +5,7 @@
   "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/1086940/header.jpg",
   "dx_version": "vulkan",
   "min_macos": "14.0",
-  "renderer": "dxvk",
+  "renderer": "moltenvk",
   "installer": "steam",
   "winetricks": [],
   "env": {

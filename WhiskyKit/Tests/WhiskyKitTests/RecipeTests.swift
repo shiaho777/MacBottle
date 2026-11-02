@@ -173,4 +173,56 @@ final class RecipeTests: XCTestCase {
             XCTAssertEqual(id, recipe.id, "Recipe keyed by \(id) has mismatched id \(recipe.id)")
         }
     }
+
+    func testAllShippedRecipesPassSemanticValidation() {
+        let store = RecipeStore(bundle: .module)
+        let recipes = store.loadAll()
+        XCTAssertGreaterThanOrEqual(recipes.count, 18)
+        for recipe in recipes.values {
+            XCTAssertEqual(
+                RecipeValidator.errors(for: recipe),
+                [],
+                "recipe \(recipe.id) must be semantically valid"
+            )
+        }
+    }
+
+    func testValidatorRejectsD3D12WithWineD3D() {
+        let recipe = Recipe(
+            id: "steam.1",
+            title: "Bad",
+            dxVersion: .d3d12,
+            minMacOS: "14.0",
+            renderer: .wined3d,
+            compatibility: .broken
+        )
+        XCTAssertFalse(RecipeValidator.errors(for: recipe).isEmpty)
+    }
+
+    func testValidatorRejectsSteamInstallerOnGogID() {
+        let recipe = Recipe(
+            id: "gog.1",
+            title: "Bad",
+            dxVersion: .d3d11,
+            minMacOS: "14.0",
+            renderer: .d3dmetal,
+            installer: .steam,
+            compatibility: .gold
+        )
+        XCTAssertTrue(
+            RecipeValidator.errors(for: recipe).contains { $0.contains("requires a steam.* id") }
+        )
+    }
+
+    func testValidatorAcceptsVulkanThroughMoltenVK() {
+        let recipe = Recipe(
+            id: "steam.2",
+            title: "Vulkan",
+            dxVersion: .vulkan,
+            minMacOS: "14.0",
+            renderer: .moltenvk,
+            compatibility: .gold
+        )
+        XCTAssertEqual(RecipeValidator.errors(for: recipe), [])
+    }
 }
