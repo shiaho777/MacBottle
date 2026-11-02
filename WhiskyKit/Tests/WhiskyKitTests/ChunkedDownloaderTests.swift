@@ -245,6 +245,13 @@ final class RangeStub: URLProtocol, @unchecked Sendable {
     override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        if let forcedStatus = Self.shared.forcedStatus {
+            respond(status: forcedStatus, body: Data("not found".utf8), headers: [
+                "Content-Length": "9"
+            ])
+            return
+        }
+
         if request.httpMethod == "HEAD" {
             let length = String(Self.shared.payload.count)
             respond(status: 200, body: Data(), headers: [
@@ -304,6 +311,12 @@ final class StubState: @unchecked Sendable {
     private var _payload = Data()
     private var _failRanges: Set<String> = []
     private var _requestedRanges: [String] = []
+    private var _forcedStatus: Int?
+
+    var forcedStatus: Int? {
+        get { lock.withLock { _forcedStatus } }
+        set { lock.withLock { _forcedStatus = newValue } }
+    }
 
     var payload: Data {
         get { lock.withLock { _payload } }
@@ -323,6 +336,7 @@ final class StubState: @unchecked Sendable {
             _payload = Data()
             _failRanges = []
             _requestedRanges = []
+            _forcedStatus = nil
         }
     }
 

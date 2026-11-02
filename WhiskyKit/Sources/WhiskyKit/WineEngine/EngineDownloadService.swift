@@ -19,8 +19,18 @@
 import Foundation
 import os.log
 
-public struct EngineDownloadProgress: Sendable, Equatable {
-    public var fraction: Double
+public enum EngineDownloadError: Error, LocalizedError {
+    case feedUnavailable(URL)
+
+    public var errorDescription: String? {
+        switch self {
+        case .feedUnavailable(let url):
+            return "The engine feed at \(url.host ?? url.absoluteString) is unavailable."
+        }
+    }
+}
+
+public struct EngineDownloadProgress: Sendable, Equatable {    public var fraction: Double
     public var completedBytes: Int64
     public var totalBytes: Int64
     public var bytesPerSecond: Double
@@ -83,27 +93,30 @@ public final class EngineDownloadService: @unchecked Sendable {
             .appending(path: ".\(destination.lastPathComponent).candidate-\(UUID().uuidString)")
         defer { try? fileManager.removeItem(at: candidate) }
 
-        try await downloader.download(
-            jobs: [
-                DownloadJob(
-                    url: url,
-                    destination: candidate,
-                    expectedSize: 0
-                )
-            ],
-            onProgress: { progress in
-                onProgress?(
-                    EngineDownloadProgress(
-                        fraction: progress.fraction,
-                        completedBytes: progress.completedUnits,
-                        totalBytes: progress.totalUnits,
-                        bytesPerSecond: progress.bytesPerSecond,
-                        currentFile: progress.currentFile
+        do {
+            try await downloader.download(
+                jobs: [
+                    DownloadJob(
+                        url: url,
+                        destination: candidate,
+                        expectedSize: 0
                     )
-                )
-            }
-        )
-
+                ],
+                onProgress: { progress in
+                    onProgress?(
+                        EngineDownloadProgress(
+                            fraction: progress.fraction,
+                            completedBytes: progress.completedUnits,
+                            totalBytes: progress.totalUnits,
+                            bytesPerSecond: progress.bytesPerSecond,
+                            currentFile: progress.currentFile
+                        )
+                    )
+                }
+            )
+        } catch let error as URLError where error.code == .badServerResponse {
+            throw EngineDownloadError.feedUnavailable(url)
+        }
         let digest = ChunkedDownloader.sha256Hex(of: candidate)
         guard !digest.isEmpty else {
             throw EngineArchiveTrustError.invalidArchive

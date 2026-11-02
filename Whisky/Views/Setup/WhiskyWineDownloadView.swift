@@ -16,14 +16,21 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import Observation
+import SemanticVersion
 import SwiftUI
+import UniformTypeIdentifiers
 import WhiskyKit
 
 struct WhiskyWineDownloadView: View {
     @State private var model = EngineDownloadModel()
+    @State private var importError: String?
+    @State private var importing = false
+    @State private var canReuseLegacy = false
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
+    @Binding var showSetup: Bool
 
     var body: some View {
         VStack(spacing: 12) {
@@ -65,13 +72,44 @@ struct WhiskyWineDownloadView: View {
                     .foregroundStyle(.red)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
+                Text("setup.engine.offline.hint")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
                 Button("setup.retry") {
                     model.start()
+                }
+            }
+
+            if let importError {
+                Text(verbatim: importError)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            if importing {
+                ProgressView()
+                    .controlSize(.small)
+                Text("setup.engine.importing")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                if canReuseLegacy {
+                    Button("setup.engine.reuseLegacy") {
+                        reuseLegacyEngine()
+                    }
+                }
+                Button("setup.engine.import") {
+                    importEngine()
                 }
             }
         }
         .frame(width: 420, height: 240)
         .onAppear {
+            canReuseLegacy = EngineRecovery.canRecover()
             model.start()
         }
         .onDisappear {
@@ -98,6 +136,88 @@ struct WhiskyWineDownloadView: View {
         } message: {
             if let message = model.errorMessage {
                 Text(verbatim: message)
+            }
+        }
+    }
+
+    private func reuseLegacyEngine() {
+        guard let source = EngineRecovery.legacyEngineRoot() else { return }
+        importing = true
+        importError = nil
+
+        Task {
+            do {
+                let engine = CrossOverEngine.default
+                try await EngineImportService.importFolder(
+                    at: source,
+                    into: engine.libraryRoot,
+                    fallbackVersion: SemanticVersion(0, 0, 0)
+                )
+                _ = try WineEngineRegistry.shared.select(
+                    identifier: engine.identifier,
+                    installIfNeeded: false
+                )
+                await MainActor.run {
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
+                    showSetup = false
+                }
+            } catch {
+                await MainActor.run {
+                    importError = error.localizedDescription
+                    importing = false
+                }
+            }
+        }
+    }
+
+    private func importEngine() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.gzip, .archive, .folder, .data]
+        panel.message = String(localized: "setup.engine.import.panel")
+        panel.prompt = String(localized: "setup.engine.import.prompt")
+        panel.begin { result in
+            guard result == .OK, let url = panel.url else { return }
+            importing = true
+            importError = nil
+
+            Task {
+                do {
+                    let engine = WineEngineCatalog.arm64Engine()
+                    var isDirectory: ObjCBool = false
+                    let exists = FileManager.default.fileExists(
+                        atPath: url.path(percentEncoded: false),
+                        isDirectory: &isDirectory
+                    )
+                    if exists && isDirectory.boolValue {
+                        try await EngineImportService.importFolder(
+                            at: url,
+                            into: engine.libraryRoot,
+                            fallbackVersion: SemanticVersion(0, 0, 0)
+                        )
+                    } else {
+                        try await EngineImportService.importTarball(
+                            at: url,
+                            engine: engine,
+                            fallbackVersion: SemanticVersion(0, 0, 0)
+                        )
+                    }
+                    _ = try WineEngineRegistry.shared.select(
+                        identifier: engine.identifier,
+                        installIfNeeded: false
+                    )
+                    await MainActor.run {
+                        ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
+                        showSetup = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        importError = error.localizedDescription
+                        importing = false
+                    }
+                }
             }
         }
     }

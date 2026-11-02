@@ -60,7 +60,51 @@ public enum WineEngineCatalog {
     }
 
     public static func allEngines() -> [any WineEngine] {
-        [modernEngine(), d3dMetalEngine(), arm64Engine()]
+        var engines: [any WineEngine] = [modernEngine(), d3dMetalEngine(), arm64Engine()]
+        engines.append(contentsOf: discoveredEngines())
+        return engines
+    }
+
+    /// Any engine folder dropped under `Engines/` that passes the same
+    /// layout validation as a user import. The three built-in slots stay
+    /// first; discovered builds follow in name order.
+    public static func discoveredEngines(in root: URL? = nil) -> [any WineEngine] {
+        let root = root ?? enginesRoot
+        let fileManager = FileManager.default
+        guard let contents = try? fileManager.contentsOfDirectory(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else {
+            return []
+        }
+        let reserved = Set([modernIdentifier, d3dMetalIdentifier, arm64Identifier])
+        return contents
+            .filter { url in
+                let name = url.lastPathComponent
+                guard !reserved.contains(name),
+                      !name.contains(".staging-"),
+                      !name.contains(".old-") else {
+                    return false
+                }
+                guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
+                      (try? EngineImportService.validate(engineRoot: url)) != nil else {
+                    return false
+                }
+                return LocalPathEngine(
+                    identifier: name,
+                    displayName: name,
+                    libraryRoot: url
+                ).installedVersion() != nil
+            }
+            .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+            .map { url in
+                LocalPathEngine(
+                    identifier: url.lastPathComponent,
+                    displayName: url.lastPathComponent,
+                    libraryRoot: url
+                )
+            }
     }
 
     public static func engine(id: String) -> (any WineEngine)? {

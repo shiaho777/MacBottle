@@ -191,6 +191,13 @@ staging, rejects `..`/absolute entries, resolves every path with
 place with rollback. A signed release manifest remains the next step;
 until then the client does not claim cryptographic provenance.
 
+The archived upstream feed (`https://data.getwhisky.app/Wine/Libraries.tar.gz`)
+returned 404 as of 2026-11. The setup flow therefore treats the network
+as optional: it can import a local Wine build, reuse an existing
+Whisky/CrossOver `Libraries` folder, or build a native ARM64 engine with
+`scripts/build-wine-arm64.sh`. Self-owned distribution is a release
+blocker, not a nice-to-have.
+
 ### Architecture generalization and the ARM64 engine slot
 
 The engine layer is architecture-parametric. `WineArchitecture` detects
