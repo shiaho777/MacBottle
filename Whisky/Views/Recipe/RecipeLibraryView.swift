@@ -187,7 +187,7 @@ private struct CompatibilityBadge: View {
     let tier: CompatibilityTier
 
     var body: some View {
-        Text(verbatim: tier.rawValue.capitalized)
+        Text(verbatim: tier.localizedName)
             .font(.caption2.weight(.medium))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

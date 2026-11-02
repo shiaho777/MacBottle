@@ -110,9 +110,9 @@ enum BottleCreationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .wineNotInstalled:
-            return "WhiskyWine is not installed. Open Setup from the Whisky menu and install Wine first."
+            return String(localized: "bottle.error.wineNotInstalled")
         case .wineBinaryMissing(let path):
-            return "Wine binary not found at \(path)."
+            return String(format: String(localized: "bottle.error.wineBinaryMissing %@"), path)
         }
     }
 }

@@ -159,11 +159,6 @@ public final class RecipeProvisioningStore: @unchecked Sendable {
     private struct StoreFile: Codable {
         var schema: Int = 1
         var records: [String: RecipeProvisioningRecord] = [:]
-
-        init(schema: Int = 1, records: [String: RecipeProvisioningRecord] = [:]) {
-            self.schema = schema
-            self.records = records
-        }
     }
 
     private func loadLocked(bottleKey: String) -> StoreFile {

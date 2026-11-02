@@ -119,7 +119,7 @@ struct GameDetailSheet: View {
     private var metadataGrid: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
             metadataRow("game.detail.metadata.compatibility",
-                        value: recipe.compatibility.rawValue.capitalized, tint: tintColor)
+                        value: recipe.compatibility.localizedName, tint: tintColor)
             metadataRow("game.detail.metadata.renderer", value: recipe.renderer.rawValue)
             metadataRow("game.detail.metadata.directx", value: recipe.dxVersion.rawValue.uppercased())
             metadataRow("game.detail.metadata.minMacOS", value: recipe.minMacOS)

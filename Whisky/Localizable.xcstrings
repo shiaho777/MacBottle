@@ -549,6 +549,50 @@
         }
       }
     },
+    "bottle.error.wineBinaryMissing %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Wine binary is missing at %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine 可执行文件不存在：%@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine 執行檔不存在：%@。"
+          }
+        }
+      }
+    },
+    "bottle.error.wineNotInstalled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine is not installed. Open Setup and install the engine first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安装 Wine。请先打开安装向导安装引擎。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安裝 Wine。請先開啟安裝精靈安裝引擎。"
+          }
+        }
+      }
+    },
     "bottle.launch.failed %@": {
       "localizations": {
         "en": {
@@ -8796,6 +8840,41 @@
             "value": "瀏覽"
           }
         }
+      }
+    },
+    "compatibility.bronze": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Bronze" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "青铜" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "青銅" } }
+      }
+    },
+    "compatibility.broken": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Broken" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不可用" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不可用" } }
+      }
+    },
+    "compatibility.gold": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Gold" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "黄金" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "黃金" } }
+      }
+    },
+    "compatibility.platinum": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Platinum" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白金" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白金" } }
+      }
+    },
+    "compatibility.silver": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Silver" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白银" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白銀" } }
       }
     },
     "create.cancel": {
