@@ -39,6 +39,14 @@ final class BottleVM: @unchecked Sendable {
         return bottles.filter { $0.isAvailable == true }.count
     }
 
+    func steamLibraryBottle() -> Bottle? {
+        SteamLibraryMarker.find(in: bottles)
+    }
+
+    func markSteamLibrary(_ bottle: Bottle) {
+        try? SteamLibraryMarker.mark(bottle)
+    }
+
     func createNewBottle(bottleName: String, winVersion: WinVersion, bottleURL: URL) -> URL {
         let newBottleDir = bottleURL.appending(path: UUID().uuidString)
 

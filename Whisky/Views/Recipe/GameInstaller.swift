@@ -110,18 +110,40 @@ final class GameInstaller {
         statusDetail = String(localized: "game.install.creatingBottle")
         progress = nil
 
-        let url = bottleVM.createNewBottle(
-            bottleName: recipe.title,
-            winVersion: .win10,
-            bottleURL: BottleData.defaultBottleDir
-        )
-        bottleURL = url
+        let sharedSteamBottle = recipe.installer == .steam
+            ? bottleVM.steamLibraryBottle()
+            : nil
+        if sharedSteamBottle != nil {
+            statusDetail = String(localized: "game.install.reusingSteam")
+        }
+        let reusedSteamBottle = sharedSteamBottle != nil
+        let url: URL
+        if let sharedSteamBottle {
+            url = sharedSteamBottle.url
+            bottleURL = url
+        } else {
+            url = bottleVM.createNewBottle(
+                bottleName: recipe.installer == .steam ? "Steam Library" : recipe.title,
+                winVersion: .win10,
+                bottleURL: BottleData.defaultBottleDir
+            )
+            bottleURL = url
+        }
 
-        let bottle = await waitForBottle(url: url)
+        let bottle: Bottle?
+        if let sharedSteamBottle {
+            bottle = sharedSteamBottle
+        } else {
+            bottle = await waitForBottle(url: url)
+        }
         if Task.isCancelled { return }
         guard let bottle else {
             fail(String(localized: "game.install.error.bottleTimeout"))
             return
+        }
+
+        if recipe.installer == .steam, !reusedSteamBottle {
+            bottleVM.markSteamLibrary(bottle)
         }
 
         phase = .configuringBottle
@@ -134,7 +156,7 @@ final class GameInstaller {
         }
 
         statusDetail = String(localized: "game.install.applyingRecipe")
-        await applyRecipeSettings(to: bottle)
+        await applyRecipeSettings(to: bottle, shared: reusedSteamBottle)
         if Task.isCancelled { return }
 
         switch recipe.installer {
@@ -437,8 +459,10 @@ final class GameInstaller {
         return panel.url
     }
 
-    private func applyRecipeSettings(to bottle: Bottle) async {
-        bottle.settings.dxvk = (recipe.renderer == .dxvk)
+    private func applyRecipeSettings(to bottle: Bottle, shared: Bool) async {
+        if !shared {
+            bottle.settings.dxvk = (recipe.renderer == .dxvk)
+        }
 
         statusDetail = String(localized: "game.install.installingCJKFonts")
         await installCJKFontSubstitutions(bottle: bottle)
