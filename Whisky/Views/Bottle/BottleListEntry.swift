@@ -42,6 +42,8 @@ struct BottleListEntry: View {
                 .foregroundStyle(bottle.isAvailable ? Color.accentColor : .secondary)
         }
         .opacity(bottle.isAvailable ? 1.0 : 0.5)
+        .accessibilityLabel(Text(bottle.settings.name))
+        .accessibilityValue(Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID)))
         .onChange(of: refresh, initial: true) {
             name = bottle.settings.name
         }

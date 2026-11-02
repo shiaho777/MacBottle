@@ -20,7 +20,7 @@ import Foundation
 import AppKit
 import WhiskyKit
 
-enum WinetricksCategories: String {
+enum WinetricksCategories: String, CaseIterable {
     case apps
     case benchmarks
     case dlls

@@ -44,6 +44,7 @@ struct PinView: View {
         }
         .buttonStyle(.plain)
         .help("pin.help \(name)")
+        .accessibilityLabel(Text(name))
         .draggable(program.url.absoluteString) {
             card
                 .opacity(0.9)
