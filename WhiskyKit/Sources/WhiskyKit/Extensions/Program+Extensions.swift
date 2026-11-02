@@ -55,16 +55,37 @@ extension Program {
                 return
             }
 
+            let bottleName = bottle.settings.name
             Task.detached(priority: .userInitiated) {
                 do {
                     if let recipe {
                         // Side-effectful recipe fields (winetricks,
                         // registry) are applied once per bottle-recipe
                         // pairing, not on every launch.
-                        try await RecipeProvisioner.shared.provisionIfNeeded(
-                            recipe: recipe,
-                            bottle: bottle
-                        )
+                        let plan = RecipeProvisioningPlan(recipe: recipe)
+                        if !plan.isEmpty {
+                            await MainActor.run {
+                                ProgramLaunchCoordinator.shared.beginProvisioning(
+                                    programName: programName,
+                                    bottleName: bottleName,
+                                    detail: String(localized: "game.install.applyingRecipe")
+                                )
+                            }
+                            try await RecipeProvisioner.shared.provisionIfNeeded(
+                                recipe: recipe,
+                                bottle: bottle
+                            ) { detail in
+                                Task { @MainActor in
+                                    ProgramLaunchCoordinator.shared.updateProvisioning(detail: detail)
+                                }
+                            }
+                            await MainActor.run {
+                                ProgramLaunchCoordinator.shared.endProvisioning(
+                                    programName: programName,
+                                    bottleName: bottleName
+                                )
+                            }
+                        }
                     }
                     switch launchMode {
                     case .file:
