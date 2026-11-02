@@ -46,6 +46,7 @@
 - ✅ v0.4:`WineEngine` 协议抽象,`CrossOverEngine` 为首个实现
 - ✅ 用户可切换引擎:`WineEngineRegistry` 持久化、Settings 切换 UI、D3DMetal 变体引擎、`LaunchEnginePolicy` 自动选型
 - 🔜 **引擎分发自主权(v1.0 硬前置)**:引擎下载与更新检查目前指向已归档上游的服务器(`data.getwhisky.app`),是全项目最大的单点风险。迁移到自有清单(GitHub Releases + manifest),复用配方同步已验证的 ETag 增量模式。
+  - ⚠️ 2026-11 现状:该上游地址已返回 404。安装向导现在提供本地导入与旧 Whisky 引擎复用;自有分发从"风险"升级为 v0.7 的发布硬阻塞。
 - 🔜 **引擎目录清单驱动**:把硬编码的 `WineEngineCatalog` 枚举改为 manifest 描述的可插拔引擎包(manifest 描述 + 按需下载安装)。这比手写第二个引擎子类更能兑现抽象层的承诺。
 - 🔜 第二个引擎实现(纯上游 Wine):依赖自建 Wine 构建流水线,成本高,单列评估、可推迟;GPTK2 因 Apple 授权不可再分发,维持"运行时本地检测"模式不变。
 

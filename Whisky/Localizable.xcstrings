@@ -21415,6 +21415,48 @@
         }
       }
     },
+    "setup.engine.import": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Import Wine engine…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "导入 Wine 引擎…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "匯入 Wine 引擎…" } }
+      }
+    },
+    "setup.engine.import.panel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a Wine build folder or a .tar.gz archive." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择 Wine 构建目录或 .tar.gz 压缩包。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇 Wine 建置目錄或 .tar.gz 壓縮檔。" } }
+      }
+    },
+    "setup.engine.import.prompt": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Import" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "导入" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "匯入" } }
+      }
+    },
+    "setup.engine.importing": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Importing engine…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在导入引擎…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在匯入引擎…" } }
+      }
+    },
+    "setup.engine.offline.hint": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The archived Whisky engine feed is offline. Import a Wine build here, or build a native ARM64 engine with scripts/build-wine-arm64.sh." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "上游 Whisky 引擎下载源已离线。请在此导入 Wine 构建，或使用 scripts/build-wine-arm64.sh 构建原生 ARM64 引擎。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "上游 Whisky 引擎下載來源已離線。請在此匯入 Wine 建置，或使用 scripts/build-wine-arm64.sh 建置原生 ARM64 引擎。" } }
+      }
+    },
+    "setup.engine.reuseLegacy": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Use existing Whisky engine" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用已有的 Whisky 引擎" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "使用既有的 Whisky 引擎" } }
+      }
+    },
     "setup.engine.trust.accept": {
       "localizations": {
         "en": {

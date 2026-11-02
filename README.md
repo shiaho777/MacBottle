@@ -191,6 +191,12 @@ The full plan — including the track breakdown and the explicit non-goals (no v
 
 MacBottle does not ship game content. You obtain games through legitimate channels (Steam, Epic, GOG, Battle.net); MacBottle only concerns itself with running them well on your Mac.
 
+> **Engine availability (2026-11):** the archived upstream feed
+> (`data.getwhisky.app`) now returns 404. Until self-owned engine
+> distribution ships, use **Setup → Import Wine engine**, reuse an
+> existing Whisky/CrossOver install from the same screen, or build a
+> native ARM64 engine with [`scripts/build-wine-arm64.sh`](scripts/build-wine-arm64.sh).
+
 ---
 
 ## Contributing
