@@ -88,8 +88,6 @@ public enum EngineImportService {
 
         let staging = destination.deletingLastPathComponent()
             .appending(path: "\(destination.lastPathComponent).staging-\(UUID().uuidString)")
-        let trash = destination.deletingLastPathComponent()
-            .appending(path: "\(destination.lastPathComponent).old-\(UUID().uuidString)")
         // The staging directory IS the future libraryRoot: copy the
         // source's *contents* into it, not the source folder itself.
         // copyItem(source → staging) would collide with the pre-created
@@ -115,18 +113,7 @@ public enum EngineImportService {
                 fallback: fallbackVersion
             )
 
-            if fileManager.fileExists(atPath: destination.path(percentEncoded: false)) {
-                try fileManager.moveItem(at: destination, to: trash)
-            }
-            do {
-                try fileManager.moveItem(at: staging, to: destination)
-            } catch {
-                if fileManager.fileExists(atPath: trash.path(percentEncoded: false)) {
-                    try? fileManager.moveItem(at: trash, to: destination)
-                }
-                throw error
-            }
-            try? fileManager.removeItem(at: trash)
+            try swapIntoPlace(staging: staging, destination: destination)
         }
 
         do {
@@ -158,6 +145,86 @@ public enum EngineImportService {
         guard engine.isInstalled() else {
             throw EngineImportError.unsupportedLayout(engine.libraryRoot)
         }
+        try? FileManager.default.removeItem(at: tarball)
+    }
+
+    /// Import the Gcenx app-bundle tarball. Its layout is
+    /// `Wine Devel.app/Contents/Resources/wine/...`, so it cannot use the
+    /// plain `importTarball` path that expects `Wine/` at the archive root.
+    public static func importGcenxTarball(
+        at tarball: URL,
+        engine: LocalPathEngine,
+        fallbackVersion: SemanticVersion
+    ) async throws {
+        let fileManager = FileManager.default
+        guard fileManager.isReadableFile(atPath: tarball.path(percentEncoded: false)) else {
+            throw EngineImportError.tarballNotReadable(tarball)
+        }
+
+        let work = engine.libraryRoot
+            .deletingLastPathComponent()
+            .appending(path: ".gcenx-import-\(UUID().uuidString)")
+        let extracted = work.appending(path: "extracted")
+        let stagedRoot = work.appending(path: "engine")
+        try fileManager.createDirectory(at: extracted, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: work) }
+
+        try Tar.untar(tarBall: tarball, toURL: extracted)
+
+        guard let wineDirectory = findGcenxWineDirectory(in: extracted) else {
+            throw EngineImportError.unsupportedLayout(extracted)
+        }
+        try fileManager.createDirectory(at: stagedRoot, withIntermediateDirectories: true)
+        try fileManager.moveItem(
+            at: wineDirectory,
+            to: stagedRoot.appending(path: "Wine")
+        )
+
+        let architectures = try validate(engineRoot: stagedRoot)
+        await writeVersionPlistIfNeeded(
+            engineRoot: stagedRoot,
+            architectures: architectures,
+            fallback: fallbackVersion
+        )
+        try swapIntoPlace(staging: stagedRoot, destination: engine.libraryRoot)
+        guard engine.isInstalled() else {
+            throw EngineImportError.unsupportedLayout(engine.libraryRoot)
+        }
+        try? fileManager.removeItem(at: tarball)
+    }
+
+    private static func findGcenxWineDirectory(in root: URL) -> URL? {
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+        for case let url as URL in enumerator where url.lastPathComponent == "wine" {
+            let values = try? url.resourceValues(forKeys: [.isDirectoryKey])
+            if values?.isDirectory == true,
+               url.path(percentEncoded: false).contains("/Contents/Resources/wine") {
+                return url
+            }
+        }
+        return nil
+    }
+
+    private static func swapIntoPlace(staging: URL, destination: URL) throws {
+        let fileManager = FileManager.default
+        let trash = destination.deletingLastPathComponent()
+            .appending(path: "\(destination.lastPathComponent).old-\(UUID().uuidString)")
+        if fileManager.fileExists(atPath: destination.path(percentEncoded: false)) {
+            try fileManager.moveItem(at: destination, to: trash)
+        }
+        do {
+            try fileManager.moveItem(at: staging, to: destination)
+        } catch {
+            if fileManager.fileExists(atPath: trash.path(percentEncoded: false)) {
+                try? fileManager.moveItem(at: trash, to: destination)
+            }
+            throw error
+        }
+        try? fileManager.removeItem(at: trash)
     }
 
     private static func writeVersionPlistIfNeeded(

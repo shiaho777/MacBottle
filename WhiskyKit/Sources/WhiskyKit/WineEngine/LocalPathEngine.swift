@@ -66,12 +66,10 @@ public struct LocalPathEngine: WineEngine, Sendable, Equatable {
     public func install(from tarball: URL) throws {
         let parent = libraryRoot.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        if FileManager.default.fileExists(atPath: libraryRoot.path) {
-            try FileManager.default.removeItem(at: libraryRoot)
-        }
-        try FileManager.default.createDirectory(at: libraryRoot, withIntermediateDirectories: true)
+        // Tar.untar extracts into staging and only then swaps top-level
+        // items into place, so a bad archive leaves the previous engine
+        // intact.
         try Tar.untar(tarBall: tarball, toURL: libraryRoot)
-        try FileManager.default.removeItem(at: tarball)
     }
 
     public func uninstall() throws {

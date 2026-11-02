@@ -105,8 +105,49 @@ final class EngineDownloadServiceTests: XCTestCase {
         )
     }
 
-    func testBadHTTPStatusMapsToFeedUnavailable() async {
-        RangeStub.shared.forcedStatus = 404
+    func testPinnedDigestIsVerifiedAndRecorded() async throws {
+        let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
+        let service = makeService(trust: trust)
+        let destination = workDir.appending(path: "pinned.tar.xz")
+        let data = payload(0x3F)
+        RangeStub.shared.payload = data
+
+        let expectedFile = workDir.appending(path: "expected.bin")
+        try data.write(to: expectedFile)
+        let digest = ChunkedDownloader.sha256Hex(of: expectedFile)
+
+        try await service.download(
+            from: url,
+            to: destination,
+            expectedSHA256: digest
+        )
+        XCTAssertEqual(try Data(contentsOf: destination), data)
+        XCTAssertEqual(
+            trust.decision(url: url, sha256: ChunkedDownloader.sha256Hex(of: destination)),
+            .trusted
+        )
+    }
+
+    func testPinnedDigestMismatchFails() async {
+        let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
+        let service = makeService(trust: trust)
+        let destination = workDir.appending(path: "pinned-bad.tar.xz")
+        RangeStub.shared.payload = payload(0x4F)
+
+        do {
+            try await service.download(
+                from: url,
+                to: destination,
+                expectedSHA256: String(repeating: "0", count: 64)
+            )
+            XCTFail("expected a checksum mismatch")
+        } catch {
+            // Either the downloader or the service rejects it.
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    func testBadHTTPStatusMapsToFeedUnavailable() async {        RangeStub.shared.forcedStatus = 404
         let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
         let service = makeService(trust: trust)
         let destination = workDir.appending(path: "engine.tar.gz")

@@ -23,6 +23,7 @@ public enum WineEngineCatalog {
     public static let modernIdentifier = "crossover"
     public static let d3dMetalIdentifier = "crossover-d3dmetal"
     public static let arm64Identifier = "upstream-arm64"
+    public static let gcenxIdentifier = "gcenx-wine"
 
     public static var enginesRoot: URL {
         CrossOverEngine.applicationFolder.appending(path: "Engines")
@@ -34,6 +35,10 @@ public enum WineEngineCatalog {
 
     public static var arm64LibraryRoot: URL {
         enginesRoot.appending(path: arm64Identifier)
+    }
+
+    public static var gcenxLibraryRoot: URL {
+        enginesRoot.appending(path: gcenxIdentifier)
     }
 
     public static func modernEngine() -> CrossOverEngine {
@@ -59,8 +64,25 @@ public enum WineEngineCatalog {
         )
     }
 
+    /// Open-source x86_64 Wine build used as the offline fallback when
+    /// the archived Whisky feed is unavailable. It runs under Rosetta on
+    /// Apple Silicon and ships no D3DMetal/DXVK, so it is a baseline,
+    /// not a replacement for the CrossOver engine.
+    public static func gcenxEngine() -> LocalPathEngine {
+        LocalPathEngine(
+            identifier: gcenxIdentifier,
+            displayName: "Wine 11.21 (Gcenx, x86_64)",
+            libraryRoot: gcenxLibraryRoot
+        )
+    }
+
     public static func allEngines() -> [any WineEngine] {
-        var engines: [any WineEngine] = [modernEngine(), d3dMetalEngine(), arm64Engine()]
+        var engines: [any WineEngine] = [
+            modernEngine(),
+            d3dMetalEngine(),
+            gcenxEngine(),
+            arm64Engine()
+        ]
         engines.append(contentsOf: discoveredEngines())
         return engines
     }
@@ -78,7 +100,7 @@ public enum WineEngineCatalog {
         ) else {
             return []
         }
-        let reserved = Set([modernIdentifier, d3dMetalIdentifier, arm64Identifier])
+        let reserved = Set([modernIdentifier, d3dMetalIdentifier, arm64Identifier, gcenxIdentifier])
         return contents
             .filter { url in
                 let name = url.lastPathComponent

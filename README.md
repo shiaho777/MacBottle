@@ -194,8 +194,10 @@ MacBottle does not ship game content. You obtain games through legitimate channe
 > **Engine availability (2026-11):** the archived upstream feed
 > (`data.getwhisky.app`) now returns 404. Until self-owned engine
 > distribution ships, use **Setup → Import Wine engine**, reuse an
-> existing Whisky/CrossOver install from the same screen, or build a
-> native ARM64 engine with [`scripts/build-wine-arm64.sh`](scripts/build-wine-arm64.sh).
+> existing Whisky/CrossOver install from the same screen, download the
+> pinned open-source Wine 11.21 fallback (x86_64, no D3DMetal/DXVK), or
+> build a native ARM64 engine with
+> [`scripts/build-wine-arm64.sh`](scripts/build-wine-arm64.sh).
 
 ---
 

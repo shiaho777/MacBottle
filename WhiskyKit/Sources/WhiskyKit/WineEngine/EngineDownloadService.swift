@@ -80,6 +80,7 @@ public final class EngineDownloadService: @unchecked Sendable {
     public func download(
         from url: URL,
         to destination: URL,
+        expectedSHA256: String? = nil,
         acceptingChangedDigest: Bool = false,
         onProgress: (@Sendable (EngineDownloadProgress) -> Void)? = nil
     ) async throws -> URL {
@@ -99,7 +100,8 @@ public final class EngineDownloadService: @unchecked Sendable {
                     DownloadJob(
                         url: url,
                         destination: candidate,
-                        expectedSize: 0
+                        expectedSize: 0,
+                        expectedSha256: expectedSHA256
                     )
                 ],
                 onProgress: { progress in
@@ -122,16 +124,28 @@ public final class EngineDownloadService: @unchecked Sendable {
             throw EngineArchiveTrustError.invalidArchive
         }
 
-        switch trustStore.decision(url: url, sha256: digest) {
-        case .trusted:
-            break
-        case .firstUse:
-            trustStore.record(url: url, sha256: digest, note: "first use")
-        case .changed(let expected, let actual):
-            guard acceptingChangedDigest else {
-                throw EngineArchiveTrustError.digestChanged(expected: expected, actual: actual)
+        if let expectedSHA256 {
+            guard digest == expectedSHA256.lowercased() else {
+                throw EngineArchiveTrustError.digestChanged(
+                    expected: expectedSHA256,
+                    actual: digest
+                )
             }
-            trustStore.record(url: url, sha256: digest, note: "user accepted changed archive")
+            // A pinned catalog digest is authoritative; record it so a
+            // later unpinned download still has a baseline.
+            trustStore.record(url: url, sha256: digest, note: "pinned catalog")
+        } else {
+            switch trustStore.decision(url: url, sha256: digest) {
+            case .trusted:
+                break
+            case .firstUse:
+                trustStore.record(url: url, sha256: digest, note: "first use")
+            case .changed(let expected, let actual):
+                guard acceptingChangedDigest else {
+                    throw EngineArchiveTrustError.digestChanged(expected: expected, actual: actual)
+                }
+                trustStore.record(url: url, sha256: digest, note: "user accepted changed archive")
+            }
         }
 
         if validateArchive {
