@@ -244,6 +244,20 @@ final class WineEngineTests: XCTestCase {
             withIntermediateDirectories: true
         )
         XCTAssertTrue(engine.supportsDXVK)
+
+        try FileManager.default.createDirectory(
+            at: root.appending(path: "DXMT/x64"),
+            withIntermediateDirectories: true
+        )
+        try Data().write(to: root.appending(path: "DXMT/x64/d3d11.dll"))
+        XCTAssertTrue(engine.supportsDXMT)
+
+        try FileManager.default.createDirectory(
+            at: root.appending(path: "VKD3D/x64"),
+            withIntermediateDirectories: true
+        )
+        try Data().write(to: root.appending(path: "VKD3D/x64/d3d12.dll"))
+        XCTAssertTrue(engine.supportsVKD3D)
     }
 }
 

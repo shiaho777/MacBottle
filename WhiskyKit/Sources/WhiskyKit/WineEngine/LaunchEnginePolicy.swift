@@ -52,6 +52,7 @@ public enum LaunchEnginePolicy {
         public let engine: any WineEngine
     }
 
+    // swiftlint:disable:next function_body_length
     public static func decide(
         executable: URL,
         recipe: Recipe?,
@@ -124,6 +125,14 @@ public enum LaunchEnginePolicy {
                     recipeRenderer: recipe.renderer,
                     bottlePinned: false
                 )
+            case .dxmt, .vkd3d:
+                return Decision(
+                    engineID: WineEngineCatalog.modernIdentifier,
+                    reason: "recipe.renderer=\(recipe.renderer.rawValue)",
+                    importProfile: importProfile,
+                    recipeRenderer: recipe.renderer,
+                    bottlePinned: false
+                )
             case .wined3d:
                 return Decision(
                     engineID: WineEngineCatalog.modernIdentifier,
@@ -176,6 +185,14 @@ public enum LaunchEnginePolicy {
                 return Decision(
                     engineID: WineEngineCatalog.modernIdentifier,
                     reason: "pe.vulkan → modern+moltenvk path",
+                    importProfile: importProfile,
+                    recipeRenderer: nil,
+                    bottlePinned: false
+                )
+            case .dxmt, .vkd3d:
+                return Decision(
+                    engineID: WineEngineCatalog.modernIdentifier,
+                    reason: "pe.\(importProfile.preferredRenderer.rawValue) path",
                     importProfile: importProfile,
                     recipeRenderer: nil,
                     bottlePinned: false

@@ -102,6 +102,29 @@ public extension WineEngine {
             ))
     }
 
+    /// Optional DXMT payload, dropped into `Engines/<id>/DXMT`.
+    var dxmtFolder: URL {
+        libraryRoot.appending(path: "DXMT")
+    }
+
+    /// Optional vkd3d-proton payload, dropped into
+    /// `Engines/<id>/VKD3D`.
+    var vkd3dFolder: URL {
+        libraryRoot.appending(path: "VKD3D")
+    }
+
+    var supportsDXMT: Bool {
+        FileManager.default.fileExists(
+            atPath: dxmtFolder.appending(path: "x64/d3d11.dll").path(percentEncoded: false)
+        )
+    }
+
+    var supportsVKD3D: Bool {
+        FileManager.default.fileExists(
+            atPath: vkd3dFolder.appending(path: "x64/d3d12.dll").path(percentEncoded: false)
+        )
+    }
+
     /// Verify a downloaded engine archive against an expected digest
     /// before handing it to the (destructive) install path. Callers that
     /// have a manifest should always use this overload.

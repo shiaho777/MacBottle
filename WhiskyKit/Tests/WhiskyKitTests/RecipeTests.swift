@@ -187,8 +187,31 @@ final class RecipeTests: XCTestCase {
         }
     }
 
-    func testValidatorRejectsD3D12WithWineD3D() {
+    func testValidatorAcceptsDXMTForD3D11() {
         let recipe = Recipe(
+            id: "steam.3",
+            title: "DXMT",
+            dxVersion: .d3d11,
+            minMacOS: "14.0",
+            renderer: .dxmt,
+            compatibility: .gold
+        )
+        XCTAssertEqual(RecipeValidator.errors(for: recipe), [])
+    }
+
+    func testValidatorAcceptsVKD3DForD3D12() {
+        let recipe = Recipe(
+            id: "steam.4",
+            title: "VKD3D",
+            dxVersion: .d3d12,
+            minMacOS: "14.0",
+            renderer: .vkd3d,
+            compatibility: .gold
+        )
+        XCTAssertEqual(RecipeValidator.errors(for: recipe), [])
+    }
+
+    func testValidatorRejectsD3D12WithWineD3D() {        let recipe = Recipe(
             id: "steam.1",
             title: "Bad",
             dxVersion: .d3d12,
