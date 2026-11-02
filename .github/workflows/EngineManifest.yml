@@ -1,0 +1,52 @@
+# Refreshes the signed engine manifest.
+#
+# Prerequisites:
+# - Repository secret ENGINE_SIGNING_KEY = base64 Ed25519 private key whose
+#   public key is embedded in Whisky/Info.plist (MBEngineManifestPublicKey).
+# - The pinned release URL in scripts/update-engine-manifest.sh.
+#
+# Manual runs and a weekly schedule keep the digest and version current.
+# The job fails closed when the signing secret is absent; it never commits
+# an unsigned manifest.
+
+name: EngineManifest
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: engine-manifest
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download, hash, and sign
+        env:
+          MACBOTTLE_ENGINE_SIGNING_KEY: ${{ secrets.ENGINE_SIGNING_KEY }}
+        run: |
+          if [ -z "$MACBOTTLE_ENGINE_SIGNING_KEY" ]; then
+            echo "::error::ENGINE_SIGNING_KEY is not configured"
+            exit 1
+          fi
+          ./scripts/update-engine-manifest.sh
+
+      - name: Commit manifest
+        run: |
+          if git diff --quiet engine-manifest.json; then
+            echo "Manifest unchanged"
+            exit 0
+          fi
+          git config user.name "MacBottle Engine Bot"
+          git config user.email "engine-bot@users.noreply.github.com"
+          git add engine-manifest.json
+          git commit -m "chore(engine): refresh signed manifest [skip ci]"
+          git push

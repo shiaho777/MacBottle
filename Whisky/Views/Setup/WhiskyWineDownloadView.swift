@@ -88,15 +88,14 @@ struct WhiskyWineDownloadView: View {
     }
 
     private func downloadFallback() {
-        let release = EngineFallbackCatalog.gcenxWine
         downloadingFallback = true
         fallbackProgress = 0
         importError = nil
 
-        let destination = FileManager.default.temporaryDirectory
-            .appending(path: "MacBottle-\(release.engineID)-\(UUID().uuidString).tar.xz")
-
         Task {
+            let release = await EngineFallbackCatalog.preferredFallback()
+            let destination = FileManager.default.temporaryDirectory
+                .appending(path: "MacBottle-\(release.engineID)-\(UUID().uuidString).tar.xz")
             do {
                 try await EngineDownloadService.shared.download(
                     from: release.url,

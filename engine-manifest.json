@@ -1,0 +1,16 @@
+{
+  "generated_at" : "2026-11-02T20:46:00Z",
+  "releases" : [
+    {
+      "arch" : "x86_64",
+      "engine_id" : "gcenx-wine",
+      "min_macos" : "14.0",
+      "sha256" : "9909b486657e10ab66c7279371ae1f990345b596b3b1b3a0cf21f28af24fa0ce",
+      "size" : 225612636,
+      "url" : "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-devel-11.21-osx64.tar.xz",
+      "version" : "11.21"
+    }
+  ],
+  "schema" : 1,
+  "signature" : "s8E3xFxKtrqKh5YvFHtkwA9HMvYXbnb4fwzpC9wTke9mqLnCynmR5ynm8o92wesy+o/Qr0c9lBok3B4jrTg7Cw=="
+}

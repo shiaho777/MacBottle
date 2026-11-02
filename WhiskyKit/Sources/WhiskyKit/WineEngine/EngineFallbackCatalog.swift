@@ -70,4 +70,25 @@ public enum EngineFallbackCatalog {
     public static var all: [EngineFallbackRelease] {
         [gcenxWine]
     }
+
+    /// Prefer a signed remote manifest when it is reachable and valid;
+    /// fall back to the digest compiled into the app. A missing/invalid
+    /// signature does not silently upgrade to an unsigned release: the
+    /// loader throws and the pinned catalog wins.
+    public static func preferredFallback() async -> EngineFallbackRelease {
+        guard let manifest = try? await EngineManifestLoader().load(
+            publicKeyBase64: EngineManifestLoader.bundledPublicKey()
+        ), let release = manifest.release(engineID: gcenxWine.engineID, arch: "x86_64") else {
+            return gcenxWine
+        }
+        return EngineFallbackRelease(
+            engineID: release.engineID,
+            displayName: gcenxWine.displayName,
+            version: release.version,
+            url: release.url,
+            sha256: release.sha256,
+            size: release.size,
+            licenseNote: gcenxWine.licenseNote
+        )
+    }
 }
