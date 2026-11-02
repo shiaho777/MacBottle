@@ -73,6 +73,12 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         coordinator.markDXVKReady(bottle: bottle, engineID: engineID)
         XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
 
+        // Force-stopping a bottle clears warm state but not the DXVK
+        // DLLs that are still installed in the prefix.
+        coordinator.clearWarm(bottle: bottle)
+        XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: engineID))
+        XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
+
         // A different engine build must not inherit the previous
         // engine's warm or DXVK state.
         XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: "crossover-4.0.0"))

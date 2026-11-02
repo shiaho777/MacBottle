@@ -30,6 +30,7 @@ actor ImageCache {
     private let maxDiskBytes: Int64
     private var inFlight: [URL: Task<Data?, Never>] = [:]
     private let memoryLimit = 256
+    private var lastDiskPrune = Date.distantPast
 
     init(diskRoot: URL? = nil, maxDiskBytes: Int64 = 512 * 1024 * 1024) {
         if let diskRoot {
@@ -97,6 +98,10 @@ actor ImageCache {
     /// Keep the disk cache bounded. Without this, every distinct recipe
     /// icon ever viewed stayed on disk forever.
     func pruneDiskIfNeeded() {
+        let now = Date()
+        guard now.timeIntervalSince(lastDiskPrune) > 300 else { return }
+        lastDiskPrune = now
+
         let fileManager = FileManager.default
         guard let entries = try? fileManager.contentsOfDirectory(
             at: diskRoot,

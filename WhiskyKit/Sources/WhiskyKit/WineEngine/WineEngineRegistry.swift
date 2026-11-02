@@ -72,8 +72,19 @@ public final class WineEngineRegistry: @unchecked Sendable {
         lock.unlock()
         guard oldValue != engine.identifier else { return true }
         Logger.wineKit.info("WineEngineRegistry active engine: \(engine.identifier)")
-        NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
+        Self.postChangeNotification()
         return true
+    }
+
+    private static func postChangeNotification() {
+        let post = {
+            NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
+        }
+        if Thread.isMainThread {
+            post()
+        } else {
+            DispatchQueue.main.async(execute: post)
+        }
     }
 
     public var available: [any WineEngine] {
@@ -90,7 +101,7 @@ public final class WineEngineRegistry: @unchecked Sendable {
             UserDefaults.standard.set(engine.identifier, forKey: Self.selectionDefaultsKey)
         }
         Logger.wineKit.info("WineEngineRegistry active engine: \(engine.identifier)")
-        NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
+        Self.postChangeNotification()
     }
 
     @discardableResult

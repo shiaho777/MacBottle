@@ -161,7 +161,9 @@ public final class ProgramLaunchCoordinator {
     }
 
     public func clearWarm(bottle: Bottle) {
-        invalidate(bottle: bottle)
+        let prefix = Self.bottleKey(bottle) + "|"
+        warmBottleKeys = warmBottleKeys.filter { !$0.hasPrefix(prefix) }
+        warmingBottleKeys = warmingBottleKeys.filter { !$0.hasPrefix(prefix) }
     }
 
     public func clearAllWarm() {
