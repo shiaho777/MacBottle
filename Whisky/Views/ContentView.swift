@@ -277,8 +277,19 @@ struct ContentView: View {
             .sorted()
     }
 
+    private func confirmEngineSwitch() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "settings.engine.switch.confirm.title")
+        alert.informativeText = String(localized: "settings.engine.switch.confirm.message")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: String(localized: "settings.engine.switch.confirm.action"))
+        alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
     private func switchEngine(to identifier: String) {
         guard !engineBusy, identifier != currentEngineID else { return }
+        guard confirmEngineSwitch() else { return }
         engineBusy = true
         Task.detached(priority: .userInitiated) {
             do {
