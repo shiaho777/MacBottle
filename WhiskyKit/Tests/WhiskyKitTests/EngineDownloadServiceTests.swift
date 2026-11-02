@@ -124,7 +124,8 @@ final class EngineDownloadServiceTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
     }
 
-    func testTrustStoreForgetRestoresFirstUse() async throws {        let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
+    func testTrustStoreForgetRestoresFirstUse() async throws {
+        let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
         trust.record(url: url, sha256: "abc")
         XCTAssertEqual(trust.decision(url: url, sha256: "abc"), .trusted)
         trust.forget(url: url)
