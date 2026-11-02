@@ -435,6 +435,22 @@ final class GameInstaller {
         statusDetail = String(localized: "game.install.installingCJKFonts")
         await installCJKFontSubstitutions(bottle: bottle)
 
+        do {
+            _ = try await RecipeProvisioner.shared.provisionIfNeeded(
+                recipe: recipe,
+                bottle: bottle
+            ) { detail in
+                Task { @MainActor in
+                    self.statusDetail = detail
+                }
+            }
+        } catch {
+            Logger.wineKit.error(
+                "GameInstaller: recipe provisioning failed for \(self.recipe.id): \(error.localizedDescription)"
+            )
+            statusDetail = error.localizedDescription
+        }
+
         Logger.wineKit.info("GameInstaller: applied recipe \(self.recipe.id) to bottle \(bottle.url.lastPathComponent)")
     }
 

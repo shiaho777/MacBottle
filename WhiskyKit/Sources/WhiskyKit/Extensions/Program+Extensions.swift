@@ -57,6 +57,15 @@ extension Program {
 
             Task.detached(priority: .userInitiated) {
                 do {
+                    if let recipe {
+                        // Side-effectful recipe fields (winetricks,
+                        // registry) are applied once per bottle-recipe
+                        // pairing, not on every launch.
+                        try await RecipeProvisioner.shared.provisionIfNeeded(
+                            recipe: recipe,
+                            bottle: bottle
+                        )
+                    }
                     switch launchMode {
                     case .file:
                         try await Wine.runProgram(

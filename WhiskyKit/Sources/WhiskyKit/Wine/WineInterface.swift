@@ -22,7 +22,8 @@ extension Wine {
     @discardableResult
     /// Run a `wine` command with the given arguments and return the output result
     public static func runWine(
-        _ args: [String], bottle: Bottle?, environment: [String: String] = [:]
+        _ args: [String], bottle: Bottle?, environment: [String: String] = [:],
+        engine: (any WineEngine)? = nil
     ) async throws -> String {
         var result: [String] = []
         let fileHandle = try makeFileHandle()
@@ -31,12 +32,21 @@ extension Wine {
 
         if let bottle = bottle {
             fileHandle.writeInfo(for: bottle)
-            environment = constructWineEnvironment(for: bottle, environment: environment)
+            environment = constructWineEnvironment(
+                for: bottle,
+                environment: environment,
+                engine: engine
+            )
         }
 
         let stream: AsyncStream<ProcessOutput>
         do {
-            stream = try runWineProcess(args: args, environment: environment, fileHandle: fileHandle)
+            stream = try runWineProcess(
+                args: args,
+                environment: environment,
+                fileHandle: fileHandle,
+                engine: engine
+            )
         } catch {
             try? fileHandle.close()
             throw error
