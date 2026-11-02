@@ -89,6 +89,19 @@ public extension WineEngine {
         isInstalled() ? installedVersion() : nil
     }
 
+    /// Whether this engine actually packages DXVK. A locally imported
+    /// upstream build often does not, and installing
+    /// `WINEDLLOVERRIDES` for DLLs that are not there breaks launches.
+    var supportsDXVK: Bool {
+        let fileManager = FileManager.default
+        return fileManager.fileExists(atPath: dxvkFolder.path(percentEncoded: false))
+            && (fileManager.fileExists(
+                atPath: dxvkFolder.appending(path: "x64").path(percentEncoded: false)
+            ) || fileManager.fileExists(
+                atPath: dxvkFolder.appending(path: "x32").path(percentEncoded: false)
+            ))
+    }
+
     /// Verify a downloaded engine archive against an expected digest
     /// before handing it to the (destructive) install path. Callers that
     /// have a manifest should always use this overload.

@@ -200,11 +200,12 @@ extension Wine {
         result["WINEPREFIX"] = bottle.url.path
         result["WINEDEBUG"] = "-all"
         result["GST_DEBUG"] = "0"
-        bottle.settings.environmentVariables(wineEnv: &result)
+        let dxvkAvailable = engine?.supportsDXVK ?? true
+        bottle.settings.environmentVariables(wineEnv: &result, dxvkAvailable: dxvkAvailable)
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: executableURL)
         result = RuntimeLaunchOptimizer.environment(
             profile: profile,
-            bottleDXVKEnabled: bottle.settings.dxvk,
+            bottleDXVKEnabled: bottle.settings.dxvk && dxvkAvailable,
             base: result
         )
         guard !environment.isEmpty else { return result }

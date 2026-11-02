@@ -227,6 +227,24 @@ final class WineEngineTests: XCTestCase {
             fake.libraryRoot.path
         )
     }
+
+    func testSupportsDXVKRequiresPackagedDLLs() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "dxvk-support-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let engine = LocalPathEngine(
+            identifier: "test",
+            displayName: "Test",
+            libraryRoot: root
+        )
+        XCTAssertFalse(engine.supportsDXVK)
+
+        try FileManager.default.createDirectory(
+            at: root.appending(path: "DXVK/x64"),
+            withIntermediateDirectories: true
+        )
+        XCTAssertTrue(engine.supportsDXVK)
+    }
 }
 
 // MARK: - Test helper

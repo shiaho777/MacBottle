@@ -68,4 +68,20 @@ final class BottleSettingsTests: XCTestCase {
         XCTAssertEqual(backups.count, 1)
         XCTAssertEqual(try Data(contentsOf: backups[0]), garbage)
     }
+
+    func testDXVKEnvironmentIsSuppressedWhenEngineLacksDXVK() {
+        var settings = BottleSettings()
+        settings.dxvk = true
+        settings.dxvkAsync = true
+
+        var unsupported: [String: String] = [:]
+        settings.environmentVariables(wineEnv: &unsupported, dxvkAvailable: false)
+        XCTAssertNil(unsupported["WINEDLLOVERRIDES"])
+        XCTAssertNil(unsupported["DXVK_ASYNC"])
+
+        var supported: [String: String] = [:]
+        settings.environmentVariables(wineEnv: &supported, dxvkAvailable: true)
+        XCTAssertEqual(supported["WINEDLLOVERRIDES"], "dxgi,d3d9,d3d10core,d3d11=n,b")
+        XCTAssertEqual(supported["DXVK_ASYNC"], "1")
+    }
 }
