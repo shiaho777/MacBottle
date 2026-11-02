@@ -145,6 +145,63 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         coordinator.dismiss()
     }
 
+    func testCompleteLaunchDoesNotOverwriteSilentFailure() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottle = Bottle(
+            bottleUrl: URL(fileURLWithPath: "/tmp/macbottle-complete-\(UUID().uuidString)"),
+            inFlight: true
+        )
+        let programURL = URL(fileURLWithPath: "/tmp/game.exe")
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        coordinator.finishLaunchFailure(
+            programURL: programURL,
+            programName: "game.exe",
+            message: "silent exit"
+        )
+        coordinator.completeLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            exitCode: 0
+        )
+        XCTAssertEqual(
+            coordinator.phase,
+            .failed(programName: "game.exe", message: "silent exit")
+        )
+        coordinator.dismiss()
+    }
+
+    func testCompleteLaunchReportsNonZeroExit() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottle = Bottle(
+            bottleUrl: URL(fileURLWithPath: "/tmp/macbottle-exit-\(UUID().uuidString)"),
+            inFlight: true
+        )
+        let programURL = URL(fileURLWithPath: "/tmp/game.exe")
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        coordinator.completeLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            exitCode: 7
+        )
+        if case .failed(let name, let message) = coordinator.phase {
+            XCTAssertEqual(name, "game.exe")
+            XCTAssertTrue(message.contains("7"))
+        } else {
+            XCTFail("expected failed phase")
+        }
+        coordinator.dismiss()
+    }
+
     func testSilentExitMessageFlagsQuickEmptyExit() {
         let message = ProgramLaunchCoordinator.silentExitFailureMessage(
             secondsToExit: 4,

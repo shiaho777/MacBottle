@@ -12753,6 +12753,13 @@
         }
       }
     },
+    "launch.exitCode %lld": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The program exited with code %lld." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "程序退出，代码 %lld。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "程式結束，代碼 %lld。" } }
+      }
+    },
     "launch.alreadyLaunching %@": {
       "localizations": {
         "en": {
