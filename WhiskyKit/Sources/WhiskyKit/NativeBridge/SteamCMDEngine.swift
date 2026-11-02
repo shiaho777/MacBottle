@@ -103,14 +103,9 @@ public final class SteamCMDEngine: @unchecked Sendable {
 
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let tarball = root.appending(path: "steamcmd_osx.tar.gz")
-        let (temp, response) = try await URLSession.shared.download(from: Self.downloadURL)
-        if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            throw SteamCMDError.bootstrapFailed("HTTP \(http.statusCode)")
-        }
-        if FileManager.default.fileExists(atPath: tarball.path) {
-            try FileManager.default.removeItem(at: tarball)
-        }
-        try FileManager.default.moveItem(at: temp, to: tarball)
+        try await ChunkedDownloader().download(jobs: [
+            DownloadJob(url: Self.downloadURL, destination: tarball, expectedSize: 0)
+        ])
 
         onProgress?(
             SteamCMDProgress(
@@ -121,15 +116,12 @@ public final class SteamCMDEngine: @unchecked Sendable {
             )
         )
 
-        let extract = try await ProcessRunner.run(
-            path: "/usr/bin/tar",
-            arguments: ["-xzf", tarball.path, "-C", root.path]
-        )
-        if !extract.isSuccess {
-            throw SteamCMDError.bootstrapFailed(
-                "tar exit \(extract.exitCode): \(extract.standardErrorString)"
-            )
+        do {
+            try Tar.untar(tarBall: tarball, toURL: root)
+        } catch {
+            throw SteamCMDError.bootstrapFailed("tar: \(error.localizedDescription)")
         }
+        try? FileManager.default.removeItem(at: tarball)
 
         guard FileManager.default.fileExists(atPath: binary.path) else {
             throw SteamCMDError.binaryMissing

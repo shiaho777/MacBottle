@@ -578,6 +578,20 @@ final class GameInstaller {
     }
 }
 
+private enum SteamSetupDownloadError: Error, LocalizedError {
+    case invalidResponse(Int)
+    case notAnExecutable
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse(let code):
+            return "SteamSetup download failed with HTTP \(code)."
+        case .notAnExecutable:
+            return "The downloaded SteamSetup is not a Windows executable."
+        }
+    }
+}
+
 private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     var onProgress: ((Int64, Int64) -> Void)?
     private var continuation: CheckedContinuation<URL, Error>?
@@ -611,6 +625,30 @@ private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, 
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
+        if let http = downloadTask.response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) {
+            continuation?.resume(throwing: SteamSetupDownloadError.invalidResponse(http.statusCode))
+            continuation = nil
+            return
+        }
+
+        let attributes = try? FileManager.default.attributesOfItem(atPath: location.path)
+        let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+        guard size > 512 * 1024 else {
+            continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
+            continuation = nil
+            return
+        }
+        if let handle = try? FileHandle(forReadingFrom: location) {
+            let magic = try? handle.read(upToCount: 2)
+            try? handle.close()
+            guard magic == Data([0x4D, 0x5A]) else {
+                continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
+                continuation = nil
+                return
+            }
+        }
+
         let dest = FileManager.default.temporaryDirectory
             .appending(path: "SteamSetup-\(UUID().uuidString).exe")
         do {
