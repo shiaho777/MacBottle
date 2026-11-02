@@ -20010,6 +20010,27 @@
         }
       }
     },
+    "settings.engine.switch.confirm.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Switch Wine engine?" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换 Wine 引擎？" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換 Wine 引擎？" } }
+      }
+    },
+    "settings.engine.switch.confirm.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All running games will be closed before the switch." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换前会关闭所有正在运行的游戏。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換前會關閉所有正在執行的遊戲。" } }
+      }
+    },
+    "settings.engine.switch.confirm.action": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Switch and close games" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换并关闭游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換並關閉遊戲" } }
+      }
+    },
     "settings.engine.switched %@": {
       "localizations": {
         "en": {
