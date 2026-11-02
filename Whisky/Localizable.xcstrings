@@ -20047,6 +20047,13 @@
         }
       }
     },
+    "settings.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Defaults for new bottles, the active Wine engine, and updates." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "新瓶子的默认值、当前 Wine 引擎与更新设置。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新瓶子的預設值、目前 Wine 引擎與更新設定。" } }
+      }
+    },
     "settings.general": {
       "localizations": {
         "ar": {

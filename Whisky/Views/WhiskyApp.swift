@@ -44,7 +44,7 @@ struct WhiskyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(showSetup: $showSetup)
-                .frame(minWidth: ViewWidth.large, minHeight: 316)
+                .frame(minWidth: 860, minHeight: 560)
                 .environment(BottleVM.shared)
                 .onAppear {
                     NSWindow.allowsAutomaticWindowTabbing = false
