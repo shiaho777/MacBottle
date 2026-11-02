@@ -179,7 +179,7 @@ struct WhiskyWineDownloadView: View {
                 defer { try? FileManager.default.removeItem(at: destination) }
 
                 let engine = WineEngineCatalog.gcenxEngine()
-                try await EngineImportService.importTarball(
+                try await EngineImportService.importGcenxTarball(
                     at: destination,
                     engine: engine,
                     fallbackVersion: SemanticVersion(11, 21, 0)

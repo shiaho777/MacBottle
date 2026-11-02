@@ -111,6 +111,43 @@ final class EngineImportServiceTests: XCTestCase {
         XCTAssertTrue(WineArchitecture.available(in: destination).contains(.aarch64))
     }
 
+    func testImportGcenxAppBundleLayout() async throws {
+        let appRoot = sourceRoot.appending(path: "Wine Devel.app")
+        let wineRoot = appRoot.appending(path: "Contents/Resources/wine")
+        let bin = wineRoot.appending(path: "bin")
+        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+        let binary = bin.appending(path: "wine")
+        try Data("#!/bin/sh\necho wine-11.21\n".utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        try FileManager.default.createDirectory(
+            at: wineRoot.appending(path: "lib/wine/x86_64-unix"),
+            withIntermediateDirectories: true
+        )
+
+        let archive = workDir.appending(path: "gcenx.tar.gz")
+        try Tar.tar(folder: appRoot, toURL: archive)
+
+        let engineRoot = workDir.appending(path: "Engines/gcenx-wine")
+        let engine = LocalPathEngine(
+            identifier: "gcenx-wine",
+            displayName: "Gcenx",
+            libraryRoot: engineRoot
+        )
+        try await EngineImportService.importGcenxTarball(
+            at: archive,
+            engine: engine,
+            fallbackVersion: SemanticVersion(0, 0, 0)
+        )
+
+        XCTAssertTrue(engine.isInstalled())
+        XCTAssertEqual(engine.installedVersion(), SemanticVersion(11, 21, 0))
+        XCTAssertTrue(
+            FileManager.default.fileExists(
+                atPath: engineRoot.appending(path: "Wine/bin/wine").path
+            )
+        )
+    }
+
     func testImportFolderPreservesSourcePlist() async throws {
         try makeWineTree(in: sourceRoot, architectures: [.aarch64], withVersionPlist: true)
         try await EngineImportService.importFolder(
