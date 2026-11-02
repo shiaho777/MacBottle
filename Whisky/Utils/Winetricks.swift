@@ -48,10 +48,23 @@ class Winetricks {
     static func runCommand(command: String, bottle: Bottle) async {
         guard let resourcesURL = Bundle.main.url(forResource: "cabextract", withExtension: nil)?
             .deletingLastPathComponent() else { return }
-        let pathPrefix = "\(WhiskyWineInstaller.binFolder.path):\(resourcesURL.path(percentEncoded: false)):$PATH"
-        let winetricksCmd =
-            "PATH=\"\(pathPrefix)\" WINE=wine64 WINEPREFIX=\"\(bottle.url.path)\" " +
-            "\"\(winetricksURL.path(percentEncoded: false))\" \(command.posixQuoted)"
+        let engineBin = WhiskyWineInstaller.binFolder
+        let wine64 = engineBin.appending(path: "wine64")
+        let wine = FileManager.default.isExecutableFile(atPath: wine64.path(percentEncoded: false))
+            ? wine64
+            : engineBin.appending(path: "wine")
+        let inheritedPath = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin"
+        let pathValue = [
+            engineBin.path(percentEncoded: false),
+            resourcesURL.path(percentEncoded: false)
+        ] + inheritedPath.split(separator: ":").map(String.init)
+        let winetricksCmd = [
+            "PATH=\(pathValue.joined(separator: ":").posixQuoted)",
+            "WINE=\(wine.path(percentEncoded: false).posixQuoted)",
+            "WINEPREFIX=\(bottle.url.path(percentEncoded: false).posixQuoted)",
+            winetricksURL.path(percentEncoded: false).posixQuoted,
+            command.posixQuoted
+        ].joined(separator: " ")
 
         do {
             try await TerminalLauncher.run(command: winetricksCmd)

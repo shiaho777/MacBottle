@@ -114,7 +114,7 @@ actor ImageCache {
             }
             guard NSImage(data: data) != nil else {
                 Logger.wineKit.debug(
-                    "ImageCache: discarding non-image response from \(url.host, privacy: .public)"
+                    "ImageCache: discarding non-image response from \(url.host ?? "unknown", privacy: .public)"
                 )
                 return nil
             }

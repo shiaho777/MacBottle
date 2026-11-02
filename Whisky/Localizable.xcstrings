@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "alert.cli.installed.message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The whisky command was linked into %@. Add that directory to PATH if your shell cannot find it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "whisky 命令已链接到 %@。如果终端找不到该命令，请把该目录加入 PATH。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "whisky 指令已連結到 %@。如果終端機找不到該指令，請將該目錄加入 PATH。"
+          }
+        }
+      }
+    },
+    "alert.cli.installed.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command line tool installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令行工具已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令列工具已安裝"
+          }
+        }
+      }
+    },
     "alert.createBottle.failed": {
       "localizations": {
         "en": {

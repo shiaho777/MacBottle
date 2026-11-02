@@ -106,8 +106,10 @@ public struct BottleData: Codable {
             self.storeURL = targetURL
             self.isDecoding = false
         } catch {
+            let path = targetURL.path(percentEncoded: false)
+            let message = error.localizedDescription
             Logger.wineKit.error(
-                "BottleData: failed to decode store at \(targetURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                "BottleData: failed to decode store at \(path, privacy: .public): \(message, privacy: .public)"
             )
             recover(reason: "decode-failed")
         }
@@ -165,8 +167,10 @@ public struct BottleData: Codable {
             try data.write(to: storeURL, options: .atomic)
             return true
         } catch {
+            let path = storeURL.path(percentEncoded: false)
+            let message = error.localizedDescription
             Logger.wineKit.error(
-                "BottleData: failed to save store at \(self.storeURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)"
+                "BottleData: failed to save store at \(path, privacy: .public): \(message, privacy: .public)"
             )
             return false
         }

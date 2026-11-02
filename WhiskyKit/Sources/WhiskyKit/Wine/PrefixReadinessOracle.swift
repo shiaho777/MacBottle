@@ -199,6 +199,7 @@ public enum PrefixReadinessOracle {
             self.baselines = baselines
         }
 
+        // swiftlint:disable:next nesting
         enum CodingKeys: String, CodingKey {
             case schema
             case baselines

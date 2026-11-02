@@ -20,6 +20,7 @@ import Foundation
 import Darwin
 import os.log
 
+// swiftlint:disable:next type_body_length
 public class Wine {
     /// URL to the installed `DXVK` folder
     static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")

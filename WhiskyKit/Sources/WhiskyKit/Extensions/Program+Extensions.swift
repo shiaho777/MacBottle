@@ -31,10 +31,10 @@ extension Program {
     }
 
     func runInWine() {
-        let arguments = settings.arguments.split { $0.isWhitespace }.map(String.init)
+        let arguments = ShellArgumentParser.parse(settings.arguments)
         let environment = generateEnvironment()
         let launchMode = settings.launchMode
-        let launchCommandArgs = settings.launchCommand.split { $0.isWhitespace }.map(String.init)
+        let launchCommandArgs = ShellArgumentParser.parse(settings.launchCommand)
         let recipe: Recipe?
         if let recipeID = settings.recipeID {
             recipe = RecipeStore.shared.recipe(id: recipeID)

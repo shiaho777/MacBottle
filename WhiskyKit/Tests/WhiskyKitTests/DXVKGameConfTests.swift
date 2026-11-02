@@ -87,9 +87,9 @@ final class DXVKGameConfTests: XCTestCase {
             at: other.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        let a = DXVKGameConf.configurationURL(for: exeURL, root: confRoot)
-        let b = DXVKGameConf.configurationURL(for: other, root: confRoot)
-        XCTAssertNotEqual(a, b)
+        let firstConfig = DXVKGameConf.configurationURL(for: exeURL, root: confRoot)
+        let secondConfig = DXVKGameConf.configurationURL(for: other, root: confRoot)
+        XCTAssertNotEqual(firstConfig, secondConfig)
     }
 
     func testUpsertReplacesCommentedDefault() {
