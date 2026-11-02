@@ -46,6 +46,7 @@ public enum FrameThroughputObserver {
         public var sessionSeconds: TimeInterval
         public var engaged: Bool
         public var posture: GameBoostProfile.Posture
+        public var frameStats: FrameTimeParser.Stats?
     }
 
     /// Minimum session length before a run is considered evidence.
@@ -57,7 +58,8 @@ public enum FrameThroughputObserver {
         programKey: String,
         sessionSeconds: TimeInterval,
         exitCode: Int32?,
-        posture: GameBoostProfile.Posture
+        posture: GameBoostProfile.Posture,
+        frameTimeSamples: [Double] = []
     ) -> Verdict? {
         let healthy = exitCode == nil || exitCode == 0
         let engaged = healthy && sessionSeconds >= minimumEvidenceSeconds
@@ -66,12 +68,19 @@ public enum FrameThroughputObserver {
             programKey: programKey,
             sessionSeconds: sessionSeconds,
             engaged: engaged,
-            posture: posture
+            posture: posture,
+            frameStats: FrameTimeParser.stats(frameTimeSamples)
         )
         guard engaged else { return nil }
-        Logger.wineKit.info(
-            "ThroughputObserver: engaged session \(Int(sessionSeconds))s under \(posture.rawValue)"
-        )
+        if let stats = verdict.frameStats {
+            Logger.wineKit.info(
+                // swiftlint:disable:next line_length
+                "ThroughputObserver: engaged session \(Int(sessionSeconds))s under \(posture.rawValue), \(String(format: "%.1f", stats.averageFPS)) fps avg, \(String(format: "%.1f", stats.onePercentLowFPS)) fps 1% low"
+            )
+        } else {
+            let detail = "engaged session \(Int(sessionSeconds))s under \(posture.rawValue), no frame samples"
+            Logger.wineKit.info("ThroughputObserver: \(detail, privacy: .public)")
+        }
         return verdict
     }
 

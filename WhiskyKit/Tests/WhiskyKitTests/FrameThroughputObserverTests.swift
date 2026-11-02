@@ -59,7 +59,8 @@ final class FrameThroughputObserverTests: XCTestCase {
             programKey: "game",
             sessionSeconds: 3000,
             engaged: true,
-            posture: .efficient
+            posture: .efficient,
+            frameStats: nil
         )
         let proposal = FrameThroughputObserver.proposePosture(current: userChoice, verdict: verdict)
         XCTAssertEqual(proposal, userChoice)

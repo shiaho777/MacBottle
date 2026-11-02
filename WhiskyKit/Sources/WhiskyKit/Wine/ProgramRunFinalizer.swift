@@ -60,12 +60,18 @@ enum ProgramRunFinalizer {
         let programKey = ProgramRunLogStore.programKey(for: programURL)
         let posture = GameBoostRegistry.profile(for: programKey)?.posture ?? .balanced
         let sessionSeconds = Date().timeIntervalSince(capture.record.startedAt)
+        let text = ProgramRunLogStore.readTailText(
+            url: capture.fileURL,
+            maxBytes: 2 * 1024 * 1024
+        ) ?? ""
+        let frameSamples = FrameTimeParser.parse(text)
         _ = FrameThroughputObserver.record(
             runID: runID,
             programKey: programKey,
             sessionSeconds: sessionSeconds,
             exitCode: exitCode,
-            posture: posture
+            posture: posture,
+            frameTimeSamples: frameSamples
         )
     }
 }
