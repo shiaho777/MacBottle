@@ -105,6 +105,25 @@ public final class InstalledGameRegistry: @unchecked Sendable {
         }
     }
 
+    /// Drop records whose bottle directory no longer exists. Callers run
+    /// this when the Library refreshes so a deleted bottle does not keep
+    /// showing its game as installed forever.
+    @discardableResult
+    public func reconcileExistingBottles() -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return (try? withFileLock { () -> Int in
+            let games = loadLocked()
+            let live = games.filter {
+                FileManager.default.fileExists(
+                    atPath: $0.bottleURL.path(percentEncoded: false)
+                )
+            }
+            guard live.count != games.count else { return 0 }
+            try saveLocked(live)
+            return games.count - live.count
+        }) ?? 0
+    }
+
     /// Cross-process exclusion. Two app instances (or the CLI and the
     /// app) previously read-modify-wrote the same JSON with only an
     /// in-process lock, silently dropping one side's update.

@@ -260,7 +260,15 @@ final class GameInstaller {
             .appending(path: "Steam")
             .appending(path: "Steam.exe")
         let steamExeAlt = steamExe.deletingLastPathComponent().appending(path: "steam.exe")
-        let launchURL = FileManager.default.fileExists(atPath: steamExe.path) ? steamExe : steamExeAlt
+        let steamExe64 = bottle.url
+            .appending(path: "drive_c")
+            .appending(path: "Program Files")
+            .appending(path: "Steam")
+            .appending(path: "Steam.exe")
+        let steamExe64Alt = steamExe64.deletingLastPathComponent().appending(path: "steam.exe")
+        let launchURL = [steamExe, steamExeAlt, steamExe64, steamExe64Alt]
+            .first { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
+            ?? steamExeAlt
 
         var launchArgs: [String] = []
         if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {

@@ -96,6 +96,7 @@ struct RecipeLibraryView: View {
     private func reload() {
         let all = RecipeStore.shared.loadAll()
         recipes = all.values.sorted { $0.title.lowercased() < $1.title.lowercased() }
+        _ = InstalledGameRegistry.shared.reconcileExistingBottles()
         installedIDs = Set(InstalledGameRegistry.shared.all().map(\.recipeID))
     }
 }
@@ -126,7 +127,7 @@ private struct RecipeCard: View {
                         .background(.quaternary, in: Capsule())
                         .foregroundStyle(.secondary)
                     if installed {
-                        Text("Installed")
+                        Text("library.installed")
                             .font(.caption2.weight(.medium))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)

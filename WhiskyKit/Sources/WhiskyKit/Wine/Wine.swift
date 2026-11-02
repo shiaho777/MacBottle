@@ -742,12 +742,27 @@ extension Wine {
         if !FileManager.default.fileExists(atPath: Self.logsFolder.path) {
             try FileManager.default.createDirectory(at: Self.logsFolder, withIntermediateDirectories: true)
         }
-        purgeOldLogs()
+        purgeOldLogsIfNeeded()
 
         let dateString = Date.now.ISO8601Format()
         let fileURL = Self.logsFolder.appending(path: dateString).appendingPathExtension("log")
         try "".write(to: fileURL, atomically: true, encoding: .utf8)
         return try FileHandle(forWritingTo: fileURL)
+    }
+
+    /// The sweep used to run on every single wine invocation, which is an
+    /// O(files) directory walk on the launch hot path. Once an hour is
+    /// plenty for a 7-day retention policy.
+    private static func purgeOldLogsIfNeeded() {
+        let marker = Self.logsFolder.appending(path: ".last-purge")
+        let fileManager = FileManager.default
+        if let attrs = try? fileManager.attributesOfItem(atPath: marker.path(percentEncoded: false)),
+           let modified = attrs[.modificationDate] as? Date,
+           Date().timeIntervalSince(modified) < 3600 {
+            return
+        }
+        purgeOldLogs()
+        try? Data().write(to: marker, options: .atomic)
     }
 
     /// Every wine invocation creates a timestamped log; without a sweep
