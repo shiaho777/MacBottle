@@ -13014,6 +13014,20 @@
         }
       }
     },
+    "library.welcome.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Play Windows games on your Mac" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在 Mac 上运行 Windows 游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "在 Mac 上執行 Windows 遊戲" } }
+      }
+    },
+    "library.welcome.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pick a recipe below, or install a .exe you already own. Each game gets a bottle: a self-contained Windows environment." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从下方选择配方，或安装你已有的 .exe。每个游戏都会获得一个独立的 Windows 环境（瓶子）。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從下方選擇配方，或安裝你已有的 .exe。每個遊戲都會獲得一個獨立的 Windows 環境（瓶子）。" } }
+      }
+    },
     "library.empty.message": {
       "localizations": {
         "en": {

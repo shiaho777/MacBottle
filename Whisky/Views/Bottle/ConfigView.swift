@@ -251,7 +251,6 @@ struct ConfigView: View {
         .animation(.whiskyDefault, value: wineSectionExpanded)
         .animation(.whiskyDefault, value: dxvkSectionExpanded)
         .animation(.whiskyDefault, value: metalSectionExpanded)
-        .navigationTitle("tab.config")
         .onAppear {
             winVersionLoadingState = .success
 

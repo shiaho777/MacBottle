@@ -368,12 +368,17 @@ struct BottleView: View {
                 }
                 do {
                     let launchURL = try prepareLaunchURL(selected)
-                    try await Wine.runProgram(
-                        at: launchURL,
-                        bottle: bottle,
-                        wait: false,
-                        applyDXVK: false
-                    )
+                    if launchURL.pathExtension.lowercased() == "bat"
+                        || launchURL.pathExtension.lowercased() == "cmd" {
+                        try await Wine.runBatchFile(url: launchURL, bottle: bottle)
+                    } else {
+                        try await Wine.runProgram(
+                            at: launchURL,
+                            bottle: bottle,
+                            wait: false,
+                            applyDXVK: false
+                        )
+                    }
                 } catch {
                     await MainActor.run {
                         let alert = NSAlert()
