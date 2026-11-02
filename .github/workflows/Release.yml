@@ -1,0 +1,147 @@
+# Signed, notarized Release pipeline.
+#
+# Required repository secrets for a fully signed release:
+# - DEVELOPER_ID_CERTIFICATE: base64 .p12 Developer ID Application cert
+# - DEVELOPER_ID_PASSWORD:    password for the .p12
+# - APPLE_TEAM_ID:            Developer Team ID
+# - APPLE_ID:                 Apple ID for notarytool
+# - APPLE_APP_PASSWORD:       app-specific password for notarytool
+#
+# Without the certificate the job still produces an unsigned zip so forks
+# can build release artifacts; it never claims the unsigned build is
+# notarized.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app || true
+
+      - name: Detect signing material
+        id: signing
+        env:
+          CERT: ${{ secrets.DEVELOPER_ID_CERTIFICATE }}
+        run: |
+          if [ -n "$CERT" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect notarization material
+        id: notary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ -n "$APPLE_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Import Developer ID certificate
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          CERT_P12: ${{ secrets.DEVELOPER_ID_CERTIFICATE }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_PASSWORD }}
+        run: |
+          echo "$CERT_P12" | base64 --decode > /tmp/macbottle-cert.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import /tmp/macbottle-cert.p12 -k build.keychain \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k actions build.keychain
+          rm -f /tmp/macbottle-cert.p12
+
+      - name: Build signed
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          xcodebuild \
+            -project Whisky.xcodeproj \
+            -scheme Whisky \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'platform=macOS' \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
+            build
+
+      - name: Build unsigned
+        if: steps.signing.outputs.enabled != 'true'
+        run: |
+          xcodebuild \
+            -project Whisky.xcodeproj \
+            -scheme Whisky \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'platform=macOS' \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent \
+            build/Build/Products/Release/Whisky.app \
+            MacBottle.zip
+          shasum -a 256 MacBottle.zip > MacBottle.zip.sha256
+
+      - name: Notarize and staple
+        if: steps.signing.outputs.enabled == 'true' && steps.notary.outputs.enabled == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcrun notarytool submit MacBottle.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait
+          xcrun stapler staple build/Build/Products/Release/Whisky.app
+          rm -f MacBottle.zip
+          ditto -c -k --keepParent \
+            build/Build/Products/Release/Whisky.app \
+            MacBottle.zip
+          shasum -a 256 MacBottle.zip > MacBottle.zip.sha256
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MacBottle.zip
+            MacBottle.zip.sha256
+
+      - name: Delivery note
+        run: |
+          {
+            echo "### Release artifacts"
+            echo "- MacBottle.zip + SHA-256"
+            echo "- Signing: ${{ steps.signing.outputs.enabled }}"
+            echo "- Notarization: ${{ steps.notary.outputs.enabled }}"
+            echo ""
+            echo "The appcast is generated separately with"
+            echo "\`scripts/generate-appcast.sh\` after the zip is published."
+          } >> "$GITHUB_STEP_SUMMARY"
