@@ -214,6 +214,13 @@ struct ConfigView: View {
                 }
                 .disabled(d3dMetalBusy)
             }
+            Section("config.title.app") {
+                LabeledContent("config.appSettings") {
+                    SettingsLink {
+                        Text("settings.open")
+                    }
+                }
+            }
             Section("config.title.tools") {
                 HStack(spacing: 10) {
                     Button("config.controlPanel") {
