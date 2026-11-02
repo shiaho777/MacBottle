@@ -149,7 +149,7 @@ private struct RecipeHeaderView: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
+                            image.resizable().scaledToFill()
                         case .failure:
                             fallbackGlyph
                         case .empty:

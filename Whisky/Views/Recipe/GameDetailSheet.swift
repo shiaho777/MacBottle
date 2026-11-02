@@ -87,7 +87,7 @@ struct GameDetailSheet: View {
             CachedAsyncImage(
                 url: recipe.iconURL,
                 success: { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
+                    image.resizable().scaledToFill()
                 },
                 placeholder: {
                     ZStack { Rectangle().fill(.quaternary); ProgressView().controlSize(.small) }

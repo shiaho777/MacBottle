@@ -77,13 +77,12 @@ public final class WineEngineRegistry: @unchecked Sendable {
     }
 
     private static func postChangeNotification() {
-        let post = {
-            NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
-        }
         if Thread.isMainThread {
-            post()
+            NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
         } else {
-            DispatchQueue.main.async(execute: post)
+            Task { @MainActor in
+                NotificationCenter.default.post(name: Self.engineDidChangeNotification, object: nil)
+            }
         }
     }
 
