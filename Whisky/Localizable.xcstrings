@@ -21415,6 +21415,13 @@
         }
       }
     },
+    "setup.engine.fallback.note": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open-source Wine 11.21, x86_64 (runs under Rosetta). No D3DMetal or DXVK; use it as a baseline, or import a CrossOver/GPTK build for D3D acceleration." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "开源 Wine 11.21，x86_64（经 Rosetta 运行）。不含 D3DMetal 或 DXVK；可作为基础引擎，或导入 CrossOver/GPTK 构建以获得 D3D 加速。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開源 Wine 11.21，x86_64（經 Rosetta 執行）。不含 D3DMetal 或 DXVK；可作為基礎引擎，或匯入 CrossOver/GPTK 建置以獲得 D3D 加速。" } }
+      }
+    },
     "setup.engine.fallback": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Download open-source Wine 11.21 (225 MB)" } },
