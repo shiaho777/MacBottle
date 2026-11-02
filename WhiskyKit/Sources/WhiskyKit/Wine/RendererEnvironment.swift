@@ -97,6 +97,32 @@ public enum RendererEnvironment {
         }
     }
 
+    /// D3D11 through DXMT: one hop to Metal, no DXVK/Vulkan stage.
+    public static func applyDXMT(to environment: inout [String: String]) {
+        environment.removeValue(forKey: "DXVK_HUD")
+        environment.removeValue(forKey: "DXVK_ASYNC")
+        environment.removeValue(forKey: "DXVK_CONFIG_FILE")
+        for key in ["dxgi", "d3d11"] {
+            environment["WINEDLLOVERRIDES"] = mergingOverride(
+                "\(key)=n,b",
+                into: environment["WINEDLLOVERRIDES"]
+            )
+        }
+    }
+
+    /// D3D12 through vkd3d-proton → Vulkan → MoltenVK.
+    public static func applyVKD3D(to environment: inout [String: String]) {
+        environment.removeValue(forKey: "DXVK_HUD")
+        environment.removeValue(forKey: "DXVK_ASYNC")
+        environment.removeValue(forKey: "DXVK_CONFIG_FILE")
+        for key in ["dxgi", "d3d12"] {
+            environment["WINEDLLOVERRIDES"] = mergingOverride(
+                "\(key)=n,b",
+                into: environment["WINEDLLOVERRIDES"]
+            )
+        }
+    }
+
     static func mergingOverride(_ entry: String, into existing: String?) -> String {
         guard let existing, !existing.isEmpty else { return entry }
         var parts = existing

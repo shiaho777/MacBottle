@@ -80,14 +80,14 @@ public enum RecipeValidator {
 
     private static func rendererErrors(for recipe: Recipe) -> [String] {
         switch (recipe.dxVersion, recipe.renderer) {
-        case (.d3d12, .d3dmetal):
+        case (.d3d12, .d3dmetal), (.d3d12, .vkd3d):
             return []
         case (.d3d12, _):
-            return ["d3d12 requires the d3dmetal renderer; \(recipe.renderer.rawValue) cannot run it"]
-        case (.d3d11, .d3dmetal), (.d3d11, .dxvk), (.d3d11, .wined3d):
+            return ["d3d12 requires d3dmetal or vkd3d; \(recipe.renderer.rawValue) cannot run it"]
+        case (.d3d11, .d3dmetal), (.d3d11, .dxvk), (.d3d11, .wined3d), (.d3d11, .dxmt):
             return []
-        case (.d3d11, .moltenvk):
-            return ["d3d11 cannot use moltenvk; use d3dmetal, dxvk, or wined3d"]
+        case (.d3d11, _):
+            return ["d3d11 cannot use \(recipe.renderer.rawValue); use d3dmetal, dxmt, dxvk, or wined3d"]
         case (.d3d10, .dxvk), (.d3d10, .wined3d):
             return []
         case (.d3d10, _):

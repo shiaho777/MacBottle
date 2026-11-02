@@ -190,6 +190,12 @@ public enum RecipeRenderer: String, Codable, CaseIterable, Sendable {
     /// DXVK is not in the path; this is what "native Vulkan" means on
     /// macOS, where the only Vulkan implementation is MoltenVK.
     case moltenvk
+    /// D3D11 → Metal directly through DXMT (one hop, optional payload
+    /// dropped into the engine's DXMT folder).
+    case dxmt
+    /// D3D12 → Vulkan through vkd3d-proton (optional payload dropped
+    /// into the engine's VKD3D folder).
+    case vkd3d
 }
 
 /// How the user is expected to acquire the game's content after

@@ -40,8 +40,29 @@ final class RendererEnvironmentTests: XCTestCase {
         XCTAssertEqual(overrides.components(separatedBy: "vulkan-1=").count, 2)
     }
 
-    func testWineD3DRemovesDXVKState() {
+    func testDXMTUsesNativeD3D11AndLeavesDXVK() {
         var env = [
+            "DXVK_HUD": "fps",
+            "DXVK_CONFIG_FILE": "/tmp/game.conf",
+            "WINEDLLOVERRIDES": "dxgi=n,b"
+        ]
+        RendererEnvironment.applyDXMT(to: &env)
+        XCTAssertNil(env["DXVK_HUD"])
+        XCTAssertNil(env["DXVK_CONFIG_FILE"])
+        let overrides = env["WINEDLLOVERRIDES"] ?? ""
+        XCTAssertTrue(overrides.contains("d3d11=n,b"))
+        XCTAssertEqual(overrides.components(separatedBy: "dxgi=n,b").count, 2)
+    }
+
+    func testVKD3DUsesNativeD3D12() {
+        var env: [String: String] = [:]
+        RendererEnvironment.applyVKD3D(to: &env)
+        let overrides = env["WINEDLLOVERRIDES"] ?? ""
+        XCTAssertTrue(overrides.contains("d3d12=n,b"))
+        XCTAssertTrue(overrides.contains("dxgi=n,b"))
+    }
+
+    func testWineD3DRemovesDXVKState() {        var env = [
             "DXVK_HUD": "fps",
             "DXVK_ASYNC": "1",
             "DXVK_CONFIG_FILE": "/tmp/game.conf",

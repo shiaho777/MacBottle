@@ -117,6 +117,74 @@ extension Wine {
     private static func dxvkMarkerURL(for bottle: Bottle) -> URL {
         bottle.url.appending(path: ".macbottle-dxvk")
     }
+
+    public static func enableDXMT(bottle: Bottle, engine: any WineEngine) throws {
+        guard engine.supportsDXMT else { return }
+        try disableDXVK(bottle: bottle)
+        try disableVKD3D(bottle: bottle)
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.replaceDLLs(
+            in: windows.appending(path: "system32"),
+            withContentsIn: engine.dxmtFolder.appending(path: "x64"),
+            makeOriginalCopy: true
+        )
+        try FileManager.default.replaceDLLs(
+            in: windows.appending(path: "syswow64"),
+            withContentsIn: engine.dxmtFolder.appending(path: "x32"),
+            makeOriginalCopy: true
+        )
+        try? Data().write(to: rendererMarkerURL("dxmt", bottle: bottle), options: .atomic)
+    }
+
+    public static func disableDXMT(bottle: Bottle) throws {
+        let marker = rendererMarkerURL("dxmt", bottle: bottle)
+        guard FileManager.default.fileExists(atPath: marker.path(percentEncoded: false)) else {
+            return
+        }
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "system32"))
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "syswow64"))
+        try? FileManager.default.removeItem(at: marker)
+    }
+
+    public static func enableVKD3D(bottle: Bottle, engine: any WineEngine) throws {
+        guard engine.supportsVKD3D else { return }
+        try disableDXVK(bottle: bottle)
+        try disableDXMT(bottle: bottle)
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.replaceDLLs(
+            in: windows.appending(path: "system32"),
+            withContentsIn: engine.vkd3dFolder.appending(path: "x64"),
+            makeOriginalCopy: true
+        )
+        try FileManager.default.replaceDLLs(
+            in: windows.appending(path: "syswow64"),
+            withContentsIn: engine.vkd3dFolder.appending(path: "x32"),
+            makeOriginalCopy: true
+        )
+        try? Data().write(to: rendererMarkerURL("vkd3d", bottle: bottle), options: .atomic)
+    }
+
+    public static func disableVKD3D(bottle: Bottle) throws {
+        let marker = rendererMarkerURL("vkd3d", bottle: bottle)
+        guard FileManager.default.fileExists(atPath: marker.path(percentEncoded: false)) else {
+            return
+        }
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "system32"))
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "syswow64"))
+        try? FileManager.default.removeItem(at: marker)
+    }
+
+    public static func disableAllRendererPayloads(bottle: Bottle) {
+        try? disableDXVK(bottle: bottle)
+        try? disableDXMT(bottle: bottle)
+        try? disableVKD3D(bottle: bottle)
+    }
+
+    private static func rendererMarkerURL(_ name: String, bottle: Bottle) -> URL {
+        bottle.url.appending(path: ".macbottle-\(name)")
+    }
 }
 
 extension Wine {

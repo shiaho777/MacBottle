@@ -262,6 +262,11 @@ public class Wine {
                 profile: profile,
                 bottleDXVKEnabled: bottle.settings.dxvk
             )
+        let dxmtActive = recipe?.renderer == .dxmt && launchEngine.supportsDXMT
+        let vkd3dActive = recipe?.renderer == .vkd3d && launchEngine.supportsVKD3D
+        if dxmtActive || vkd3dActive {
+            shouldApplyDXVK = false
+        }
         if engineDecision?.decision.engineID == WineEngineCatalog.d3dMetalIdentifier {
             shouldApplyDXVK = false
         } else if recipe?.renderer == .d3dmetal {
@@ -273,7 +278,23 @@ public class Wine {
         }
 
         var dxvkConfigURL: URL?
-        if shouldApplyDXVK {
+        if dxmtActive {
+            try? disableVKD3D(bottle: bottle)
+            try? disableDXVK(bottle: bottle)
+            try? enableDXMT(bottle: bottle, engine: launchEngine)
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.clearDXVK(bottle: bottle)
+            }
+        } else if vkd3dActive {
+            try? disableDXMT(bottle: bottle)
+            try? disableDXVK(bottle: bottle)
+            try? enableVKD3D(bottle: bottle, engine: launchEngine)
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.clearDXVK(bottle: bottle)
+            }
+        } else if shouldApplyDXVK {
+            try? disableDXMT(bottle: bottle)
+            try? disableVKD3D(bottle: bottle)
             let engineID = buildID(for: launchEngine)
             let dxvkReady = await MainActor.run {
                 ProgramLaunchCoordinator.shared.isDXVKReady(bottle: bottle, engineID: engineID)
@@ -295,10 +316,10 @@ public class Wine {
                 executable: url
             )
         } else {
-            // A recipe or engine may have overridden a bottle that had
-            // DXVK installed. Restore the Wine DLLs instead of leaving a
-            // half-switched prefix behind.
-            try? disableDXVK(bottle: bottle)
+            // A recipe or engine may have overridden a bottle that had a
+            // renderer payload installed. Restore the Wine DLLs instead of
+            // leaving a half-switched prefix behind.
+            disableAllRendererPayloads(bottle: bottle)
             await MainActor.run {
                 ProgramLaunchCoordinator.shared.clearDXVK(bottle: bottle)
             }
@@ -311,7 +332,11 @@ public class Wine {
         let isVulkanRoute = recipe?.renderer == .moltenvk
             || (recipe == nil
                 && engineDecision?.decision.importProfile?.graphicsAPIs.contains(.vulkan) == true)
-        if isVulkanRoute {
+        if dxmtActive {
+            RendererEnvironment.applyDXMT(to: &environment)
+        } else if vkd3dActive {
+            RendererEnvironment.applyVKD3D(to: &environment)
+        } else if isVulkanRoute {
             RendererEnvironment.applyMoltenVK(to: &environment, engine: launchEngine)
         } else if recipe?.renderer == .wined3d {
             RendererEnvironment.applyWineD3D(to: &environment)
