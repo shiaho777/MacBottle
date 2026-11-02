@@ -44,7 +44,7 @@ reviewers can find a file by platform id without grep.
 | `icon_url` | string | no | HTTPS URL to a cover image (JPEG/PNG). Steam header art is `https://cdn.cloudflare.steamstatic.com/steam/apps/<AppID>/header.jpg`. ~460×215 or square, under 200 KB recommended. |
 | `dx_version` | enum | yes | `d3d9` \| `d3d10` \| `d3d11` \| `d3d12` \| `vulkan` \| `opengl`. |
 | `min_macos` | string | yes | Semantic version, e.g. `14.0`. |
-| `renderer` | enum | yes | `d3dmetal` (default, Apple Silicon) \| `dxvk` \| `wined3d`. |
+| `renderer` | enum | yes | `d3dmetal` (D3D11/12 on Apple Silicon) \| `dxvk` (D3D9/10/11 → Vulkan → MoltenVK) \| `wined3d` \| `moltenvk` (the game's own Vulkan renderer → MoltenVK; DXVK is not in the path). |
 | `installer` | enum | no | How the game's content is obtained, driving the install UI: `steam` \| `gog` \| `custom`. Omit for configuration-only recipes. |
 | `main_exe` | string | no | Relative path inside `drive_c` to the main executable after install, e.g. `Program Files/Game/game.exe`. Used as a hint in the "pick main .exe" dialog; nil means "ask the user". |
 | `winetricks` | string[] | no | Verbs to install, lowercase. Example: `["vcrun2022", "dotnet48"]`. |
@@ -66,6 +66,27 @@ reviewers can find a file by platform id without grep.
 
 - `path` must start with `HKCU\\`, `HKLM\\`, `HKCR\\`, `HKU\\`, or `HKCC\\`.
 - `type` is one of `REG_SZ`, `REG_DWORD`, `REG_BINARY`.
+
+`winetricks` verbs and `registry` entries are applied once per
+bottle-recipe pairing, with an on-disk receipt so a failed run resumes
+instead of repeating expensive verbs. `env` is merged on every launch and
+wins over bottle defaults.
+
+### Renderer compatibility
+
+CI rejects contradictory combinations:
+
+| `dx_version` | Allowed `renderer` |
+| --- | --- |
+| `d3d12` | `d3dmetal` |
+| `d3d11` | `d3dmetal`, `dxvk`, `wined3d` |
+| `d3d10` | `dxvk`, `wined3d` |
+| `d3d9`, `opengl` | `dxvk`, `wined3d` |
+| `vulkan` | `moltenvk` |
+
+macOS has no Apple-supplied Vulkan driver; `moltenvk` means
+`winevulkan` → MoltenVK → Metal. DXVK is a D3D translator and is never
+inserted into a Vulkan title's path.
 
 ### Compatibility tiers
 
@@ -114,7 +135,9 @@ Mirrors the ProtonDB scale; choose honestly. If in doubt, go one tier lower.
 
 PRs are reviewed against these rules; violations block merge.
 
-1. The recipe must validate against the schema above.
+1. The recipe must decode and pass `RecipeValidator` (id shape, semantic
+   version, installer/platform agreement, winetricks token shape, registry
+   path prefix, and the renderer compatibility table above).
 2. `id` must be unique across all shipped recipes.
 3. `title` must match the canonical title on the platform (Steam store page,
    GOG product page). No fan translations in `title`; put translated names
