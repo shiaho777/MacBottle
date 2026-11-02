@@ -145,6 +145,27 @@ final class RecipeProvisionerTests: XCTestCase {
         )
     }
 
+    func testTwoRecipesInSameBottleKeepIndependentReceipts() async throws {
+        let calls = CallLog()
+        let provisioner = RecipeProvisioner(
+            store: store,
+            runVerb: { verb, _ in await calls.append("verb:\(verb)") },
+            runRegistry: { entry, _ in await calls.append("reg:\(entry.key)") }
+        )
+        let recipeA = makeRecipe(id: "steam.a", verbs: ["vcrun2022"], registry: [])
+        let recipeB = makeRecipe(id: "steam.b", verbs: ["corefonts"], registry: [])
+
+        _ = try await provisioner.provisionIfNeeded(recipe: recipeA, bottle: bottle)
+        _ = try await provisioner.provisionIfNeeded(recipe: recipeB, bottle: bottle)
+        let firstPass = await calls.snapshot()
+        XCTAssertEqual(firstPass, ["verb:vcrun2022", "verb:corefonts"])
+
+        _ = try await provisioner.provisionIfNeeded(recipe: recipeA, bottle: bottle)
+        _ = try await provisioner.provisionIfNeeded(recipe: recipeB, bottle: bottle)
+        let secondPass = await calls.snapshot()
+        XCTAssertEqual(secondPass, firstPass, "one recipe's receipt must not erase another's")
+    }
+
     func testEmptyPlanDoesNothing() async throws {
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
@@ -158,7 +179,7 @@ final class RecipeProvisionerTests: XCTestCase {
         XCTAssertFalse(didWork)
         let invoked = await calls.snapshot()
         XCTAssertTrue(invoked.isEmpty)
-        XCTAssertNil(store.record(bottleKey: ProgramRunLogStore.bottleKey(for: bottle)))
+        XCTAssertTrue(store.records(bottleKey: ProgramRunLogStore.bottleKey(for: bottle)).isEmpty)
     }
 }
 

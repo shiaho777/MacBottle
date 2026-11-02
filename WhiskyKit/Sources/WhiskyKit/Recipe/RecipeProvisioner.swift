@@ -127,29 +127,68 @@ public final class RecipeProvisioningStore: @unchecked Sendable {
         }
     }
 
-    public func record(bottleKey: String) -> RecipeProvisioningRecord? {
+    public func records(bottleKey: String) -> [String: RecipeProvisioningRecord] {
         lock.lock(); defer { lock.unlock() }
-        guard let data = try? Data(contentsOf: fileURL(bottleKey: bottleKey)) else {
-            return nil
-        }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(RecipeProvisioningRecord.self, from: data)
+        return loadLocked(bottleKey: bottleKey).records
+    }
+
+    public func record(bottleKey: String, recipeID: String) -> RecipeProvisioningRecord? {
+        lock.lock(); defer { lock.unlock() }
+        return loadLocked(bottleKey: bottleKey).records[recipeID]
     }
 
     public func save(_ record: RecipeProvisioningRecord, bottleKey: String) throws {
         lock.lock(); defer { lock.unlock() }
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        let data = try encoder.encode(record)
-        try data.write(to: fileURL(bottleKey: bottleKey), options: .atomic)
+        var file = loadLocked(bottleKey: bottleKey)
+        file.records[record.recipeID] = record
+        try saveLocked(file, bottleKey: bottleKey)
     }
 
     public func remove(bottleKey: String) {
         lock.lock(); defer { lock.unlock() }
         try? FileManager.default.removeItem(at: fileURL(bottleKey: bottleKey))
+    }
+
+    public func remove(bottleKey: String, recipeID: String) {
+        lock.lock(); defer { lock.unlock() }
+        var file = loadLocked(bottleKey: bottleKey)
+        guard file.records.removeValue(forKey: recipeID) != nil else { return }
+        try? saveLocked(file, bottleKey: bottleKey)
+    }
+
+    private struct StoreFile: Codable {
+        var schema: Int = 1
+        var records: [String: RecipeProvisioningRecord] = [:]
+
+        init(schema: Int = 1, records: [String: RecipeProvisioningRecord] = [:]) {
+            self.schema = schema
+            self.records = records
+        }
+    }
+
+    private func loadLocked(bottleKey: String) -> StoreFile {
+        guard let data = try? Data(contentsOf: fileURL(bottleKey: bottleKey)) else {
+            return StoreFile()
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        if let file = try? decoder.decode(StoreFile.self, from: data) {
+            return file
+        }
+        // Migrate the v1 single-record file.
+        if let legacy = try? decoder.decode(RecipeProvisioningRecord.self, from: data) {
+            return StoreFile(records: [legacy.recipeID: legacy])
+        }
+        return StoreFile()
+    }
+
+    private func saveLocked(_ file: StoreFile, bottleKey: String) throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        let data = try encoder.encode(file)
+        try data.write(to: fileURL(bottleKey: bottleKey), options: .atomic)
     }
 
     private func fileURL(bottleKey: String) -> URL {
@@ -191,8 +230,7 @@ public actor RecipeProvisioner {
 
         let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
         var record: RecipeProvisioningRecord
-        if let existing = store.record(bottleKey: bottleKey),
-           existing.recipeID == recipe.id,
+        if let existing = store.record(bottleKey: bottleKey, recipeID: recipe.id),
            existing.fingerprint == plan.fingerprint {
             record = existing
         } else {
@@ -229,9 +267,7 @@ public actor RecipeProvisioner {
 
     public func invalidate(recipeID: String, bottle: Bottle) {
         let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
-        guard let record = store.record(bottleKey: bottleKey),
-              record.recipeID == recipeID else { return }
-        store.remove(bottleKey: bottleKey)
+        store.remove(bottleKey: bottleKey, recipeID: recipeID)
     }
 
     private static func registryKey(_ entry: RegistryEntry) -> String {
