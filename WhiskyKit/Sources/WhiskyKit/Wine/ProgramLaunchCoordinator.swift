@@ -45,20 +45,41 @@ public final class ProgramLaunchCoordinator {
 
     private init() {}
 
-    public func isWarm(bottle: Bottle) -> Bool {
-        warmBottleKeys.contains(Self.bottleKey(bottle))
+    public func isWarm(bottle: Bottle, engineID: String) -> Bool {
+        warmBottleKeys.contains(Self.warmKey(bottle: bottle, engineID: engineID))
     }
 
-    public func isWarming(bottle: Bottle) -> Bool {
-        warmingBottleKeys.contains(Self.bottleKey(bottle))
+    public func isWarming(bottle: Bottle, engineID: String) -> Bool {
+        warmingBottleKeys.contains(Self.warmKey(bottle: bottle, engineID: engineID))
     }
 
-    public func isDXVKReady(bottle: Bottle) -> Bool {
-        dxvkReadyKeys.contains(Self.bottleKey(bottle))
+    public func isDXVKReady(bottle: Bottle, engineID: String) -> Bool {
+        dxvkReadyKeys.contains(Self.warmKey(bottle: bottle, engineID: engineID))
     }
 
-    public func markDXVKReady(bottle: Bottle) {
-        dxvkReadyKeys.insert(Self.bottleKey(bottle))
+    public func markDXVKReady(bottle: Bottle, engineID: String) {
+        dxvkReadyKeys.insert(Self.warmKey(bottle: bottle, engineID: engineID))
+    }
+
+    /// Drop every piece of state that is only valid for the engine that
+    /// produced it. Called when the user switches engines: a prefix warmed
+    /// by CrossOver is not warm under GPTK, and DXVK DLLs copied from one
+    /// engine must not be reused under another.
+    public func invalidateEngineBoundState() {
+        warmBottleKeys.removeAll()
+        warmingBottleKeys.removeAll()
+        dxvkReadyKeys.removeAll()
+        if case .warming = phase {
+            phase = .idle
+        }
+    }
+
+    /// Drop engine-bound state for one bottle (delete, rename, force stop).
+    public func invalidate(bottle: Bottle) {
+        let prefix = Self.bottleKey(bottle) + "|"
+        warmBottleKeys = warmBottleKeys.filter { !$0.hasPrefix(prefix) }
+        warmingBottleKeys = warmingBottleKeys.filter { !$0.hasPrefix(prefix) }
+        dxvkReadyKeys = dxvkReadyKeys.filter { !$0.hasPrefix(prefix) }
     }
 
     public func isLaunching(programURL: URL) -> Bool {
@@ -106,8 +127,8 @@ public final class ProgramLaunchCoordinator {
         )
     }
 
-    public func beginWarmup(bottle: Bottle) {
-        let key = Self.bottleKey(bottle)
+    public func beginWarmup(bottle: Bottle, engineID: String) {
+        let key = Self.warmKey(bottle: bottle, engineID: engineID)
         guard !warmBottleKeys.contains(key) else { return }
         warmingBottleKeys.insert(key)
         if case .launching = phase {
@@ -117,8 +138,8 @@ public final class ProgramLaunchCoordinator {
         activeBottleURL = bottle.url
     }
 
-    public func finishWarmup(bottle: Bottle, success: Bool) {
-        let key = Self.bottleKey(bottle)
+    public func finishWarmup(bottle: Bottle, engineID: String, success: Bool) {
+        let key = Self.warmKey(bottle: bottle, engineID: engineID)
         warmingBottleKeys.remove(key)
         if success {
             warmBottleKeys.insert(key)
@@ -128,15 +149,14 @@ public final class ProgramLaunchCoordinator {
         }
     }
 
-    public func markWarm(bottle: Bottle) {
-        warmBottleKeys.insert(Self.bottleKey(bottle))
-        warmingBottleKeys.remove(Self.bottleKey(bottle))
+    public func markWarm(bottle: Bottle, engineID: String) {
+        let key = Self.warmKey(bottle: bottle, engineID: engineID)
+        warmBottleKeys.insert(key)
+        warmingBottleKeys.remove(key)
     }
 
     public func clearWarm(bottle: Bottle) {
-        let key = Self.bottleKey(bottle)
-        warmBottleKeys.remove(key)
-        warmingBottleKeys.remove(key)
+        invalidate(bottle: bottle)
     }
 
     public func clearAllWarm() {
@@ -215,6 +235,10 @@ public final class ProgramLaunchCoordinator {
 
     public static func bottleKey(_ bottle: Bottle) -> String {
         bottle.url.standardizedFileURL.path
+    }
+
+    static func warmKey(bottle: Bottle, engineID: String) -> String {
+        "\(bottleKey(bottle))|\(engineID)"
     }
 
     public static func programKey(_ url: URL) -> String {

@@ -291,6 +291,10 @@ struct ContentView: View {
                     installIfNeeded: true
                 )
                 await MainActor.run {
+                    // Warm and DXVK state are engine-specific; keeping
+                    // them across a switch would spawn the old wineserver
+                    // and load the old DXVK DLLs under the new engine.
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
                     engineBusy = false
                     currentEngineID = engine.identifier
                 }
