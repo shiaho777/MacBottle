@@ -30,7 +30,7 @@ final class SteamCMDEngineTests: XCTestCase {
         )
 
         XCTAssertTrue(script.contains("@sSteamCmdForcePlatformType windows"))
-        XCTAssertTrue(script.contains("force_install_dir /tmp/library"))
+        XCTAssertTrue(script.contains("force_install_dir \"/tmp/library\""))
         XCTAssertTrue(script.contains("login \"user\" \"secret\""))
         XCTAssertTrue(script.contains("app_update 2050650 validate"))
         XCTAssertTrue(script.hasSuffix("quit\n"))
@@ -47,6 +47,22 @@ final class SteamCMDEngineTests: XCTestCase {
         XCTAssertTrue(script.contains("login anonymous"))
         XCTAssertTrue(script.contains("app_update 220\n"))
         XCTAssertFalse(script.contains("validate"))
+    }
+
+    func testUpdateScriptQuotesInstallDirectoryWithSpaces() {
+        let script = SteamCMDEngine.makeUpdateScript(
+            appID: 220,
+            installDir: URL(
+                fileURLWithPath: "/Users/me/Library/Application Support/app.macbottle.MacBottle/NativeCache"
+            ),
+            credentials: .anonymous,
+            validate: false
+        )
+        XCTAssertTrue(
+            script.contains(
+                "force_install_dir \"/Users/me/Library/Application Support/app.macbottle.MacBottle/NativeCache\""
+            )
+        )
     }
 
     func testUpdateScriptQuotesCredentialsWithMetacharacters() {
