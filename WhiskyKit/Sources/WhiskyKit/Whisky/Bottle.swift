@@ -98,8 +98,10 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
         self.isAvailable = isAvailable
         self.metadataURL = metadataURL
 
+        var settingsLoaded = false
         do {
             self.settings = try BottleSettings.decode(from: metadataURL)
+            settingsLoaded = true
         } catch {
             Logger.wineKit.error(
               "Failed to load settings for bottle `\(metadataURL.path(percentEncoded: false))`: \(error)"
@@ -109,6 +111,7 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
 
         // Get rid of duplicates and pins that reference removed files
         var found: Set<URL> = []
+        let originalPinCount = self.settings.pins.count
         self.settings.pins = self.settings.pins.filter { pin in
             guard let url = pin.url else { return false }
             guard !found.contains(url) else { return false }
@@ -122,6 +125,13 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
             }
             let legallyRemoved = pin.removable && volume == nil
             return FileManager.default.fileExists(atPath: urlPath) || legallyRemoved
+        }
+        // Persist the cleanup, but only when the original settings decoded
+        // successfully. A corrupt metadata file was quarantined by
+        // `BottleSettings.decode`; overwriting it with defaults here would
+        // destroy the evidence before the user can recover it.
+        if settingsLoaded, self.settings.pins.count != originalPinCount {
+            saveSettings()
         }
     }
 

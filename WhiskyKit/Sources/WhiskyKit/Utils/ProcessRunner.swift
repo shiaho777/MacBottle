@@ -61,9 +61,19 @@ public enum ProcessRunner {
             process.standardOutput = stdout
             process.standardError = stderr
 
+            // Drain both pipes while the child runs. Reading only after
+            // exit deadlocks as soon as a child writes more than the
+            // kernel pipe buffer (~64 KB), which winetricks and steamcmd
+            // routinely do.
+            let outReader = PipeDrain(handle: stdout.fileHandleForReading)
+            let errReader = PipeDrain(handle: stderr.fileHandleForReading)
+            let gate = ResumeGate()
+
             process.terminationHandler = { finished in
-                let outData = (try? stdout.fileHandleForReading.readToEnd()) ?? Data()
-                let errData = (try? stderr.fileHandleForReading.readToEnd()) ?? Data()
+                let outData = outReader.finish()
+                let errData = errReader.finish()
+
+                guard gate.claim() else { return }
                 continuation.resume(
                     returning: ProcessRunResult(
                         exitCode: finished.terminationStatus,
@@ -76,6 +86,9 @@ public enum ProcessRunner {
             do {
                 try process.run()
             } catch {
+                _ = outReader.finish()
+                _ = errReader.finish()
+                guard gate.claim() else { return }
                 continuation.resume(throwing: error)
             }
         }
@@ -93,5 +106,59 @@ public enum ProcessRunner {
             currentDirectory: currentDirectory,
             environment: environment
         )
+    }
+}
+
+/// Serializes reads for one pipe and keeps every byte the child wrote.
+private final class PipeDrain: @unchecked Sendable {    private let handle: FileHandle
+    private let lock = NSLock()
+    private var buffer = Data()
+
+    init(handle: FileHandle) {
+        self.handle = handle
+        handle.readabilityHandler = { [weak self] handle in
+            self?.readAvailable(from: handle)
+        }
+    }
+
+    private func readAvailable(from handle: FileHandle) {
+        lock.lock()
+        defer { lock.unlock() }
+        let chunk = handle.availableData
+        if chunk.isEmpty {
+            handle.readabilityHandler = nil
+        } else {
+            buffer.append(chunk)
+        }
+    }
+
+    /// Stop the handler and drain whatever is still buffered. Called only
+    /// after the child has exited, so `availableData` reaches EOF instead
+    /// of blocking.
+    func finish() -> Data {
+        lock.lock()
+        defer { lock.unlock() }
+        handle.readabilityHandler = nil
+        while true {
+            let chunk = handle.availableData
+            if chunk.isEmpty { break }
+            buffer.append(chunk)
+        }
+        return buffer
+    }
+}
+
+/// Ensures a `CheckedContinuation` is resumed exactly once even when both
+/// the spawn path and the termination handler race.
+private final class ResumeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var resumed = false
+
+    func claim() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !resumed else { return false }
+        resumed = true
+        return true
     }
 }

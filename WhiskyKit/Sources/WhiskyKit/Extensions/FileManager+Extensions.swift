@@ -44,13 +44,16 @@ extension FileManager {
                 if fileExists(atPath: copyPath), filesLikelyIdentical(originalURL, replacementURL) {
                     return
                 }
-                if fileExists(atPath: copyPath) {
-                    try FileManager.default.removeItem(at: copyURL)
+                // Keep the pristine original across engine upgrades.
+                // Overwriting the backup with a newer DXVK DLL would
+                // make the prefix impossible to restore.
+                if !fileExists(atPath: copyPath) {
+                    try FileManager.default.moveItem(at: originalURL, to: copyURL)
                 }
-                try FileManager.default.moveItem(at: originalURL, to: copyURL)
             } else if filesLikelyIdentical(originalURL, replacementURL) {
                 return
-            } else {
+            }
+            if fileExists(atPath: originalPath) {
                 try FileManager.default.removeItem(at: originalURL)
             }
             try FileManager.default.copyItem(at: replacementURL, to: originalURL)
@@ -60,15 +63,34 @@ extension FileManager {
         try FileManager.default.copyItem(at: replacementURL, to: originalURL)
     }
 
+    /// Restore every `*.dll.orig` snapshot in `directory` and remove the
+    /// snapshot. Returns the number of restored files.
+    @discardableResult
+    func restoreDLLs(in directory: URL) throws -> Int {
+        guard let contents = try? contentsOfDirectory(
+            at: directory,
+            includingPropertiesForKeys: nil
+        ) else {
+            return 0
+        }
+        var restored = 0
+        for backup in contents where backup.pathExtension == "orig" {
+            let original = backup.deletingPathExtension()
+            guard original.pathExtension == "dll" else { continue }
+            if fileExists(atPath: original.path(percentEncoded: false)) {
+                try removeItem(at: original)
+            }
+            try moveItem(at: backup, to: original)
+            restored += 1
+        }
+        return restored
+    }
+
     private func filesLikelyIdentical(_ lhs: URL, _ rhs: URL) -> Bool {
-        guard
-            let left = try? attributesOfItem(atPath: lhs.path(percentEncoded: false)),
-            let right = try? attributesOfItem(atPath: rhs.path(percentEncoded: false)),
-            let leftSize = left[.size] as? NSNumber,
-            let rightSize = right[.size] as? NSNumber
-        else {
+        guard let left = try? Data(contentsOf: lhs),
+              let right = try? Data(contentsOf: rhs) else {
             return false
         }
-        return leftSize == rightSize
+        return left == right
     }
 }

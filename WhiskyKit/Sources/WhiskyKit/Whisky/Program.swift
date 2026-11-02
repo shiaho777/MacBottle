@@ -52,15 +52,26 @@ public final class Program: Equatable, Hashable, Identifiable, @unchecked Sendab
 
     private var cachedPEFile: PEFile?
     private var didLoadPEFile = false
+    private var cachedModificationDate: Date?
+    private var cachedFileSize: UInt64?
     private let peFileLock = NSLock()
 
     public var peFile: PEFile? {
         peFileLock.lock()
         defer { peFileLock.unlock() }
-        if didLoadPEFile {
+        let attributes = try? FileManager.default.attributesOfItem(
+            atPath: url.path(percentEncoded: false)
+        )
+        let modificationDate = attributes?[.modificationDate] as? Date
+        let fileSize = (attributes?[.size] as? NSNumber)?.uint64Value
+        if didLoadPEFile,
+           cachedModificationDate == modificationDate,
+           cachedFileSize == fileSize {
             return cachedPEFile
         }
         didLoadPEFile = true
+        cachedModificationDate = modificationDate
+        cachedFileSize = fileSize
         do {
             cachedPEFile = try PEFile(url: url)
         } catch {

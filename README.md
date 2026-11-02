@@ -37,8 +37,8 @@ Running Windows games on Apple Silicon shouldn't require a command-line tutorial
 - **Actively maintained.** Open source and under continuous development — fixes, new recipes, and support for the latest Apple Silicon and macOS land as they arrive.
 - **No terminal required.** There is no need to build wine prefixes by hand or memorize `WINEPREFIX`. MacBottle creates, configures, and launches every bottle from a native macOS window.
 - **Free and open source.** Everything MacBottle does is GPL-3.0 and built in public — no license fees, no subscriptions, no locked-in features.
-- **Recipes that know each game.** A recipe is one JSON file describing what a single game needs: environment variables, winetricks verbs, registry tweaks, and the right renderer. Community-verified, synced from a shared catalog, and applied automatically at launch. Most wrappers leave you to guess; a recipe hands MacBottle the answer.
-- **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, or **WineD3D** — then runs the matching Wine engine without asking.
+- **Recipes that know each game.** A recipe is one JSON file describing what a single game needs: environment variables, winetricks verbs, registry tweaks, and the right renderer. Community-verified, synced from a shared catalog, and applied automatically — environment on every launch, winetricks/registry once per bottle with a resumable receipt. Most wrappers leave you to guess; a recipe hands MacBottle the answer.
+- **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, **MoltenVK** (the game's own Vulkan renderer), or **WineD3D** — then runs the matching Wine engine without asking.
 - **Chinese and English, written together.** The UI, recipes, and documentation are authored in both languages from the first line, not translated in afterward.
 
 ---
@@ -51,7 +51,7 @@ A quick scan of what's in the box.
 | --- | --- |
 | **Bottle management** | Create, configure, rename, and delete bottles; pins/shortcuts; per-bottle engine binding |
 | **Game recipes** | Community JSON recipes (Steam / GOG / generic), bundled catalog + remote sync with ETag cache, diff UI with per-row selection |
-| **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), or **WineD3D**; Metal HUD/trace; DXR toggle |
+| **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), **MoltenVK** for Vulkan titles, or **WineD3D**; Metal HUD/trace; DXR toggle; per-game DXVK config outside the game directory |
 | **Wine engine layer** | CrossOver-based engine today; pluggable `WineEngine` protocol so pure upstream Wine can slot in later |
 | **Launch experience** | Wineserver prewarm, launch-status feedback, per-program run logs, force-stop for frozen runtimes, stale-status reconciliation |
 | **Bottle internals** | Winetricks catalog with categorized verbs, environment variables, Windows version & enhanced-sync (msync/esync) selection, AVX toggle |
@@ -162,7 +162,7 @@ WhiskyCmd/               CLI companion
 WhiskyThumbnail/         Finder thumbnail extension for PE files
 ```
 
-A game launch merges environments in a strict order — program defaults → bottle settings → recipe overrides (recipe wins) — then spawns `wine <exe>` through the engine selected by `LaunchEnginePolicy`. If no recipe is attached, the path is identical to upstream Whisky; the recipe layer is purely additive.
+A game launch merges environments in a strict order — program defaults → bottle settings → recipe overrides (recipe wins) — then spawns `wine <exe>` through the engine selected by `LaunchEnginePolicy`. Side-effectful recipe fields (winetricks, registry) run once per bottle before the first launch, with a resumable on-disk receipt. If no recipe is attached, the path is identical to upstream Whisky; the recipe layer is purely additive.
 
 The complete design rationale lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

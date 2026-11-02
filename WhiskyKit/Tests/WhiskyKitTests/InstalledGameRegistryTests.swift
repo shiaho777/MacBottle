@@ -63,4 +63,27 @@ final class InstalledGameRegistryTests: XCTestCase {
         let backup = storeURL.appendingPathExtension("corrupt")
         XCTAssertEqual(try String(contentsOf: backup, encoding: .utf8), garbage)
     }
+
+    func testReconcileDropsRecordsForMissingBottles() throws {
+        let storeURL = makeTempStoreURL()
+        let registry = InstalledGameRegistry(storeURL: storeURL)
+        let liveBottle = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-live-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: liveBottle, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: liveBottle) }
+
+        try registry.record(InstalledGame(
+            recipeID: "steam.live",
+            bottleURL: liveBottle,
+            mainExe: "C:\\game.exe"
+        ))
+        try registry.record(InstalledGame(
+            recipeID: "steam.gone",
+            bottleURL: URL(fileURLWithPath: "/tmp/does-not-exist-\(UUID().uuidString)"),
+            mainExe: "C:\\game.exe"
+        ))
+
+        XCTAssertEqual(registry.reconcileExistingBottles(), 1)
+        XCTAssertEqual(registry.all().map(\.recipeID), ["steam.live"])
+    }
 }

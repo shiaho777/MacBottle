@@ -182,10 +182,14 @@ public enum DXVersion: String, Codable, CaseIterable, Sendable {
 public enum RecipeRenderer: String, Codable, CaseIterable, Sendable {
     /// Apple's Game Porting Toolkit (D3DMetal). Default for DX11/12 on Apple Silicon.
     case d3dmetal
-    /// DXVK (DirectX → Vulkan → Metal via MoltenVK). Useful for DX10/11 on Intel.
+    /// DXVK (DirectX → Vulkan → Metal via MoltenVK). Useful for DX10/11.
     case dxvk
     /// Wine's built-in DirectX → OpenGL translation. Last resort.
     case wined3d
+    /// The game's own Vulkan renderer → winevulkan → MoltenVK → Metal.
+    /// DXVK is not in the path; this is what "native Vulkan" means on
+    /// macOS, where the only Vulkan implementation is MoltenVK.
+    case moltenvk
 }
 
 /// How the user is expected to acquire the game's content after

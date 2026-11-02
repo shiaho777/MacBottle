@@ -219,7 +219,17 @@ public final class RemoteRecipeSource: Sendable {
         }
 
         do {
-            return try JSONDecoder().decode(Recipe.self, from: data)
+            let recipe = try JSONDecoder().decode(Recipe.self, from: data)
+            let problems = RecipeValidator.errors(for: recipe)
+            guard problems.isEmpty else {
+                throw RemoteRecipeError.recipeMalformed(
+                    id: entry.id,
+                    underlying: RecipeValidationError.invalid(id: entry.id, problems: problems)
+                )
+            }
+            return recipe
+        } catch let error as RemoteRecipeError {
+            throw error
         } catch {
             throw RemoteRecipeError.recipeMalformed(id: entry.id, underlying: error)
         }

@@ -184,9 +184,36 @@ public enum PrefixReadinessOracle {
         var bottleKey: String
         var engineBuildID: String
         var fingerprint: PrefixFingerprint
+        var updatedAt: Date?
+    }
+
+    /// One file holds every bottle's baseline. A single-slot file meant
+    /// only the most recently launched bottle could ever take the
+    /// ZeroPath; every other bottle paid the double launch forever.
+    struct BaselineStore: Codable, Sendable {
+        var schema: Int = 1
+        var baselines: [String: Baseline] = [:]
+
+        init(schema: Int = 1, baselines: [String: Baseline] = [:]) {
+            self.schema = schema
+            self.baselines = baselines
+        }
+
+        // swiftlint:disable:next nesting
+        enum CodingKeys: String, CodingKey {
+            case schema
+            case baselines
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.schema = try container.decodeIfPresent(Int.self, forKey: .schema) ?? 1
+            self.baselines = try container.decodeIfPresent([String: Baseline].self, forKey: .baselines) ?? [:]
+        }
     }
 
     private static let baselineLock = NSLock()
+    private static let maxBaselines = 128
 
     public static func saveBaseline(
         bottleKey: String,
@@ -196,11 +223,20 @@ public enum PrefixReadinessOracle {
         let baseline = Baseline(
             bottleKey: bottleKey,
             engineBuildID: engineBuildID,
-            fingerprint: fingerprint
+            fingerprint: fingerprint,
+            updatedAt: Date()
         )
         baselineLock.lock()
         defer { baselineLock.unlock() }
-        guard let data = try? JSONEncoder().encode(baseline) else { return }
+        var store = loadStoreLocked()
+        store.baselines[bottleKey] = baseline
+        if store.baselines.count > maxBaselines {
+            let keep = store.baselines
+                .sorted { ($0.value.updatedAt ?? .distantPast) > ($1.value.updatedAt ?? .distantPast) }
+                .prefix(maxBaselines)
+            store.baselines = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
+        }
+        guard let data = try? JSONEncoder().encode(store) else { return }
         try? FileManager.default.createDirectory(
             at: baselineURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -211,15 +247,26 @@ public enum PrefixReadinessOracle {
     public static func loadBaseline(bottleKey: String) -> PrefixBaseline? {
         baselineLock.lock()
         defer { baselineLock.unlock() }
-        guard let data = try? Data(contentsOf: baselineURL),
-              let baseline = try? JSONDecoder().decode(Baseline.self, from: data),
-              baseline.bottleKey == bottleKey else {
-            return nil
-        }
+        guard let baseline = loadStoreLocked().baselines[bottleKey] else { return nil }
         return PrefixBaseline(
             fingerprint: baseline.fingerprint,
             engineBuildID: baseline.engineBuildID
         )
+    }
+
+    private static func loadStoreLocked() -> BaselineStore {
+        guard let data = try? Data(contentsOf: baselineURL) else {
+            return BaselineStore()
+        }
+        if let store = try? JSONDecoder().decode(BaselineStore.self, from: data),
+           !store.baselines.isEmpty {
+            return store
+        }
+        // Migration from the v1 single-baseline file.
+        if let legacy = try? JSONDecoder().decode(Baseline.self, from: data) {
+            return BaselineStore(baselines: [legacy.bottleKey: legacy])
+        }
+        return BaselineStore()
     }
 
     public static func resetForTests() {

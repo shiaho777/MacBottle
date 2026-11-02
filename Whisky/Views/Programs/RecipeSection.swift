@@ -40,7 +40,7 @@ struct RecipeSection: View {
             Picker("recipe.section.attach", selection: recipeIDBinding) {
                 Text("recipe.section.none").tag(String?.none)
                 ForEach(recipes) { recipe in
-                    Text(verbatim: "\(recipe.title)  ·  \(recipe.compatibility.rawValue)")
+                    Text(verbatim: "\(recipe.title)  ·  \(recipe.compatibility.localizedName)")
                         .tag(Optional(recipe.id))
                 }
             }
@@ -89,7 +89,7 @@ private struct RecipeDetailRows: View {
 
     var body: some View {
         LabeledContent("recipe.section.compatibility") {
-            Text(verbatim: recipe.compatibility.rawValue.capitalized)
+            Text(verbatim: recipe.compatibility.localizedName)
                 .foregroundStyle(color(for: recipe.compatibility))
         }
         LabeledContent("recipe.section.renderer") {
@@ -149,7 +149,7 @@ private struct RecipeHeaderView: View {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
+                            image.resizable().scaledToFill()
                         case .failure:
                             fallbackGlyph
                         case .empty:

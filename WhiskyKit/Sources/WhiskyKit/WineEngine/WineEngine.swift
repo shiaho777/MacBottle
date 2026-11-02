@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import CryptoKit
 import SemanticVersion
 
 // MARK: - WineEngine
@@ -86,5 +87,36 @@ public extension WineEngine {
     /// the pattern UI setup views use.
     func installedOrNil() -> SemanticVersion? {
         isInstalled() ? installedVersion() : nil
+    }
+
+    /// Verify a downloaded engine archive against an expected digest
+    /// before handing it to the (destructive) install path. Callers that
+    /// have a manifest should always use this overload.
+    func install(from tarball: URL, expectedSHA256: String) throws {
+        let actual = ChunkedDownloader.sha256Hex(of: tarball)
+        guard !actual.isEmpty else {
+            throw WineEngineIntegrityError.unreadable(tarball)
+        }
+        guard actual == expectedSHA256.lowercased() else {
+            throw WineEngineIntegrityError.checksumMismatch(
+                expected: expectedSHA256,
+                actual: actual
+            )
+        }
+        try install(from: tarball)
+    }
+}
+
+public enum WineEngineIntegrityError: Error, LocalizedError {
+    case unreadable(URL)
+    case checksumMismatch(expected: String, actual: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unreadable(let url):
+            return "Could not read the engine archive at \(url.path)."
+        case .checksumMismatch(let expected, let actual):
+            return "Engine archive failed integrity verification (expected \(expected), got \(actual))."
+        }
     }
 }

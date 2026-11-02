@@ -25,11 +25,14 @@ actor ImageCache {
     static let shared = ImageCache()
 
     private var memory: [URL: Data] = [:]
+    private var memoryOrder: [URL] = []
     private let diskRoot: URL
+    private let maxDiskBytes: Int64
     private var inFlight: [URL: Task<Data?, Never>] = [:]
     private let memoryLimit = 256
+    private var lastDiskPrune = Date.distantPast
 
-    init(diskRoot: URL? = nil) {
+    init(diskRoot: URL? = nil, maxDiskBytes: Int64 = 512 * 1024 * 1024) {
         if let diskRoot {
             self.diskRoot = diskRoot
         } else {
@@ -44,6 +47,7 @@ actor ImageCache {
                 .appending(path: Bundle.whiskyBundleIdentifier)
                 .appending(path: "ImageCache")
         }
+        self.maxDiskBytes = maxDiskBytes
         try? FileManager.default.createDirectory(
             at: self.diskRoot,
             withIntermediateDirectories: true
@@ -52,6 +56,7 @@ actor ImageCache {
 
     func data(for url: URL) async -> Data? {
         if let hit = memory[url] {
+            touch(url)
             return hit
         }
 
@@ -69,12 +74,55 @@ actor ImageCache {
         let data = await task.value
         inFlight[url] = nil
         if let data {
-            if memory.count >= memoryLimit {
-                memory.removeAll(keepingCapacity: true)
-            }
-            memory[url] = data
+            storeInMemory(data, for: url)
+            pruneDiskIfNeeded()
         }
         return data
+    }
+
+    private func touch(_ url: URL) {
+        memoryOrder.removeAll { $0 == url }
+        memoryOrder.append(url)
+    }
+
+    private func storeInMemory(_ data: Data, for url: URL) {
+        if memory[url] == nil, memory.count >= memoryLimit,
+           let oldest = memoryOrder.first {
+            memory.removeValue(forKey: oldest)
+            memoryOrder.removeFirst()
+        }
+        memory[url] = data
+        touch(url)
+    }
+
+    /// Keep the disk cache bounded. Without this, every distinct recipe
+    /// icon ever viewed stayed on disk forever.
+    func pruneDiskIfNeeded() {
+        let now = Date()
+        guard now.timeIntervalSince(lastDiskPrune) > 300 else { return }
+        lastDiskPrune = now
+
+        let fileManager = FileManager.default
+        guard let entries = try? fileManager.contentsOfDirectory(
+            at: diskRoot,
+            includingPropertiesForKeys: [.fileSizeKey, .contentModificationDateKey]
+        ) else { return }
+
+        var files: [(url: URL, size: Int64, modified: Date)] = []
+        for entry in entries {
+            guard let values = try? entry.resourceValues(
+                forKeys: [.fileSizeKey, .contentModificationDateKey]
+            ), let size = values.fileSize else { continue }
+            files.append((entry, Int64(size), values.contentModificationDate ?? .distantPast))
+        }
+        var total = files.reduce(Int64(0)) { $0 + $1.size }
+        guard total > maxDiskBytes else { return }
+
+        for file in files.sorted(by: { $0.modified < $1.modified }) {
+            guard total > maxDiskBytes else { break }
+            try? fileManager.removeItem(at: file.url)
+            total -= file.size
+        }
     }
 
     private static func diskURL(for url: URL, root: URL) -> URL {
@@ -114,7 +162,7 @@ actor ImageCache {
             }
             guard NSImage(data: data) != nil else {
                 Logger.wineKit.debug(
-                    "ImageCache: discarding non-image response from \(url.host, privacy: .public)"
+                    "ImageCache: discarding non-image response from \(url.host ?? "unknown", privacy: .public)"
                 )
                 return nil
             }
@@ -132,6 +180,7 @@ actor ImageCache {
 
     func purge() throws {
         memory.removeAll()
+        memoryOrder.removeAll()
         if FileManager.default.fileExists(atPath: diskRoot.path) {
             try FileManager.default.removeItem(at: diskRoot)
             try FileManager.default.createDirectory(

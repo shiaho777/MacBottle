@@ -260,7 +260,15 @@ final class GameInstaller {
             .appending(path: "Steam")
             .appending(path: "Steam.exe")
         let steamExeAlt = steamExe.deletingLastPathComponent().appending(path: "steam.exe")
-        let launchURL = FileManager.default.fileExists(atPath: steamExe.path) ? steamExe : steamExeAlt
+        let steamExe64 = bottle.url
+            .appending(path: "drive_c")
+            .appending(path: "Program Files")
+            .appending(path: "Steam")
+            .appending(path: "Steam.exe")
+        let steamExe64Alt = steamExe64.deletingLastPathComponent().appending(path: "steam.exe")
+        let launchURL = [steamExe, steamExeAlt, steamExe64, steamExe64Alt]
+            .first { FileManager.default.fileExists(atPath: $0.path(percentEncoded: false)) }
+            ?? steamExeAlt
 
         var launchArgs: [String] = []
         if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
@@ -435,6 +443,22 @@ final class GameInstaller {
         statusDetail = String(localized: "game.install.installingCJKFonts")
         await installCJKFontSubstitutions(bottle: bottle)
 
+        do {
+            _ = try await RecipeProvisioner.shared.provisionIfNeeded(
+                recipe: recipe,
+                bottle: bottle
+            ) { detail in
+                Task { @MainActor in
+                    self.statusDetail = detail
+                }
+            }
+        } catch {
+            Logger.wineKit.error(
+                "GameInstaller: recipe provisioning failed for \(self.recipe.id): \(error.localizedDescription)"
+            )
+            statusDetail = error.localizedDescription
+        }
+
         Logger.wineKit.info("GameInstaller: applied recipe \(self.recipe.id) to bottle \(bottle.url.lastPathComponent)")
     }
 
@@ -554,6 +578,20 @@ final class GameInstaller {
     }
 }
 
+private enum SteamSetupDownloadError: Error, LocalizedError {
+    case invalidResponse(Int)
+    case notAnExecutable
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse(let code):
+            return "SteamSetup download failed with HTTP \(code)."
+        case .notAnExecutable:
+            return "The downloaded SteamSetup is not a Windows executable."
+        }
+    }
+}
+
 private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     var onProgress: ((Int64, Int64) -> Void)?
     private var continuation: CheckedContinuation<URL, Error>?
@@ -587,6 +625,30 @@ private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, 
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
+        if let http = downloadTask.response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) {
+            continuation?.resume(throwing: SteamSetupDownloadError.invalidResponse(http.statusCode))
+            continuation = nil
+            return
+        }
+
+        let attributes = try? FileManager.default.attributesOfItem(atPath: location.path)
+        let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+        guard size > 512 * 1024 else {
+            continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
+            continuation = nil
+            return
+        }
+        if let handle = try? FileHandle(forReadingFrom: location) {
+            let magic = try? handle.read(upToCount: 2)
+            try? handle.close()
+            guard magic == Data([0x4D, 0x5A]) else {
+                continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
+                continuation = nil
+                return
+            }
+        }
+
         let dest = FileManager.default.temporaryDirectory
             .appending(path: "SteamSetup-\(UUID().uuidString).exe")
         do {

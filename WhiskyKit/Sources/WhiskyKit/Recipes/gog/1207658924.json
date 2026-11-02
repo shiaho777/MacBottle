@@ -5,7 +5,7 @@
   "icon_url": "https://cdn.cloudflare.steamstatic.com/steam/apps/20920/header.jpg",
   "dx_version": "d3d9",
   "min_macos": "14.0",
-  "renderer": "d3dmetal",
+  "renderer": "dxvk",
   "installer": "gog",
   "winetricks": [
     "vcrun2010"

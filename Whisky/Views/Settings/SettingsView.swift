@@ -144,6 +144,7 @@ struct SettingsView: View {
                     installIfNeeded: installIfNeeded
                 )
                 await MainActor.run {
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
                     selectedEngineID = engine.identifier
                     engineMessage = String(format: String(localized: "settings.engine.switched %@"), engine.displayName)
                     engineBusy = false
@@ -171,6 +172,7 @@ struct SettingsView: View {
                     installIfNeeded: false
                 )
                 await MainActor.run {
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
                     selectedEngineID = engine.identifier
                     let format = String(localized: "settings.engine.d3dmetalReady %@")
                     engineMessage = String(format: format, engine.libraryRoot.path)
@@ -227,6 +229,7 @@ struct SettingsView: View {
                     )
                     await MainActor.run {
                         WhiskyApp.killBottles()
+                        ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
                         selectedEngineID = engine.identifier
                         let format = String(localized: "settings.engine.imported %@")
                         engineMessage = String(format: format, engine.libraryRoot.path)

@@ -16,113 +16,188 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import Observation
 import SwiftUI
 import WhiskyKit
 
 struct WhiskyWineDownloadView: View {
-    @State private var fractionProgress: Double = 0
-    @State private var completedBytes: Int64 = 0
-    @State private var totalBytes: Int64 = 0
-    @State private var downloadSpeed: Double = 0
-    @State private var downloadTask: URLSessionDownloadTask?
-    @State private var observation: NSKeyValueObservation?
-    @State private var startTime: Date?
+    @State private var model = EngineDownloadModel()
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
+
     var body: some View {
-        VStack {
-            VStack {
-                Text("setup.whiskywine.download")
-                    .font(.title)
-                    .fontWeight(.bold)
-                Text("setup.whiskywine.download.subtitle")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                VStack {
-                    ProgressView(value: fractionProgress, total: 1)
-                    HStack {
-                        HStack {
-                            Text(String(format: String(localized: "setup.whiskywine.progress"),
-                                        formatBytes(bytes: completedBytes),
-                                        formatBytes(bytes: totalBytes)))
-                            + Text(String(" "))
-                            + (shouldShowEstimate() ?
-                               Text(String(format: String(localized: "setup.whiskywine.eta"),
-                                           formatRemainingTime(remainingBytes: totalBytes - completedBytes)))
-                               : Text(String()))
-                            Spacer()
-                        }
-                        .font(.subheadline)
-                        .monospacedDigit()
+        VStack(spacing: 12) {
+            Text("setup.whiskywine.download")
+                .font(.title)
+                .fontWeight(.bold)
+            Text("setup.whiskywine.download.subtitle")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if model.isDownloading || model.fraction > 0 {
+                ProgressView(value: min(max(model.fraction, 0), 1), total: 1)
+                    .padding(.horizontal)
+                HStack {
+                    Text(String(
+                        format: String(localized: "setup.whiskywine.progress"),
+                        Self.formatBytes(model.completedBytes),
+                        Self.formatBytes(model.totalBytes)
+                    ))
+                    if model.speed > 0, model.totalBytes > model.completedBytes {
+                        Text(String(
+                            format: String(localized: "setup.whiskywine.eta"),
+                            Self.formatRemaining(
+                                bytes: model.totalBytes - model.completedBytes,
+                                speed: model.speed
+                            )
+                        ))
                     }
+                    Spacer()
                 }
+                .font(.subheadline)
+                .monospacedDigit()
                 .padding(.horizontal)
-                Spacer()
             }
-            Spacer()
-        }
-        .frame(width: 400, height: 200)
-        .onAppear {
-            Task {
-                if let url: URL = URL(string: "https://data.getwhisky.app/Wine/Libraries.tar.gz") {
-                    downloadTask = URLSession(configuration: .ephemeral).downloadTask(with: url) { url, _, _ in
-                        Task.detached {
-                            await MainActor.run {
-                                if let url = url {
-                                    tarLocation = url
-                                    proceed()
-                                }
-                            }
-                        }
-                    }
-                    observation = downloadTask?.observe(\.countOfBytesReceived) { task, _ in
-                        Task {
-                            await MainActor.run {
-                                let currentTime = Date()
-                                let elapsedTime = currentTime.timeIntervalSince(startTime ?? currentTime)
-                                if completedBytes > 0 {
-                                    downloadSpeed = Double(completedBytes) / elapsedTime
-                                }
-                                totalBytes = task.countOfBytesExpectedToReceive
-                                completedBytes = task.countOfBytesReceived
-                                fractionProgress = Double(completedBytes) / Double(totalBytes)
-                            }
-                        }
-                    }
-                    startTime = Date()
-                    downloadTask?.resume()
+
+            if let error = model.errorMessage {
+                Text(verbatim: error)
+                    .font(.callout)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                Button("setup.retry") {
+                    model.start()
                 }
+            }
+        }
+        .frame(width: 420, height: 240)
+        .onAppear {
+            model.start()
+        }
+        .onDisappear {
+            model.cancel()
+        }
+        .onChange(of: model.completedURL) { _, url in
+            guard let url else { return }
+            tarLocation = url
+            path.append(.whiskyWineInstall)
+        }
+        .alert(
+            "setup.engine.trust.title",
+            isPresented: Binding(
+                get: { model.awaitingTrust },
+                set: { model.awaitingTrust = $0 }
+            )
+        ) {
+            Button("setup.engine.trust.accept") {
+                model.acceptChangedArchive()
+            }
+            Button("button.removeAlert.cancel", role: .cancel) {
+                model.cancel()
+            }
+        } message: {
+            if let message = model.errorMessage {
+                Text(verbatim: message)
             }
         }
     }
 
-    func formatBytes(bytes: Int64) -> String {
+    private static func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         formatter.zeroPadsFractionDigits = true
         return formatter.string(fromByteCount: bytes)
     }
 
-    func shouldShowEstimate() -> Bool {
-        let elapsedTime = Date().timeIntervalSince(startTime ?? Date())
-        return Int(elapsedTime.rounded()) > 5 && completedBytes != 0
-    }
-
-    func formatRemainingTime(remainingBytes: Int64) -> String {
-        let remainingTimeInSeconds = Double(remainingBytes) / downloadSpeed
-
+    private static func formatRemaining(bytes: Int64, speed: Double) -> String {
+        guard speed > 0 else { return "" }
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute, .second]
-        formatter.unitsStyle = .full
-        if shouldShowEstimate() {
-            return formatter.string(from: TimeInterval(remainingTimeInSeconds)) ?? ""
-        } else {
-            return ""
+        formatter.unitsStyle = .short
+        return formatter.string(from: TimeInterval(Double(bytes) / speed)) ?? ""
+    }
+}
+
+@MainActor
+@Observable
+final class EngineDownloadModel {
+    static let sourceURL: URL = {
+        guard let url = URL(string: "https://data.getwhisky.app/Wine/Libraries.tar.gz") else {
+            preconditionFailure("invalid engine source URL")
+        }
+        return url
+    }()
+
+    var fraction: Double = 0
+    var completedBytes: Int64 = 0
+    var totalBytes: Int64 = 0
+    var speed: Double = 0
+    var isDownloading = false
+    var errorMessage: String?
+    var awaitingTrust = false
+    var completedURL: URL?
+
+    private var task: Task<Void, Never>?
+    private var destination: URL?
+
+    func start(acceptingChangedDigest: Bool = false) {
+        guard !isDownloading else { return }
+        isDownloading = true
+        errorMessage = nil
+        awaitingTrust = false
+        completedURL = nil
+        fraction = 0
+        completedBytes = 0
+        totalBytes = 0
+        speed = 0
+
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: "WhiskyWine-\(UUID().uuidString).tar.gz")
+        self.destination = destination
+
+        task = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let url = try await EngineDownloadService.shared.download(
+                    from: Self.sourceURL,
+                    to: destination,
+                    acceptingChangedDigest: acceptingChangedDigest
+                ) { progress in
+                    Task { @MainActor [weak self] in
+                        self?.apply(progress)
+                    }
+                }
+                self.completedURL = url
+            } catch let error as EngineArchiveTrustError {
+                if case .digestChanged = error {
+                    self.awaitingTrust = true
+                }
+                self.errorMessage = error.localizedDescription
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+            self.isDownloading = false
         }
     }
 
-    func proceed() {
-        path.append(.whiskyWineInstall)
+    func acceptChangedArchive() {
+        awaitingTrust = false
+        start(acceptingChangedDigest: true)
+    }
+
+    func cancel() {
+        task?.cancel()
+        task = nil
+        isDownloading = false
+        if let destination {
+            try? FileManager.default.removeItem(at: destination)
+        }
+    }
+
+    private func apply(_ progress: EngineDownloadProgress) {
+        fraction = progress.fraction
+        completedBytes = progress.completedBytes
+        totalBytes = progress.totalBytes
+        speed = progress.bytesPerSecond
     }
 }

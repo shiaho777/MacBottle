@@ -21,12 +21,14 @@ import XCTest
 
 final class DXVKGameConfTests: XCTestCase {
     private var workDir: URL!
+    private var confRoot: URL!
     private var exeURL: URL!
 
     override func setUp() {
         super.setUp()
         workDir = FileManager.default.temporaryDirectory
             .appending(component: "dxvk-conf-tests-\(UUID().uuidString)")
+        confRoot = workDir.appending(path: "conf")
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
         exeURL = workDir.appending(component: "game.exe")
         try? Data().write(to: exeURL)
@@ -38,7 +40,7 @@ final class DXVKGameConfTests: XCTestCase {
     }
 
     private var confURL: URL {
-        workDir.appending(component: "game.exe.conf")
+        DXVKGameConf.configurationURL(for: exeURL, root: confRoot)
     }
 
     func testResponsivePostureLatencyOne() {
@@ -48,11 +50,21 @@ final class DXVKGameConfTests: XCTestCase {
         XCTAssertTrue(memory >= 8_192 && memory <= 24_000, "budget \(memory) outside clamp")
     }
 
-    func testApplyWritesAllFourLevers() throws {
-        DXVKGameConf.apply(
+    func testApplyWritesAllFourLeversOutsideGameDirectory() throws {
+        let url = DXVKGameConf.apply(
             posture: .init(maxFrameLatency: 1, maxDeviceMemoryMegabytes: 12_288),
-            executable: exeURL
+            executable: exeURL,
+            root: confRoot
         )
+        XCTAssertEqual(url, confURL)
+        XCTAssertTrue(url.path.hasPrefix(confRoot.path), "config must live under Application Support")
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: exeURL.appendingPathExtension("conf").path(percentEncoded: false)
+            ),
+            "the game directory must stay untouched"
+        )
+
         let text = try String(contentsOf: confURL, encoding: .utf8)
         XCTAssertTrue(text.contains("dxgi.maxFrameLatency = 1"))
         XCTAssertTrue(text.contains("d3d9.maxFrameLatency = 1"))
@@ -62,16 +74,29 @@ final class DXVKGameConfTests: XCTestCase {
 
     func testApplyIsIdempotent() throws {
         let posture = DXVKGameConf.Posture(maxFrameLatency: 1, maxDeviceMemoryMegabytes: 12_288)
-        XCTAssertTrue(DXVKGameConf.apply(posture: posture, executable: exeURL))
-        XCTAssertFalse(DXVKGameConf.apply(posture: posture, executable: exeURL), "second write should be a no-op")
+        _ = DXVKGameConf.apply(posture: posture, executable: exeURL, root: confRoot)
+        let first = try Data(contentsOf: confURL)
+        _ = DXVKGameConf.apply(posture: posture, executable: exeURL, root: confRoot)
+        let second = try Data(contentsOf: confURL)
+        XCTAssertEqual(first, second, "second write should not change the file")
     }
 
-    func testUpsertReplacesCommentedDefault() throws {
+    func testDifferentExecutablesDoNotShareConfig() {
+        let other = workDir.appending(component: "other/game.exe")
+        try? FileManager.default.createDirectory(
+            at: other.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let firstConfig = DXVKGameConf.configurationURL(for: exeURL, root: confRoot)
+        let secondConfig = DXVKGameConf.configurationURL(for: other, root: confRoot)
+        XCTAssertNotEqual(firstConfig, secondConfig)
+    }
+
+    func testUpsertReplacesCommentedDefault() {
         let text = """
         # dxgi.maxFrameLatency = 0
         # other comment
         """
-        try text.write(to: confURL, atomically: true, encoding: .utf8)
         let merged = DXVKGameConf.upsertLine(
             in: text,
             key: "dxgi.maxFrameLatency",
@@ -82,18 +107,23 @@ final class DXVKGameConfTests: XCTestCase {
         XCTAssertTrue(merged.contains("# other comment"))
     }
 
-    func testRemoveRestoresOriginalSnapshot() throws {
-        let original = "# user authored conf\ndxgi.syncInterval = -1\n"
-        try original.write(to: confURL, atomically: true, encoding: .utf8)
-        DXVKGameConf.apply(
+    func testRemoveDeletesOnlyGeneratedConfig() throws {
+        _ = DXVKGameConf.apply(
             posture: .init(maxFrameLatency: 1, maxDeviceMemoryMegabytes: 8_192),
-            executable: exeURL
+            executable: exeURL,
+            root: confRoot
         )
-        DXVKGameConf.remove(executable: exeURL)
-        let restored = try String(contentsOf: confURL, encoding: .utf8)
-        XCTAssertEqual(restored, original)
-        XCTAssertFalse(FileManager.default.fileExists(
-            atPath: confURL.appendingPathExtension("macbottle.orig").path(percentEncoded: false)
-        ))
+        let userAuthored = exeURL.appendingPathExtension("conf")
+        let original = "# user authored conf\ndxgi.syncInterval = -1\n"
+        try original.write(to: userAuthored, atomically: true, encoding: .utf8)
+
+        DXVKGameConf.remove(executable: exeURL, root: confRoot)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: confURL.path))
+        XCTAssertEqual(
+            try String(contentsOf: userAuthored, encoding: .utf8),
+            original,
+            "user-authored config must never be touched"
+        )
     }
 }

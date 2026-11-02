@@ -20,6 +20,7 @@ import Foundation
 import Darwin
 import os.log
 
+// swiftlint:disable:next type_body_length
 public class Wine {
     /// URL to the installed `DXVK` folder
     static let dxvkFolder: URL = WhiskyWineInstaller.libraryFolder.appending(path: "DXVK")
@@ -83,10 +84,12 @@ public class Wine {
     /// Run a `wineserver` process with the given arguments and environment variables returning a stream of output
     private static func runWineserverProcess(
         name: String? = nil, args: [String], environment: [String: String] = [:],
-        fileHandle: FileHandle?
+        fileHandle: FileHandle?,
+        engine: (any WineEngine)? = nil
     ) throws -> AsyncStream<ProcessOutput> {
         return try runProcess(
-            name: name, args: args, environment: environment, executableURL: wineserverBinary,
+            name: name, args: args, environment: environment,
+            executableURL: engine?.wineserverBinary ?? wineserverBinary,
             fileHandle: fileHandle
         )
     }
@@ -121,7 +124,8 @@ public class Wine {
                 environment: constructWineEnvironment(
                     for: bottle,
                     environment: environment,
-                    executableURL: executableURL
+                    executableURL: executableURL,
+                    engine: engine
                 ),
                 fileHandle: fileHandle,
                 qualityOfService: qualityOfService,
@@ -138,7 +142,8 @@ public class Wine {
 
     /// Run a `wineserver` process with the given arguments and environment variables returning a stream of output
     public static func runWineserverProcess(
-        name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:]
+        name: String? = nil, args: [String], bottle: Bottle, environment: [String: String] = [:],
+        engine: (any WineEngine)? = nil
     ) throws -> AsyncStream<ProcessOutput> {
         let fileHandle = try makeFileHandle()
         fileHandle.writeApplicationInfo()
@@ -147,8 +152,13 @@ public class Wine {
         do {
             return try runWineserverProcess(
                 name: name, args: args,
-                environment: constructWineServerEnvironment(for: bottle, environment: environment),
-                fileHandle: fileHandle
+                environment: constructWineServerEnvironment(
+                    for: bottle,
+                    environment: environment,
+                    engine: engine
+                ),
+                fileHandle: fileHandle,
+                engine: engine
             )
         } catch {
             try? fileHandle.close()
@@ -156,15 +166,17 @@ public class Wine {
         }
     }
 
-    public static func prewarmBottle(_ bottle: Bottle) async throws {
+    public static func prewarmBottle(_ bottle: Bottle, engine: (any WineEngine)? = nil) async throws {
+        let engine = engine ?? WineEngineRegistry.shared.current
+        let engineID = buildID(for: engine)
         let gate = await MainActor.run { () -> String in
-            if ProgramLaunchCoordinator.shared.isWarm(bottle: bottle) {
+            if ProgramLaunchCoordinator.shared.isWarm(bottle: bottle, engineID: engineID) {
                 return "warm"
             }
-            if ProgramLaunchCoordinator.shared.isWarming(bottle: bottle) {
+            if ProgramLaunchCoordinator.shared.isWarming(bottle: bottle, engineID: engineID) {
                 return "warming"
             }
-            ProgramLaunchCoordinator.shared.beginWarmup(bottle: bottle)
+            ProgramLaunchCoordinator.shared.beginWarmup(bottle: bottle, engineID: engineID)
             return "start"
         }
 
@@ -175,8 +187,8 @@ public class Wine {
             for _ in 0..<50 {
                 try await Task.sleep(for: .milliseconds(40))
                 let done = await MainActor.run {
-                    ProgramLaunchCoordinator.shared.isWarm(bottle: bottle)
-                        || !ProgramLaunchCoordinator.shared.isWarming(bottle: bottle)
+                    ProgramLaunchCoordinator.shared.isWarm(bottle: bottle, engineID: engineID)
+                        || !ProgramLaunchCoordinator.shared.isWarming(bottle: bottle, engineID: engineID)
                 }
                 if done {
                     return
@@ -189,27 +201,25 @@ public class Wine {
         // boot-complete from on-disk evidence alone. When it does, the
         // "prewarm" is genuinely instant — nothing to spawn at all.
         let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
-        let engine = WineEngineRegistry.shared.current
-        let engineBuildID = "\(engine.identifier)-\(engine.installedVersion()?.description ?? "unknown")"
         let baseline = PrefixReadinessOracle.loadBaseline(bottleKey: bottleKey)
         let verdict = PrefixReadinessOracle.verdict(
             bottleURL: bottle.url,
             saved: baseline,
-            engineBuildID: engineBuildID
+            engineBuildID: engineID
         )
         if verdict.isReady {
             Logger.wineKit.info("ZeroPath: prewarm skipped (readiness proven)")
             await MainActor.run {
-                ProgramLaunchCoordinator.shared.markWarm(bottle: bottle)
+                ProgramLaunchCoordinator.shared.markWarm(bottle: bottle, engineID: engineID)
             }
             return
         }
 
         do {
             let process = Process()
-            process.executableURL = wineserverBinary
+            process.executableURL = engine.wineserverBinary
             process.arguments = ["-p"]
-            process.environment = constructWineServerEnvironment(for: bottle)
+            process.environment = constructWineServerEnvironment(for: bottle, engine: engine)
             process.standardOutput = FileHandle.nullDevice
             process.standardError = FileHandle.nullDevice
             // wineserver is the IPC hub every wine call round-trips —
@@ -224,24 +234,41 @@ public class Wine {
             try await Task.sleep(for: .milliseconds(150))
             let success = process.isRunning || process.terminationStatus == 0
             await MainActor.run {
-                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: success)
+                ProgramLaunchCoordinator.shared.finishWarmup(
+                    bottle: bottle,
+                    engineID: engineID,
+                    success: success
+                )
             }
         } catch {
             await MainActor.run {
-                ProgramLaunchCoordinator.shared.finishWarmup(bottle: bottle, success: false)
+                ProgramLaunchCoordinator.shared.finishWarmup(
+                    bottle: bottle,
+                    engineID: engineID,
+                    success: false
+                )
             }
             throw error
         }
     }
 
-    public static func ensureBottleReady(_ bottle: Bottle) async {
+    public static func ensureBottleReady(
+        _ bottle: Bottle,
+        engine: (any WineEngine)? = nil
+    ) async {
         do {
-            try await prewarmBottle(bottle)
+            try await prewarmBottle(bottle, engine: engine)
         } catch {
             Logger.wineKit.warning(
                 "Bottle prewarm skipped: \(error.localizedDescription, privacy: .public)"
             )
         }
+    }
+
+    /// Stable identity for "which Wine build is this". Used to invalidate
+    /// warm state and readiness baselines when the build changes.
+    public static func buildID(for engine: any WineEngine) -> String {
+        "\(engine.identifier)-\(engine.installedVersion()?.description ?? "unknown")"
     }
 
     public static func runProgram(
@@ -255,17 +282,34 @@ public class Wine {
         autoSelectEngine: Bool = true,
         captureRunLog: Bool = true
     ) async throws {
-        // Plan (PE scan, engine decision, readiness fingerprint) and
-        // warmup (wineserver spawn) touch disjoint state; racing them
-        // hides the warmup latency behind the planning work instead of
-        // paying both serially.
-        async let warmup: Void = ensureBottleReady(bottle)
+        // Resolve the engine before prewarming: the warmup must spawn the
+        // same wineserver the launch will use, and engine auto-selection
+        // flips the process-wide registry.
+        let engineDecision: LaunchEnginePolicy.AppliedLaunch?
+        if autoSelectEngine {
+            engineDecision = LaunchEnginePolicy.applyForLaunch(
+                executable: url,
+                recipe: recipe,
+                bottleDXVKEnabled: bottle.settings.dxvk,
+                bottleEngineID: bottle.settings.engineID
+            )
+        } else {
+            engineDecision = nil
+        }
+        let launchEngine = engineDecision?.engine ?? WineEngineRegistry.shared.current
+
+        // Plan (PE scan, DXVK config, readiness fingerprint) and warmup
+        // (wineserver spawn) touch disjoint state; racing them hides the
+        // warmup latency behind the planning work instead of paying both
+        // serially.
+        async let warmup: Void = ensureBottleReady(bottle, engine: launchEngine)
         let launchContext = await planLaunch(
             url: url,
             bottle: bottle,
             recipe: recipe,
             applyDXVK: applyDXVK,
-            autoSelectEngine: autoSelectEngine,
+            engineDecision: engineDecision,
+            launchEngine: launchEngine,
             environment: environment,
             args: args
         )
@@ -309,27 +353,11 @@ public class Wine {
         bottle: Bottle,
         recipe: Recipe?,
         applyDXVK: Bool,
-        autoSelectEngine: Bool,
+        engineDecision: LaunchEnginePolicy.AppliedLaunch?,
+        launchEngine: any WineEngine,
         environment: [String: String],
         args: [String]
     ) async -> ZeroPathLaunchContext {
-        let engineDecision: LaunchEnginePolicy.AppliedLaunch?
-        if autoSelectEngine {
-            engineDecision = LaunchEnginePolicy.applyForLaunch(
-                executable: url,
-                recipe: recipe,
-                bottleDXVKEnabled: bottle.settings.dxvk,
-                bottleEngineID: bottle.settings.engineID
-            )
-        } else {
-            engineDecision = nil
-        }
-        // Resolve the binaries synchronously from the applied engine:
-        // the registry may be flipped by a concurrent launch or a UI
-        // switch between here and spawn, and this launch must run under
-        // exactly the engine that was selected for it.
-        let launchEngine = engineDecision?.engine ?? WineEngineRegistry.shared.current
-
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
 
         var shouldApplyDXVK = applyDXVK
@@ -341,35 +369,63 @@ public class Wine {
             shouldApplyDXVK = false
         } else if recipe?.renderer == .d3dmetal {
             shouldApplyDXVK = false
+        } else if recipe?.renderer == .moltenvk {
+            shouldApplyDXVK = false
         } else if recipe?.renderer == .wined3d {
             shouldApplyDXVK = false
         }
 
+        var dxvkConfigURL: URL?
         if shouldApplyDXVK {
+            let engineID = buildID(for: launchEngine)
             let dxvkReady = await MainActor.run {
-                ProgramLaunchCoordinator.shared.isDXVKReady(bottle: bottle)
+                ProgramLaunchCoordinator.shared.isDXVKReady(bottle: bottle, engineID: engineID)
             }
             if !dxvkReady {
-                try? enableDXVK(bottle: bottle)
+                try? enableDXVK(bottle: bottle, engine: launchEngine)
                 await MainActor.run {
-                    ProgramLaunchCoordinator.shared.markDXVKReady(bottle: bottle)
+                    ProgramLaunchCoordinator.shared.markDXVKReady(
+                        bottle: bottle,
+                        engineID: engineID
+                    )
                 }
             }
             // Per-game dxvk.conf: queue depth 1 + honest UMA budget.
-            _ = DXVKGameConf.apply(
+            // Written under Application Support and handed to DXVK via
+            // DXVK_CONFIG_FILE, so the game directory stays untouched.
+            dxvkConfigURL = DXVKGameConf.apply(
                 posture: .responsive(physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory),
                 executable: url
             )
+        } else {
+            // A recipe or engine may have overridden a bottle that had
+            // DXVK installed. Restore the Wine DLLs instead of leaving a
+            // half-switched prefix behind.
+            try? disableDXVK(bottle: bottle)
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.clearDXVK(bottle: bottle)
+            }
         }
 
         var environment = environment
+        if let dxvkConfigURL {
+            environment["DXVK_CONFIG_FILE"] = dxvkConfigURL.path(percentEncoded: false)
+        }
+        let isVulkanRoute = recipe?.renderer == .moltenvk
+            || (recipe == nil
+                && engineDecision?.decision.importProfile?.graphicsAPIs.contains(.vulkan) == true)
+        if isVulkanRoute {
+            RendererEnvironment.applyMoltenVK(to: &environment, engine: launchEngine)
+        } else if recipe?.renderer == .wined3d {
+            RendererEnvironment.applyWineD3D(to: &environment)
+        }
         if environment["WINEDLLOVERRIDES"]?.isEmpty == true {
             environment.removeValue(forKey: "WINEDLLOVERRIDES")
         }
 
         // ---- ZeroPath: predict prefix readiness, skip boot-check ----
         let launchStart = Date()
-        let engineBuildID = "\(launchEngine.identifier)-\(launchEngine.installedVersion()?.description ?? "unknown")"
+        let engineBuildID = buildID(for: launchEngine)
         let bottleKey = ProgramRunLogStore.bottleKey(for: bottle)
         let plan = DoubleLaunchExecutor.plan(
             bottle: bottle,
@@ -694,12 +750,27 @@ extension Wine {
         if !FileManager.default.fileExists(atPath: Self.logsFolder.path) {
             try FileManager.default.createDirectory(at: Self.logsFolder, withIntermediateDirectories: true)
         }
-        purgeOldLogs()
+        purgeOldLogsIfNeeded()
 
         let dateString = Date.now.ISO8601Format()
         let fileURL = Self.logsFolder.appending(path: dateString).appendingPathExtension("log")
         try "".write(to: fileURL, atomically: true, encoding: .utf8)
         return try FileHandle(forWritingTo: fileURL)
+    }
+
+    /// The sweep used to run on every single wine invocation, which is an
+    /// O(files) directory walk on the launch hot path. Once an hour is
+    /// plenty for a 7-day retention policy.
+    private static func purgeOldLogsIfNeeded() {
+        let marker = Self.logsFolder.appending(path: ".last-purge")
+        let fileManager = FileManager.default
+        if let attrs = try? fileManager.attributesOfItem(atPath: marker.path(percentEncoded: false)),
+           let modified = attrs[.modificationDate] as? Date,
+           Date().timeIntervalSince(modified) < 3600 {
+            return
+        }
+        purgeOldLogs()
+        try? Data().write(to: marker, options: .atomic)
     }
 
     /// Every wine invocation creates a timestamped log; without a sweep

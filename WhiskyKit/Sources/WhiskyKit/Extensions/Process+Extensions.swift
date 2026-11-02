@@ -85,6 +85,11 @@ public extension Process {
         let cleanup = PipeReaderCleanup(readers: [pipe.fileHandleForReading, errorPipe.fileHandleForReading])
         let stopReading: @Sendable () -> Void = { cleanup.stopReading() }
         let drainAndClose: @Sendable () -> Void = { cleanup.drainAndClose() }
+        // Both stdout and stderr handlers write to the same log file;
+        // FileWriteBox serializes them and enforces the capture cap.
+        let writeBox = fileHandle.map { FileWriteBox(handle: $0, maxBytes: 12 * 1024 * 1024) }
+        let outLines = LineAccumulator()
+        let errLines = LineAccumulator()
 
         let stream = AsyncStream(ProcessOutput.self, bufferingPolicy: .unbounded) { continuation in
             continuation.onTermination = { @Sendable termination in
@@ -102,31 +107,48 @@ public extension Process {
             continuation.yield(.started(self))
 
             pipe.fileHandleForReading.readabilityHandler = { pipe in
-                guard let line = pipe.nextLine() else { return }
-                continuation.yield(.message(line))
-                guard !line.isEmpty else { return }
-                if systemLog {
-                    Logger.wineKit.info("\(line, privacy: .public)")
+                let data = pipe.availableData
+                guard !data.isEmpty else {
+                    pipe.readabilityHandler = nil
+                    return
                 }
-                fileHandle?.write(line: line)
+                for line in outLines.append(data) {
+                    continuation.yield(.message(line))
+                    if systemLog {
+                        Logger.wineKit.info("\(line, privacy: .public)")
+                    }
+                    writeBox?.write(line: line)
+                }
             }
 
             errorPipe.fileHandleForReading.readabilityHandler = { pipe in
-                guard let line = pipe.nextLine() else { return }
-                continuation.yield(.error(line))
-                guard !line.isEmpty else { return }
-                if systemLog {
-                    Logger.wineKit.warning("\(line, privacy: .public)")
+                let data = pipe.availableData
+                guard !data.isEmpty else {
+                    pipe.readabilityHandler = nil
+                    return
                 }
-                fileHandle?.write(line: line)
+                for line in errLines.append(data) {
+                    continuation.yield(.error(line))
+                    if systemLog {
+                        Logger.wineKit.warning("\(line, privacy: .public)")
+                    }
+                    writeBox?.write(line: line)
+                }
             }
 
             self.terminationHandler = { (process: Process) in
                 drainAndClose()
-                do {
-                    try fileHandle?.close()
-                } catch {
-                    Logger.wineKit.error("Error while clearing data: \(error)")
+                for line in outLines.flush() {
+                    continuation.yield(.message(line))
+                    writeBox?.write(line: line)
+                }
+                for line in errLines.flush() {
+                    continuation.yield(.error(line))
+                    writeBox?.write(line: line)
+                }
+                writeBox?.close()
+                if writeBox == nil {
+                    try? fileHandle?.close()
                 }
 
                 process.logTermination(name: name)
@@ -234,7 +256,9 @@ public extension Process {
             Logger.wineKit.info("Directory: `\(directory.path(percentEncoded: false))`")
         }
         if let environment = environment {
-            Logger.wineKit.info("Environment: \(environment)")
+            // Values can contain tokens and user secrets; log the shape,
+            // not the contents.
+            Logger.wineKit.info("Environment keys: \(environment.keys.sorted().joined(separator: ","))")
         }
     }
 }
@@ -296,6 +320,11 @@ private final class FileWriteBox: @unchecked Sendable {
         markTruncatedLocked(handle: handle)
     }
 
+    func write(line: String) {
+        guard let data = (line + "\n").data(using: .utf8) else { return }
+        write(data)
+    }
+
     private func markTruncatedLocked(handle: FileHandle) {
         guard !truncated else { return }
         truncated = true
@@ -314,13 +343,49 @@ private final class FileWriteBox: @unchecked Sendable {
     }
 }
 
-extension FileHandle {
-    func nextLine() -> String? {
-        guard let line = String(data: availableData, encoding: .utf8) else { return nil }
-        if !line.isEmpty {
-            return line
-        } else {
-            return nil
+/// Reassembles complete UTF-8 lines from arbitrary pipe chunks.
+///
+/// `availableData` can split a multi-byte character across reads, and the
+/// old `String(data:encoding:)` shortcut dropped the whole chunk when
+/// that happened. This keeps bytes until a newline arrives and decodes
+/// lossily only at the boundary.
+private final class LineAccumulator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var buffer = Data()
+
+    func append(_ data: Data) -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        buffer.append(data)
+        var lines: [String] = []
+        while let newline = buffer.firstIndex(of: 0x0A) {
+            let lineData = Data(buffer[buffer.startIndex..<newline])
+            buffer.removeSubrange(buffer.startIndex...newline)
+            lines.append(Self.decode(lineData))
         }
+        // A pathological line without a newline must not grow forever.
+        if buffer.count > 64 * 1024 {
+            lines.append(Self.decode(buffer))
+            buffer.removeAll(keepingCapacity: true)
+        }
+        return lines
+    }
+
+    func flush() -> [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !buffer.isEmpty else { return [] }
+        let remaining = buffer
+        buffer.removeAll(keepingCapacity: true)
+        return [Self.decode(remaining)]
+    }
+
+    private static func decode(_ data: Data) -> String {
+        // swiftlint:disable:next optional_data_string_conversion
+        var text = String(decoding: data, as: UTF8.self)
+        if text.hasSuffix("\r") {
+            text.removeLast()
+        }
+        return text
     }
 }

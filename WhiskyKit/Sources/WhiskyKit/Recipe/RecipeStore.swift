@@ -117,6 +117,13 @@ public final class RecipeStore: @unchecked Sendable {
             do {
                 let data = try Data(contentsOf: url)
                 let recipe = try decoder.decode(Recipe.self, from: data)
+                let problems = RecipeValidator.errors(for: recipe)
+                guard problems.isEmpty else {
+                    Logger.wineKit.error(
+                        "MacBottle: recipe \(recipe.id) failed semantic validation: \(problems.joined(separator: "; "))"
+                    )
+                    continue
+                }
                 if let existing = result[recipe.id] {
                     Logger.wineKit.error(
                         // swiftlint:disable:next line_length

@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import Darwin
 import Foundation
 import os.log
 
@@ -74,7 +75,7 @@ public final class InstalledGameRegistry: @unchecked Sendable {
 
     public func all() -> [InstalledGame] {
         lock.lock(); defer { lock.unlock() }
-        return loadLocked()
+        return withFileLock { loadLocked() }
     }
 
     public func game(forRecipe id: String) -> InstalledGame? {
@@ -85,19 +86,58 @@ public final class InstalledGameRegistry: @unchecked Sendable {
 
     public func record(_ game: InstalledGame) throws {
         lock.lock(); defer { lock.unlock() }
-        var games = loadLocked()
-        games.removeAll(where: { $0.recipeID == game.recipeID })
-        games.append(game)
-        try saveLocked(games)
+        try withFileLock {
+            var games = loadLocked()
+            games.removeAll(where: { $0.recipeID == game.recipeID })
+            games.append(game)
+            try saveLocked(games)
+        }
     }
 
     public func remove(recipeID: String) throws {
         lock.lock(); defer { lock.unlock() }
-        var games = loadLocked()
-        let before = games.count
-        games.removeAll(where: { $0.recipeID == recipeID })
-        guard games.count != before else { return }
-        try saveLocked(games)
+        try withFileLock {
+            var games = loadLocked()
+            let before = games.count
+            games.removeAll(where: { $0.recipeID == recipeID })
+            guard games.count != before else { return }
+            try saveLocked(games)
+        }
+    }
+
+    /// Drop records whose bottle directory no longer exists. Callers run
+    /// this when the Library refreshes so a deleted bottle does not keep
+    /// showing its game as installed forever.
+    @discardableResult
+    public func reconcileExistingBottles() -> Int {
+        lock.lock(); defer { lock.unlock() }
+        return (try? withFileLock { () -> Int in
+            let games = loadLocked()
+            let live = games.filter {
+                FileManager.default.fileExists(
+                    atPath: $0.bottleURL.path(percentEncoded: false)
+                )
+            }
+            guard live.count != games.count else { return 0 }
+            try saveLocked(live)
+            return games.count - live.count
+        }) ?? 0
+    }
+
+    /// Cross-process exclusion. Two app instances (or the CLI and the
+    /// app) previously read-modify-wrote the same JSON with only an
+    /// in-process lock, silently dropping one side's update.
+    private func withFileLock<T>(_ body: () throws -> T) rethrows -> T {
+        let fileManager = FileManager.default
+        let parent = storeURL.deletingLastPathComponent()
+        try? fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
+        let lockURL = storeURL.appendingPathExtension("lock")
+        let descriptor = open(lockURL.path(percentEncoded: false), O_CREAT | O_RDWR, 0o600)
+        guard descriptor >= 0 else { return try body() }
+        defer { close(descriptor) }
+        _ = flock(descriptor, LOCK_EX)
+        defer { _ = flock(descriptor, LOCK_UN) }
+        return try body()
     }
 
     // MARK: - Locked helpers

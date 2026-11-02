@@ -54,19 +54,23 @@ final class BottleVM: @unchecked Sendable {
 
                 try FileManager.default.createDirectory(atPath: newBottleDir.path(percentEncoded: false),
                                                         withIntermediateDirectories: true)
-                let bottle = Bottle(bottleUrl: newBottleDir, inFlight: true)
+                let bottle = await MainActor.run {
+                    Bottle(bottleUrl: newBottleDir, inFlight: true)
+                }
                 bottleId = bottle
 
                 await MainActor.run {
+                    // All mutable Bottle state stays on the main actor;
+                    // `Bottle` is only @unchecked Sendable for transport.
+                    bottle.settings.windowsVersion = winVersion
+                    bottle.settings.name = bottleName
                     self.bottles.append(bottle)
                 }
 
-                bottle.settings.windowsVersion = winVersion
-                bottle.settings.name = bottleName
                 try await Wine.changeWinVersion(bottle: bottle, win: winVersion)
                 let wineVer = try await Wine.wineVersion()
-                bottle.settings.wineVersion = SemanticVersion(wineVer) ?? SemanticVersion(0, 0, 0)
                 await MainActor.run {
+                    bottle.settings.wineVersion = SemanticVersion(wineVer) ?? SemanticVersion(0, 0, 0)
                     self.bottlesList.paths.append(newBottleDir)
                     self.loadBottles()
                 }
@@ -106,9 +110,9 @@ enum BottleCreationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .wineNotInstalled:
-            return "WhiskyWine is not installed. Open Setup from the Whisky menu and install Wine first."
+            return String(localized: "bottle.error.wineNotInstalled")
         case .wineBinaryMissing(let path):
-            return "Wine binary not found at \(path)."
+            return String(format: String(localized: "bottle.error.wineBinaryMissing %@"), path)
         }
     }
 }

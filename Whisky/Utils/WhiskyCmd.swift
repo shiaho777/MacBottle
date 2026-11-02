@@ -22,45 +22,69 @@ import os.log
 
 class WhiskyCmd {
     static func install() async {
-        let whiskyCmdURL = Bundle.main.url(forResource: "WhiskyCmd", withExtension: nil)
+        guard let cliURL = Bundle.main.url(forResource: "WhiskyCmd", withExtension: nil) else {
+            Logger.app.error("WhiskyCmd: CLI binary missing from the app bundle")
+            return
+        }
 
-        if let whiskyCmdURL = whiskyCmdURL {
-            // swiftlint:disable line_length
-            let script = """
-            do shell script "mkdir -p /usr/local/bin && ln -fs \(appleScriptLiteral(shellQuoted(whiskyCmdURL.path(percentEncoded: false)))) /usr/local/bin/whisky" with administrator privileges
-            """
-            // swiftlint:enable line_length
+        let fileManager = FileManager.default
+        let homebrew = "/opt/homebrew/bin"
+        let intelHomebrew = "/usr/local/bin"
 
-            var error: NSDictionary?
-            // Use AppleScript because somehow in 2023 Apple doesn't have good privileged file ops APIs
-            if let appleScript = NSAppleScript(source: script) {
-                appleScript.executeAndReturnError(&error)
+        if fileManager.fileExists(atPath: homebrew),
+           fileManager.isWritableFile(atPath: homebrew) {
+            installSymlink(cliURL, in: URL(fileURLWithPath: homebrew))
+            return
+        }
+        if fileManager.fileExists(atPath: intelHomebrew),
+           fileManager.isWritableFile(atPath: intelHomebrew) {
+            installSymlink(cliURL, in: URL(fileURLWithPath: intelHomebrew))
+            return
+        }
 
-                if let error = error {
-                    Logger.app.error("WhiskyCmd install error: \(String(describing: error))")
-                    if let description = error["NSAppleScriptErrorMessage"] as? String {
-                        await MainActor.run {
-                            let alert = NSAlert()
-                            alert.messageText = String(localized: "alert.message")
-                            alert.informativeText = String(localized: "alert.info")
-                                + description
-                            alert.alertStyle = .critical
-                            alert.addButton(withTitle: String(localized: "button.ok"))
-                            alert.runModal()
-                        }
-                    }
-                }
+        // No writable system prefix: install into the user's own bin
+        // instead of asking for administrator privileges to write one
+        // symlink into /usr/local/bin.
+        let localBin = fileManager.homeDirectoryForCurrentUser
+            .appending(path: ".local/bin")
+        do {
+            try fileManager.createDirectory(at: localBin, withIntermediateDirectories: true)
+            installSymlink(cliURL, in: localBin)
+            await MainActor.run {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "alert.cli.installed.title")
+                alert.informativeText = String(
+                    format: String(localized: "alert.cli.installed.message %@"),
+                    localBin.path(percentEncoded: false)
+                )
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: String(localized: "button.ok"))
+                alert.runModal()
+            }
+        } catch {
+            Logger.app.error("WhiskyCmd install error: \(error.localizedDescription)")
+            await MainActor.run {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "alert.message")
+                alert.informativeText = error.localizedDescription
+                alert.alertStyle = .critical
+                alert.addButton(withTitle: String(localized: "button.ok"))
+                alert.runModal()
             }
         }
     }
 
-    private static func shellQuoted(_ path: String) -> String {
-        "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
-    private static func appleScriptLiteral(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+    private static func installSymlink(_ cliURL: URL, in directory: URL) {
+        let link = directory.appending(path: "whisky")
+        let fileManager = FileManager.default
+        do {
+            if fileManager.fileExists(atPath: link.path(percentEncoded: false)) {
+                try fileManager.removeItem(at: link)
+            }
+            try fileManager.createSymbolicLink(at: link, withDestinationURL: cliURL)
+            Logger.app.info("WhiskyCmd installed at \(link.path, privacy: .public)")
+        } catch {
+            Logger.app.error("WhiskyCmd install error: \(error.localizedDescription)")
+        }
     }
 }

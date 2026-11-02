@@ -16,35 +16,46 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import Darwin
 import Foundation
 
 /// A true zero-copy, page-granular view over a file's bytes.
 ///
-/// The PE scanner used to read import names one syscall per byte
-/// (`FileHandle.read(upToCount: 1)` inside a 260-iteration loop) and
-/// slurp 4 MB into memory for the string fallback. For a 250 MB
-/// launcher scanned on every click of "Run" that is hundreds of syscalls
-/// plus a full-buffer copy for what is, structurally, a read-only
-/// projection.
-///
-/// This view mmaps the file (`mmap(2)` via `Data(mappedIfSafe)`), keeps
-/// only the 16-byte header window resident as a copy, and serves every
-/// other read straight from the mapping. Nothing beyond the touched
-/// pages is ever paged in: scanning a 256 MB PyInstaller launcher costs
-/// a handful of header-page touches instead of a 256 MB copy.
+/// The previous implementation stored `Data.withUnsafeBytes`' base
+/// pointer after the closure had returned. `Data` does not guarantee that
+/// the pointer remains valid (or that the storage is contiguous), so that
+/// was undefined behaviour. This owns an `mmap(2)` mapping explicitly and
+/// unmaps it in `deinit`.
 final class MappedPEView: @unchecked Sendable {
-    private let mapped: Data
-    private var basePointer: UnsafeRawPointer
+    private let fileDescriptor: Int32
+    private let basePointer: UnsafeRawPointer
     let count: Int
 
     init?(url: URL) {
-        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe, .uncached]),
-              case let .some(pointer) = data.withUnsafeBytes({ $0.baseAddress }) else {
+        let descriptor = open(url.path(percentEncoded: false), O_RDONLY)
+        guard descriptor >= 0 else { return nil }
+
+        var status = stat()
+        guard fstat(descriptor, &status) == 0, status.st_size > 0 else {
+            close(descriptor)
             return nil
         }
-        self.mapped = data
-        self.basePointer = pointer
-        self.count = mapped.count
+
+        let size = Int(status.st_size)
+        guard let mapped = mmap(nil, size, PROT_READ, MAP_PRIVATE, descriptor, 0),
+              mapped != MAP_FAILED else {
+            close(descriptor)
+            return nil
+        }
+
+        self.fileDescriptor = descriptor
+        self.basePointer = UnsafeRawPointer(mapped)
+        self.count = size
+    }
+
+    deinit {
+        munmap(UnsafeMutableRawPointer(mutating: basePointer), count)
+        close(fileDescriptor)
     }
 
     func scalar<T: FixedWidthInteger>(_ type: T.Type, at offset: Int) -> T? {

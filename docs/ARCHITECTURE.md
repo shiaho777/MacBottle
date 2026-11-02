@@ -119,9 +119,12 @@ Design choices worth knowing:
   changes remain, the ETag is cleared so the next check re-fetches and
   re-presents the diff. A fully-failed apply leaves the previous state
   intact.
-- **Apply-time side effects (winetricks, registry) are out of scope for
-  `RecipeApplier`.** They belong in a future `RecipeProvisioner` that runs
-  once per bottle-recipe pairing at mount time, not on every launch.
+- **Apply-time side effects have their own type.** `RecipeApplier` stays a
+  pure environment merge. `RecipeProvisioner` owns winetricks and registry
+  writes: it runs once per bottle-recipe pairing, keeps a per-bottle receipt
+  so a failed run resumes at the last completed step, and fingerprints only
+  the side-effect payload (an env-only recipe edit does not reinstall
+  anything).
 
 ## Wine engine abstraction
 
@@ -154,15 +157,52 @@ saved selection restored afterwards.
 `WineEngineRegistry.shared.current`, so every existing call site keeps
 working. New code should call the registry directly.
 
+### Renderer routing
+
+`RecipeRenderer` has four values and they map to four different stacks:
+
+| Recipe value | Path |
+| --- | --- |
+| `d3dmetal` | D3D11/12 → Apple D3DMetal → Metal (closed source, local GPTK) |
+| `dxvk` | D3D9/10/11 → DXVK → Vulkan → MoltenVK → Metal |
+| `moltenvk` | the game's own Vulkan renderer → `winevulkan` → MoltenVK → Metal |
+| `wined3d` | D3D → OpenGL → Metal via Wine's built-in translator |
+
+macOS has no Apple-supplied Vulkan driver, so "native Vulkan" means
+MoltenVK, not a vendor ICD. `RendererEnvironment` applies conservative
+`MVK_CONFIG_*` defaults, discovers `MoltenVK_icd.json`, and guarantees a
+`vulkan-1=b` override so a stale DXVK-style override cannot shadow the
+loader. `DXVKGameConf` writes its per-game config under Application
+Support and passes it via `DXVK_CONFIG_FILE`; the game directory is never
+modified, and a user-authored `<exe>.conf` still wins on DXVK's
+documented precedence. `RecipeValidator` rejects contradictory
+`dx_version`/`renderer` pairs at load and sync time.
+
+### Engine distribution integrity
+
+`EngineDownloadService` downloads through `ChunkedDownloader` (resumable,
+bounded parts, streaming SHA-256), verifies the archive is a readable
+tar.gz, and consults `EngineArchiveTrustStore` before replacing a
+known-good archive. The trust store is trust-on-first-use: it cannot
+authenticate the first download, but it turns every later silent
+replacement into an explicit user decision. `Tar.untar` extracts into
+staging, rejects `..`/absolute entries, resolves every path with
+`realpath(3)` to catch symlink escapes, and swaps top-level items into
+place with rollback. A signed release manifest remains the next step;
+until then the client does not claim cryptographic provenance.
+
 ### Architecture generalization and the ARM64 engine slot
 
 The engine layer is architecture-parametric. `WineArchitecture` detects
 `<arch>-unix` module directories (`x86_64-unix`, `aarch64-unix`) instead of
 hardcoding one, and `WineEngineCatalog` registers a third slot,
 `upstream-arm64`, resolved at `Engines/upstream-arm64`. A native aarch64
-Wine build matters because the current x86_64 engine pays a measured 36×
-Rosetta translation tax on x86_64 payloads (same Java workload: 0.06s
-native ARM64 JVM vs 2.17s inside the bottle) — every launch, every frame.
+Wine build removes Rosetta from the Wine host process and runs ARM64
+Windows binaries natively. It does **not** run x86_64 PEs by itself:
+those still need Rosetta 2's whole-process translation or a userspace
+emulator such as FEX/Box64. The historical 0.06 s vs 2.17 s JVM reading
+was a startup-latency observation, not a per-frame tax; the
+steady-state attribution below finds no measurable engine overhead.
 
 `EngineImportService` installs a user-provided build (folder or tar.gz)
 into that slot: it validates `Wine/bin` plus at least one `<arch>-unix`

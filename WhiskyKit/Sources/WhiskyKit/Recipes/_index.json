@@ -1,5 +1,5 @@
 {
-  "generated_at" : "2026-08-27T02:24:35Z",
+  "generated_at" : "2026-11-02T09:26:16Z",
   "recipes" : [
     {
       "id" : "generic.pvz-hybrid-edition",
@@ -11,9 +11,9 @@
     {
       "id" : "gog.1207658924",
       "path" : "gog\/1207658924.json",
-      "sha" : "9c89e7a65bb34b6be5eb955f136c809d88f8acc2",
-      "sha256" : "728a8a1f04db7f02610a9a4a2cc40363bd15c4c539e2464b6376666cd6509d79",
-      "size" : 490
+      "sha" : "07630337abca579d1a9fca549406294e877e5d52",
+      "sha256" : "c488dc7b30c2ab6334bcb95659a096f350659685efc8a5a2560531fe5c3f51d2",
+      "size" : 486
     },
     {
       "id" : "steam.105600",
@@ -25,9 +25,9 @@
     {
       "id" : "steam.1086940",
       "path" : "steam\/1086940.json",
-      "sha" : "97f630605dc220ef035267a052bedcd1f6fc7dd2",
-      "sha256" : "68a15a2648e172acdc52d2f1d019d744a943ed8f27805cecd4cb97cfac706353",
-      "size" : 546
+      "sha" : "9944bc2ee193c2efb7a232e1794e7f935daf1f5c",
+      "sha256" : "c2dd6ed16454701c52f6f836f0c3d2dc5e4b847bce8d8f412169a9cb983e8480",
+      "size" : 550
     },
     {
       "id" : "steam.1091500",
@@ -60,9 +60,9 @@
     {
       "id" : "steam.220",
       "path" : "steam\/220.json",
-      "sha" : "905211af9bf0134b42a395875d6393c70cae5d62",
-      "sha256" : "9ce07190f7f7b069123cf86601f7d42190a7f9ac908b420e35db0ddd6b260881",
-      "size" : 481
+      "sha" : "81cc7a51b755213c4807e8e9cdc2f8114487d23c",
+      "sha256" : "55667ecc75f5276c270473a5f20385138191667372bd016ea2d1908b4ee1ad38",
+      "size" : 477
     },
     {
       "id" : "steam.271590",
@@ -123,9 +123,9 @@
     {
       "id" : "steam.782330",
       "path" : "steam\/782330.json",
-      "sha" : "84ec5f5c59bec37ebd3590885afa07b319e3e259",
-      "sha256" : "43e767903f7842b0d84c38e9aacc4988e06052bd7e44c1e288890be77a7a5fbd",
-      "size" : 461
+      "sha" : "8ca96f6a63d114249d39c6ddb6805647f5305ab7",
+      "sha256" : "1c5bbcf565201674ee4b8b7f7faefaba8640fd3012dc6ecaf2e5f3f796866ea4",
+      "size" : 465
     },
     {
       "id" : "steam.990080",

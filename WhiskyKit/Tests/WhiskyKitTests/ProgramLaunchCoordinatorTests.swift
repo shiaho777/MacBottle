@@ -61,16 +61,51 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
         bottle.settings.name = "Warm"
 
-        XCTAssertFalse(coordinator.isWarm(bottle: bottle))
-        coordinator.beginWarmup(bottle: bottle)
-        XCTAssertTrue(coordinator.isWarming(bottle: bottle))
-        coordinator.finishWarmup(bottle: bottle, success: true)
-        XCTAssertTrue(coordinator.isWarm(bottle: bottle))
-        XCTAssertFalse(coordinator.isWarming(bottle: bottle))
+        let engineID = "crossover-3.0.0"
+        XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: engineID))
+        coordinator.beginWarmup(bottle: bottle, engineID: engineID)
+        XCTAssertTrue(coordinator.isWarming(bottle: bottle, engineID: engineID))
+        coordinator.finishWarmup(bottle: bottle, engineID: engineID, success: true)
+        XCTAssertTrue(coordinator.isWarm(bottle: bottle, engineID: engineID))
+        XCTAssertFalse(coordinator.isWarming(bottle: bottle, engineID: engineID))
 
-        XCTAssertFalse(coordinator.isDXVKReady(bottle: bottle))
-        coordinator.markDXVKReady(bottle: bottle)
-        XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle))
+        XCTAssertFalse(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
+        coordinator.markDXVKReady(bottle: bottle, engineID: engineID)
+        XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
+
+        // Force-stopping a bottle clears warm state but not the DXVK
+        // DLLs that are still installed in the prefix.
+        coordinator.clearWarm(bottle: bottle)
+        XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: engineID))
+        XCTAssertTrue(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
+
+        // A different engine build must not inherit the previous
+        // engine's warm or DXVK state.
+        XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: "crossover-4.0.0"))
+        XCTAssertFalse(coordinator.isDXVKReady(bottle: bottle, engineID: "crossover-4.0.0"))
+
+        coordinator.invalidateEngineBoundState()
+        XCTAssertFalse(coordinator.isWarm(bottle: bottle, engineID: engineID))
+        XCTAssertFalse(coordinator.isDXVKReady(bottle: bottle, engineID: engineID))
+        coordinator.dismiss()
+    }
+
+    func testInvalidateBottleLeavesOtherBottlesWarm() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottleA = Bottle(
+            bottleUrl: URL(fileURLWithPath: "/tmp/macbottle-a-\(UUID().uuidString)"),
+            inFlight: true
+        )
+        let bottleB = Bottle(
+            bottleUrl: URL(fileURLWithPath: "/tmp/macbottle-b-\(UUID().uuidString)"),
+            inFlight: true
+        )
+        coordinator.markWarm(bottle: bottleA, engineID: "e1")
+        coordinator.markWarm(bottle: bottleB, engineID: "e1")
+        coordinator.invalidate(bottle: bottleA)
+        XCTAssertFalse(coordinator.isWarm(bottle: bottleA, engineID: "e1"))
+        XCTAssertTrue(coordinator.isWarm(bottle: bottleB, engineID: "e1"))
         coordinator.dismiss()
     }
 

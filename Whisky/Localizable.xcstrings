@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "alert.cli.installed.message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The whisky command was linked into %@. Add that directory to PATH if your shell cannot find it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "whisky 命令已链接到 %@。如果终端找不到该命令，请把该目录加入 PATH。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "whisky 指令已連結到 %@。如果終端機找不到該指令，請將該目錄加入 PATH。"
+          }
+        }
+      }
+    },
+    "alert.cli.installed.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Command line tool installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令行工具已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令列工具已安裝"
+          }
+        }
+      }
+    },
     "alert.createBottle.failed": {
       "localizations": {
         "en": {
@@ -501,6 +545,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭"
+          }
+        }
+      }
+    },
+    "bottle.error.wineBinaryMissing %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Wine binary is missing at %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine 可执行文件不存在：%@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine 執行檔不存在：%@。"
+          }
+        }
+      }
+    },
+    "bottle.error.wineNotInstalled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wine is not installed. Open Setup and install the engine first."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安装 Wine。请先打开安装向导安装引擎。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未安裝 Wine。請先開啟安裝精靈安裝引擎。"
           }
         }
       }
@@ -8754,6 +8842,41 @@
         }
       }
     },
+    "compatibility.bronze": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Bronze" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "青铜" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "青銅" } }
+      }
+    },
+    "compatibility.broken": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Broken" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不可用" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不可用" } }
+      }
+    },
+    "compatibility.gold": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Gold" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "黄金" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "黃金" } }
+      }
+    },
+    "compatibility.platinum": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Platinum" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白金" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白金" } }
+      }
+    },
+    "compatibility.silver": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Silver" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白银" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白銀" } }
+      }
+    },
     "create.cancel": {
       "localizations": {
         "ar": {
@@ -12652,6 +12775,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "还没有游戏配方"
+          }
+        }
+      }
+    },
+    "library.installed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安裝"
           }
         }
       }
@@ -21244,6 +21389,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "離開"
+          }
+        }
+      }
+    },
+    "setup.engine.trust.accept": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trust and continue"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任并继续"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任並繼續"
+          }
+        }
+      }
+    },
+    "setup.engine.trust.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine archive changed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎压缩包已变更"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎壓縮檔已變更"
           }
         }
       }

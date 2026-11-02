@@ -22,7 +22,8 @@ extension Wine {
     @discardableResult
     /// Run a `wine` command with the given arguments and return the output result
     public static func runWine(
-        _ args: [String], bottle: Bottle?, environment: [String: String] = [:]
+        _ args: [String], bottle: Bottle?, environment: [String: String] = [:],
+        engine: (any WineEngine)? = nil
     ) async throws -> String {
         var result: [String] = []
         let fileHandle = try makeFileHandle()
@@ -31,12 +32,21 @@ extension Wine {
 
         if let bottle = bottle {
             fileHandle.writeInfo(for: bottle)
-            environment = constructWineEnvironment(for: bottle, environment: environment)
+            environment = constructWineEnvironment(
+                for: bottle,
+                environment: environment,
+                engine: engine
+            )
         }
 
         let stream: AsyncStream<ProcessOutput>
         do {
-            stream = try runWineProcess(args: args, environment: environment, fileHandle: fileHandle)
+            stream = try runWineProcess(
+                args: args,
+                environment: environment,
+                fileHandle: fileHandle,
+                engine: engine
+            )
         } catch {
             try? fileHandle.close()
             throw error
@@ -73,15 +83,39 @@ extension Wine {
         BottleForceStop.forceStop(bottle: bottle, reason: "killBottle")
     }
 
-    public static func enableDXVK(bottle: Bottle) throws {
+    public static func enableDXVK(
+        bottle: Bottle,
+        engine: (any WineEngine)? = nil
+    ) throws {
+        let engine = engine ?? WineEngineRegistry.shared.current
         try FileManager.default.replaceDLLs(
             in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "system32"),
-            withContentsIn: Wine.dxvkFolder.appending(path: "x64")
+            withContentsIn: engine.dxvkFolder.appending(path: "x64"),
+            makeOriginalCopy: true
         )
         try FileManager.default.replaceDLLs(
             in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "syswow64"),
-            withContentsIn: Wine.dxvkFolder.appending(path: "x32")
+            withContentsIn: engine.dxvkFolder.appending(path: "x32"),
+            makeOriginalCopy: true
         )
+        try? Data(engine.identifier.utf8).write(to: dxvkMarkerURL(for: bottle), options: .atomic)
+    }
+
+    /// Restore the Wine DLLs snapshotted by `enableDXVK`. Safe to call
+    /// when DXVK was never installed (no-op).
+    public static func disableDXVK(bottle: Bottle) throws {
+        let marker = dxvkMarkerURL(for: bottle)
+        guard FileManager.default.fileExists(atPath: marker.path(percentEncoded: false)) else {
+            return
+        }
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "system32"))
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "syswow64"))
+        try? FileManager.default.removeItem(at: marker)
+    }
+
+    private static func dxvkMarkerURL(for bottle: Bottle) -> URL {
+        bottle.url.appending(path: ".macbottle-dxvk")
     }
 }
 
@@ -104,7 +138,7 @@ extension Wine {
         }.joined()
     }
 
-    static func baseHostEnvironment() -> [String: String] {
+    static func baseHostEnvironment(engine: (any WineEngine)? = nil) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
         let stripKeys = [
             "DYLD_INSERT_LIBRARIES",
@@ -123,7 +157,8 @@ extension Wine {
             env.removeValue(forKey: key)
         }
 
-        let wineBin = WhiskyWineInstaller.binFolder.path
+        let wineBin = engine?.wineBinary.deletingLastPathComponent().path
+            ?? WhiskyWineInstaller.binFolder.path
         let pathParts = (env["PATH"] ?? "")
             .split(separator: ":")
             .map(String.init)
@@ -158,9 +193,10 @@ extension Wine {
     static func constructWineEnvironment(
         for bottle: Bottle,
         environment: [String: String] = [:],
-        executableURL: URL? = nil
+        executableURL: URL? = nil,
+        engine: (any WineEngine)? = nil
     ) -> [String: String] {
-        var result = baseHostEnvironment()
+        var result = baseHostEnvironment(engine: engine)
         result["WINEPREFIX"] = bottle.url.path
         result["WINEDEBUG"] = "-all"
         result["GST_DEBUG"] = "0"
@@ -177,9 +213,11 @@ extension Wine {
     }
 
     static func constructWineServerEnvironment(
-        for bottle: Bottle, environment: [String: String] = [:]
+        for bottle: Bottle,
+        environment: [String: String] = [:],
+        engine: (any WineEngine)? = nil
     ) -> [String: String] {
-        var result = baseHostEnvironment()
+        var result = baseHostEnvironment(engine: engine)
         result["WINEPREFIX"] = bottle.url.path
         result["WINEDEBUG"] = "-all"
         result["GST_DEBUG"] = "0"
@@ -194,7 +232,7 @@ extension Wine {
         at url: URL, bottle: Bottle, args: String, environment: [String: String]
     ) -> String {
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
-        let extra = args.split { $0.isWhitespace }.map(String.init)
+        let extra = ShellArgumentParser.parse(args)
         let startBits = RuntimeLaunchOptimizer.startArguments(
             profile: profile,
             executable: url,

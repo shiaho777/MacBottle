@@ -234,3 +234,15 @@ struct QuickActionTile: View {
         .contentShape(Rectangle())
     }
 }
+
+extension CompatibilityTier {
+    var localizedName: String {
+        switch self {
+        case .platinum: return String(localized: "compatibility.platinum")
+        case .gold:     return String(localized: "compatibility.gold")
+        case .silver:   return String(localized: "compatibility.silver")
+        case .bronze:   return String(localized: "compatibility.bronze")
+        case .broken:   return String(localized: "compatibility.broken")
+        }
+    }
+}

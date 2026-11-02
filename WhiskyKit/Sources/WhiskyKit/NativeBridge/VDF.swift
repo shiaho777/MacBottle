@@ -39,26 +39,29 @@ public enum VDFNode: Sendable, Equatable {
 }
 
 public enum VDF {
+    private static let maxDepth = 64
+
     public static func parse(_ text: String) throws -> VDFNode {
         var lexer = Lexer(text)
         let rootKey = try lexer.string()
-        let rootValue = try parseValue(&lexer)
+        let rootValue = try parseValue(&lexer, depth: 0)
         return .object([rootKey: rootValue])
     }
 
-    private static func parseValue(_ lexer: inout Lexer) throws -> VDFNode {
+    private static func parseValue(_ lexer: inout Lexer, depth: Int) throws -> VDFNode {
+        guard depth <= maxDepth else { throw VDFError.depthExceeded }
         if lexer.peekIsBrace() {
-            return try parseObject(&lexer)
+            return try parseObject(&lexer, depth: depth + 1)
         }
         return .value(try lexer.string())
     }
 
-    private static func parseObject(_ lexer: inout Lexer) throws -> VDFNode {
+    private static func parseObject(_ lexer: inout Lexer, depth: Int) throws -> VDFNode {
         try lexer.expectBraceOpen()
         var dict: [String: VDFNode] = [:]
         while !lexer.peekIsBraceClose() {
             let key = try lexer.string()
-            let value = try parseValue(&lexer)
+            let value = try parseValue(&lexer, depth: depth)
             dict[key] = value
         }
         try lexer.expectBraceClose()
@@ -67,13 +70,18 @@ public enum VDF {
 
     public static func collectPackages(from root: VDFNode) -> [SteamPackage] {
         var results: [SteamPackage] = []
-        walk(root, path: [], into: &results)
+        walk(root, path: [], depth: 0, into: &results)
         var seen = Set<String>()
         return results.filter { seen.insert($0.fileName).inserted }
     }
 
-    private static func walk(_ node: VDFNode, path: [String], into results: inout [SteamPackage]) {
-        guard case .object(let dict) = node else { return }
+    private static func walk(
+        _ node: VDFNode,
+        path: [String],
+        depth: Int,
+        into results: inout [SteamPackage]
+    ) {
+        guard depth <= maxDepth, case .object(let dict) = node else { return }
         if let file = dict["file"]?.stringValue {
             let size = Int64(dict["size"]?.stringValue ?? "") ?? 0
             let sha2 = dict["sha2"]?.stringValue
@@ -92,7 +100,7 @@ public enum VDF {
         }
         for (key, child) in dict {
             if case .object = child {
-                walk(child, path: path + [key], into: &results)
+                walk(child, path: path + [key], depth: depth + 1, into: &results)
             }
         }
     }
@@ -193,6 +201,7 @@ public enum VDFError: Error {
     case expectedString
     case unterminatedString
     case expectedBrace
+    case depthExceeded
 }
 
 public struct SteamPackage: Sendable, Hashable, Identifiable {

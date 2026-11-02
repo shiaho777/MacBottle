@@ -112,6 +112,6 @@ public struct ProgramSettings: Codable {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
         let data = try encoder.encode(self)
-        try data.write(to: settingsURL)
+        try data.write(to: settingsURL, options: .atomic)
     }
 }

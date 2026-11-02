@@ -65,8 +65,28 @@ final class ChunkedDownloaderTests: XCTestCase {
         "bytes=\(start)-\(end)"
     }
 
-    func testParallelDownloadAssemblesExactBytes() async throws {
-        let payload = makePayload(5)
+    func testChunkPlanBoundsPartSizeForHugeFiles() {
+        let hundredGB: Int64 = 100 * 1024 * 1024 * 1024
+        let count = ChunkedDownloader.chunkCount(
+            totalSize: hundredGB,
+            preferredChunkSize: 16 * 1024 * 1024,
+            maxChunksPerFile: 2048
+        )
+        XCTAssertEqual(count, 2048)
+        let partSize = hundredGB / Int64(count)
+        XCTAssertLessThan(partSize, 64 * 1024 * 1024, "a failed part must not cost gigabytes")
+    }
+
+    func testChunkPlanUsesPreferredSizeWhenUnderCap() {
+        let count = ChunkedDownloader.chunkCount(
+            totalSize: 40 * 1024 * 1024,
+            preferredChunkSize: 16 * 1024 * 1024,
+            maxChunksPerFile: 2048
+        )
+        XCTAssertEqual(count, 3)
+    }
+
+    func testParallelDownloadAssemblesExactBytes() async throws {        let payload = makePayload(5)
         RangeStub.shared.payload = payload
 
         let destination = workRoot.appending(path: "game.bin")
