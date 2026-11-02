@@ -65,6 +65,7 @@ struct RecipeLibraryView: View {
                             )
                         }
                         .buttonStyle(.plain)
+                    .accessibilityLabel(Text(recipe.title))
                     }
                 }
                 .padding(MacBottleTheme.pagePadding)

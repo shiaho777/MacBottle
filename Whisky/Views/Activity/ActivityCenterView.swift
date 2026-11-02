@@ -55,15 +55,12 @@ struct ActivityCenterView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("activity.title")
-                    .font(.largeTitle.weight(.bold))
-                Text("activity.subtitle")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+        HStack(alignment: .center, spacing: AppSpacing.medium) {
+            PageHeader(
+                title: "activity.title",
+                subtitle: "activity.subtitle",
+                systemImage: "waveform.path.ecg"
+            )
             Button {
                 bottles = BottleVM.shared.bottles
                 refreshToken += 1
@@ -71,6 +68,7 @@ struct ActivityCenterView: View {
                 Label("button.refresh", systemImage: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
+            .accessibilityLabel(Text("button.refresh"))
         }
     }
 

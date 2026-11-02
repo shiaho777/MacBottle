@@ -202,6 +202,7 @@ struct BottleHeroHeader: View {
                 Spacer(minLength: 0)
             }
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

@@ -58,6 +58,7 @@ struct BottleView: View {
     @State private var showWorkspaceImport = false
     @State private var showForceStopConfirm = false
     @State private var programLoading = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let gridLayout = [
         GridItem(.adaptive(minimum: 112, maximum: 140), spacing: MacBottleTheme.gridSpacing)
@@ -238,14 +239,11 @@ struct BottleView: View {
 
     private var pinnedSection: some View {
         VStack(alignment: .leading, spacing: MacBottleTheme.rowSpacing) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("bottle.section.pinned")
-                    .font(.headline)
-                Spacer()
-                Button("bottle.section.allGames") {
-                    tab = .games
-                }
-                .buttonStyle(.link)
+            SectionHeader(
+                title: "bottle.section.pinned",
+                trailingTitle: "bottle.section.allGames"
+            ) {
+                tab = .games
             }
             LazyVGrid(columns: gridLayout, alignment: .leading, spacing: MacBottleTheme.gridSpacing) {
                 ForEach(bottle.pinnedPrograms, id: \.id) { pinned in
@@ -265,14 +263,11 @@ struct BottleView: View {
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: MacBottleTheme.rowSpacing) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("bottle.section.recent")
-                    .font(.headline)
-                Spacer()
-                Button("bottle.section.allGames") {
-                    tab = .games
-                }
-                .buttonStyle(.link)
+            SectionHeader(
+                title: "bottle.section.recent",
+                trailingTitle: "bottle.section.allGames"
+            ) {
+                tab = .games
             }
             VStack(spacing: 8) {
                 ForEach(recentPrograms, id: \.id) { program in
@@ -530,7 +525,7 @@ struct BottleView: View {
             RoundedRectangle(cornerRadius: MacBottleTheme.compactRadius, style: .continuous)
                 .strokeBorder(tint.opacity(MacBottleTheme.tintBorderOpacity), lineWidth: 1)
         }
-        .animation(.easeInOut(duration: 0.2), value: launchCoordinator.phase)
+        .animation(AppMotion.standard(reduceMotion: reduceMotion), value: launchCoordinator.phase)
     }
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {

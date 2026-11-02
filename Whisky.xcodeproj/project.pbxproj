@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ECE00000000000000000041B /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000041A /* DesignSystem.swift */; };
 		ECE00000000000000000031B /* SidebarSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000031A /* SidebarSelection.swift */; };
 		ECE00000000000000000032B /* ActivityCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000032A /* ActivityCenterView.swift */; };
 		ECE00000000000000000010A /* MacBottleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000010B /* MacBottleTheme.swift */; };
@@ -132,6 +133,7 @@
 		6365C4C22B1AA8CD00AAE1FD /* BottleListEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleListEntry.swift; sourceTree = "<group>"; };
 		ECE00000000000000000031A /* SidebarSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarSelection.swift; sourceTree = "<group>"; };
 		ECE00000000000000000032A /* ActivityCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityCenterView.swift; sourceTree = "<group>"; };
+		ECE00000000000000000041A /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		63FFDE852ADF0C7700178665 /* BottomBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomBar.swift; sourceTree = "<group>"; };
 		6763D8F52BC6314100651D27 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		67D278502BC5907E006F9A1E /* ActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionView.swift; sourceTree = "<group>"; };
@@ -240,6 +242,7 @@
 		63FFDE822ADEFADF00178665 /* Common */ = {
 			isa = PBXGroup;
 			children = (
+				ECE00000000000000000041A /* DesignSystem.swift */,
 				63FFDE852ADF0C7700178665 /* BottomBar.swift */,
 				ECE00000000000000000010B /* MacBottleTheme.swift */,
 				6330DD952B1B0EA4007A625A /* RenameView.swift */,
@@ -662,6 +665,7 @@
 				ECE00000000000000000010A /* MacBottleTheme.swift in Sources */,
 				6E6C0CF62A419A8300356232 /* WhiskyWineDownloadView.swift in Sources */,
 				6365C4C32B1AA8CD00AAE1FD /* BottleListEntry.swift in Sources */,
+				ECE00000000000000000041B /* DesignSystem.swift in Sources */,
 				6E50D98529CDF25B008C39F6 /* BottleCreationView.swift in Sources */,
 				6E182FCA2B0BF64E00AADE81 /* WinetricksView.swift in Sources */,
 				6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */,

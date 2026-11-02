@@ -33,7 +33,16 @@ struct SettingsView: View {
     @State private var engineDescriptions: [String: String] = [:]
 
     var body: some View {
-        Form {
+        VStack(alignment: .leading, spacing: 0) {
+            PageHeader(
+                title: "settings.general",
+                subtitle: "settings.subtitle",
+                systemImage: "gearshape"
+            )
+            .padding(.horizontal, AppSpacing.page)
+            .padding(.top, AppSpacing.medium)
+
+            Form {
             Section("settings.general") {
                 Toggle("settings.toggle.kill.on.terminate", isOn: $killOnTerminate)
                 ActionView(
@@ -115,6 +124,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        }
         .frame(minWidth: 520, idealWidth: 560)
         .navigationTitle("settings.general")
         .onAppear {
