@@ -74,6 +74,10 @@ struct WhiskyApp: App {
             }
             CommandGroup(replacing: .newItem) {}
             CommandGroup(after: .newItem) {
+                Button("button.createBottle") {
+                    NotificationCenter.default.post(name: .macbottleNewBottle, object: nil)
+                }
+                .keyboardShortcut("n", modifiers: .command)
                 Button("open.bottle") {
                     let panel = NSOpenPanel()
                     panel.canChooseFiles = false

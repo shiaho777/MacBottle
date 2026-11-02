@@ -214,44 +214,43 @@ struct ConfigView: View {
                 }
                 .disabled(d3dMetalBusy)
             }
+            Section("config.title.tools") {
+                HStack(spacing: 10) {
+                    Button("config.controlPanel") {
+                        Task(priority: .userInitiated) {
+                            do {
+                                try await Wine.control(bottle: bottle)
+                            } catch {
+                                Logger.uiLogger.error("Failed to launch control")
+                            }
+                        }
+                    }
+                    Button("config.regedit") {
+                        Task(priority: .userInitiated) {
+                            do {
+                                try await Wine.regedit(bottle: bottle)
+                            } catch {
+                                Logger.uiLogger.error("Failed to launch regedit")
+                            }
+                        }
+                    }
+                    Button("config.winecfg") {
+                        Task(priority: .userInitiated) {
+                            do {
+                                try await Wine.cfg(bottle: bottle)
+                            } catch {
+                                Logger.uiLogger.error("Failed to launch winecfg")
+                            }
+                        }
+                    }
+                    Spacer()
+                }
+            }
         }
         .formStyle(.grouped)
         .animation(.whiskyDefault, value: wineSectionExpanded)
         .animation(.whiskyDefault, value: dxvkSectionExpanded)
         .animation(.whiskyDefault, value: metalSectionExpanded)
-        .bottomBar {
-            HStack {
-                Spacer()
-                Button("config.controlPanel") {
-                    Task(priority: .userInitiated) {
-                        do {
-                            try await Wine.control(bottle: bottle)
-                        } catch {
-                            Logger.uiLogger.error("Failed to launch control")
-                        }
-                    }
-                }
-                Button("config.regedit") {
-                    Task(priority: .userInitiated) {
-                        do {
-                            try await Wine.regedit(bottle: bottle)
-                        } catch {
-                            Logger.uiLogger.error("Failed to launch regedit")
-                        }
-                    }
-                }
-                Button("config.winecfg") {
-                    Task(priority: .userInitiated) {
-                        do {
-                            try await Wine.cfg(bottle: bottle)
-                        } catch {
-                            Logger.uiLogger.error("Failed to launch winecfg")
-                        }
-                    }
-                }
-            }
-            .padding()
-        }
         .navigationTitle("tab.config")
         .onAppear {
             winVersionLoadingState = .success

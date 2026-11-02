@@ -26,6 +26,15 @@ public enum ProgramLaunchPhase: Equatable, Sendable {
     case launching(programName: String, bottleName: String)
     case launched(programName: String)
     case failed(programName: String, message: String)
+
+    public var isActive: Bool {
+        switch self {
+        case .idle, .launched, .failed:
+            return false
+        case .warming, .provisioning, .launching:
+            return true
+        }
+    }
 }
 
 @MainActor

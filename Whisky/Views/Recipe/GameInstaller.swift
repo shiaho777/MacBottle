@@ -60,14 +60,17 @@ final class GameInstaller {
     private let recipe: Recipe
     private let bottleVM: BottleVM
     private let registry: InstalledGameRegistry
+    private let installerURL: URL?
     private var workTask: Task<Void, Never>?
 
     init(
         recipe: Recipe,
+        installerURL: URL? = nil,
         bottleVM: BottleVM = .shared,
         registry: InstalledGameRegistry = .shared
     ) {
         self.recipe = recipe
+        self.installerURL = installerURL
         self.bottleVM = bottleVM
         self.registry = registry
     }
@@ -414,7 +417,12 @@ final class GameInstaller {
     private func runPickedInstaller(bottle: Bottle) async {
         statusDetail = String(localized: "game.install.selectInstallerPrompt")
         progress = nil
-        let picked = await pickInstallerExe()
+        let picked: URL?
+        if let installerURL {
+            picked = installerURL
+        } else {
+            picked = await pickInstallerExe()
+        }
         guard let picked else {
             fail(String(localized: "game.install.error.selectionCancelled"))
             return
@@ -424,9 +432,16 @@ final class GameInstaller {
         statusDetail = String(localized: "game.install.launchingInstaller")
 
         let installerURL = picked
+        let stagedInstaller: URL
+        do {
+            stagedInstaller = try stageInstaller(installerURL, bottle: bottle)
+        } catch {
+            fail(error.localizedDescription)
+            return
+        }
         Task.detached(priority: .userInitiated) {
             do {
-                try await Wine.runProgram(at: installerURL, bottle: bottle, autoSelectEngine: false)
+                try await Wine.runProgram(at: stagedInstaller, bottle: bottle, autoSelectEngine: false)
             } catch {
                 Logger.wineKit.error(
                     "GameInstaller: installer process ended with error: \(error.localizedDescription)"
@@ -435,6 +450,28 @@ final class GameInstaller {
         }
 
         statusDetail = String(localized: "game.install.installerLaunched")
+    }
+
+    private func stageInstaller(_ url: URL, bottle: Bottle) throws -> URL {
+        if url.path.hasPrefix(bottle.url.path) {
+            return url
+        }
+        let imports = bottle.url
+            .appending(path: "drive_c")
+            .appending(path: "MacBottleImports")
+        try FileManager.default.createDirectory(at: imports, withIntermediateDirectories: true)
+        var name = url.lastPathComponent
+        if name.unicodeScalars.contains(where: { !$0.isASCII }) {
+            let ext = url.pathExtension
+            name = "installer_\(Int(Date().timeIntervalSince1970))"
+            if !ext.isEmpty { name += ".\(ext)" }
+        }
+        let destination = imports.appending(path: name)
+        if FileManager.default.fileExists(atPath: destination.path) {
+            try FileManager.default.removeItem(at: destination)
+        }
+        try FileManager.default.copyItem(at: url, to: destination)
+        return destination
     }
 
     @MainActor
