@@ -47,21 +47,28 @@ struct RecipeLibraryView: View {
     private let columns = [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 18)]
 
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(filtered) { recipe in
-                    Button {
-                        selectedRecipe = recipe
-                    } label: {
-                        RecipeCard(
-                            recipe: recipe,
-                            installed: installedIDs.contains(recipe.id)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
+        VStack(spacing: 0) {
+            if installedIDs.isEmpty {
+                welcomeCard
+                    .padding(.horizontal, MacBottleTheme.pagePadding)
+                    .padding(.top, MacBottleTheme.pagePadding)
             }
-            .padding(MacBottleTheme.pagePadding)
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(filtered) { recipe in
+                        Button {
+                            selectedRecipe = recipe
+                        } label: {
+                            RecipeCard(
+                                recipe: recipe,
+                                installed: installedIDs.contains(recipe.id)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(MacBottleTheme.pagePadding)
+            }
         }
         .navigationTitle("library.title")
         .searchable(text: $query, placement: .toolbar, prompt: "library.search")
@@ -104,6 +111,36 @@ struct RecipeLibraryView: View {
         return recipes.filter {
             $0.title.localizedCaseInsensitiveContains(query)
                 || $0.id.localizedCaseInsensitiveContains(query)
+        }
+    }
+
+    private var welcomeCard: some View {
+        SurfaceCard(padding: 18) {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: MacBottleTheme.tileRadius, style: .continuous)
+                        .fill(Color.accentColor.opacity(0.16))
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .frame(width: 56, height: 56)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("library.welcome.title")
+                        .font(.title3.weight(.semibold))
+                    Text("library.welcome.message")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                Button("library.installExe") {
+                    pickInstaller()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
         }
     }
 

@@ -222,7 +222,6 @@ struct ProgramsView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .navigationTitle("programs.title")
         .searchable(text: $searchText, prompt: "programs.search")
         .toolbar { toolbarContent }
         .onAppear {
