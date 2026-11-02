@@ -361,6 +361,7 @@ public class Wine {
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: url)
 
         var shouldApplyDXVK = applyDXVK
+            && launchEngine.supportsDXVK
             && RuntimeLaunchOptimizer.effectiveDXVKEnabled(
                 profile: profile,
                 bottleDXVKEnabled: bottle.settings.dxvk

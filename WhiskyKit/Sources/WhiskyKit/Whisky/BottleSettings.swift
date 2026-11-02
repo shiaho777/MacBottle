@@ -302,8 +302,11 @@ public struct BottleSettings: Codable, Equatable {    static let defaultFileVers
         try data.write(to: metadataUrl, options: .atomic)
     }
 
-    public func environmentVariables(wineEnv: inout [String: String]) {
-        if dxvk {
+    public func environmentVariables(
+        wineEnv: inout [String: String],
+        dxvkAvailable: Bool = true
+    ) {
+        if dxvk && dxvkAvailable {
             wineEnv.updateValue("dxgi,d3d9,d3d10core,d3d11=n,b", forKey: "WINEDLLOVERRIDES")
             switch dxvkHud {
             case .full:
@@ -317,7 +320,7 @@ public struct BottleSettings: Codable, Equatable {    static let defaultFileVers
             }
         }
 
-        if dxvkAsync {
+        if dxvkAsync && dxvkAvailable {
             wineEnv.updateValue("1", forKey: "DXVK_ASYNC")
         }
 
