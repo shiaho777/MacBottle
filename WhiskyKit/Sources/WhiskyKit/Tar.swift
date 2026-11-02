@@ -72,7 +72,7 @@ public class Tar {
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: staging) }
 
-        let result = try run(["-xzf", tarBall.path, "-C", staging.path])
+        let result = try run(["-xf", tarBall.path, "-C", staging.path])
         guard result.status == 0 else {
             throw TarError.extractionFailed(result.error)
         }
@@ -84,7 +84,7 @@ public class Tar {
     // MARK: - Safety
 
     static func list(_ tarBall: URL) throws -> [String] {
-        let result = try run(["-tzf", tarBall.path])
+        let result = try run(["-tf", tarBall.path])
         guard result.status == 0 else {
             throw TarError.listingFailed(result.error)
         }

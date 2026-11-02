@@ -28,6 +28,8 @@ struct WhiskyWineDownloadView: View {
     @State private var importError: String?
     @State private var importing = false
     @State private var canReuseLegacy = false
+    @State private var downloadingFallback = false
+    @State private var fallbackProgress: Double = 0
     @Binding var tarLocation: URL
     @Binding var path: [SetupStage]
     @Binding var showSetup: Bool
@@ -80,6 +82,20 @@ struct WhiskyWineDownloadView: View {
                 Button("setup.retry") {
                     model.start()
                 }
+            }
+
+            if model.errorMessage != nil, !downloadingFallback {
+                Button("setup.engine.fallback") {
+                    downloadFallback()
+                }
+            }
+
+            if downloadingFallback {
+                ProgressView(value: min(max(fallbackProgress, 0), 1), total: 1)
+                    .padding(.horizontal)
+                Text("setup.engine.fallback.downloading")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             if let importError {
@@ -136,6 +152,52 @@ struct WhiskyWineDownloadView: View {
         } message: {
             if let message = model.errorMessage {
                 Text(verbatim: message)
+            }
+        }
+    }
+
+    private func downloadFallback() {
+        let release = EngineFallbackCatalog.gcenxWine
+        downloadingFallback = true
+        fallbackProgress = 0
+        importError = nil
+
+        let destination = FileManager.default.temporaryDirectory
+            .appending(path: "MacBottle-\(release.engineID)-\(UUID().uuidString).tar.xz")
+
+        Task {
+            do {
+                try await EngineDownloadService.shared.download(
+                    from: release.url,
+                    to: destination,
+                    expectedSHA256: release.sha256
+                ) { progress in
+                    Task { @MainActor in
+                        fallbackProgress = progress.fraction
+                    }
+                }
+                defer { try? FileManager.default.removeItem(at: destination) }
+
+                let engine = WineEngineCatalog.gcenxEngine()
+                try await EngineImportService.importTarball(
+                    at: destination,
+                    engine: engine,
+                    fallbackVersion: SemanticVersion(11, 21, 0)
+                )
+                _ = try WineEngineRegistry.shared.select(
+                    identifier: engine.identifier,
+                    installIfNeeded: false
+                )
+                await MainActor.run {
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
+                    showSetup = false
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: destination)
+                await MainActor.run {
+                    importError = error.localizedDescription
+                    downloadingFallback = false
+                }
             }
         }
     }

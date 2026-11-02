@@ -158,6 +158,7 @@ public enum EngineImportService {
         guard engine.isInstalled() else {
             throw EngineImportError.unsupportedLayout(engine.libraryRoot)
         }
+        try? FileManager.default.removeItem(at: tarball)
     }
 
     private static func writeVersionPlistIfNeeded(

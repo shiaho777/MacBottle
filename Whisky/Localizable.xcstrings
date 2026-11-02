@@ -21415,6 +21415,20 @@
         }
       }
     },
+    "setup.engine.fallback": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Download open-source Wine 11.21 (225 MB)" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下载开源 Wine 11.21（225 MB）" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "下載開源 Wine 11.21（225 MB）" } }
+      }
+    },
+    "setup.engine.fallback.downloading": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Downloading open-source Wine…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在下载开源 Wine…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在下載開源 Wine…" } }
+      }
+    },
     "setup.engine.import": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Import Wine engine…" } },

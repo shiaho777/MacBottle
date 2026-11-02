@@ -194,7 +194,9 @@ until then the client does not claim cryptographic provenance.
 The archived upstream feed (`https://data.getwhisky.app/Wine/Libraries.tar.gz`)
 returned 404 as of 2026-11. The setup flow therefore treats the network
 as optional: it can import a local Wine build, reuse an existing
-Whisky/CrossOver `Libraries` folder, or build a native ARM64 engine with
+Whisky/CrossOver `Libraries` folder, download a pinned open-source Wine
+11.21 build from `Gcenx/macOS_Wine_builds` (SHA-256 verified, x86_64,
+no D3DMetal/DXVK), or build a native ARM64 engine with
 `scripts/build-wine-arm64.sh`. Self-owned distribution is a release
 blocker, not a nice-to-have.
 
