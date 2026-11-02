@@ -21,11 +21,17 @@ import Foundation
 
 public enum DownloadError: Error, LocalizedError {
     case checksumMismatch(file: String)
+    case insufficientDiskSpace(required: Int64, available: Int64)
 
     public var errorDescription: String? {
         switch self {
         case .checksumMismatch(let file):
             return "Downloaded file failed its SHA-256 integrity check: \(file)"
+        case .insufficientDiskSpace(let required, let available):
+            let formatter = ByteCountFormatter()
+            formatter.countStyle = .file
+            return "Not enough disk space: need \(formatter.string(fromByteCount: required)), "
+                + "only \(formatter.string(fromByteCount: available)) available."
         }
     }
 }
@@ -74,8 +80,8 @@ public actor ChunkedDownloader {
     public init(
         maxConcurrent: Int = 10,
         chunkThreshold: Int64 = 8 * 1024 * 1024,
-        preferredChunkSize: Int64 = 4 * 1024 * 1024,
-        maxChunksPerFile: Int = 8,
+        preferredChunkSize: Int64 = 16 * 1024 * 1024,
+        maxChunksPerFile: Int = 2048,
         sessionConfiguration: URLSessionConfiguration? = nil
     ) {
         let config = sessionConfiguration ?? {
@@ -100,6 +106,7 @@ public actor ChunkedDownloader {
         onProgress: ProgressHandler? = nil
     ) async throws {
         let totalBytes = jobs.reduce(Int64(0)) { $0 + max(Int64(0), $1.expectedSize) }
+        try ensureDiskCapacity(for: jobs, totalBytes: totalBytes)
         let state = ProgressState(totalBytes: totalBytes, totalFiles: jobs.count)
 
         try await withThrowingTaskGroup(of: (Int64, String).self) { group in
@@ -136,6 +143,49 @@ public actor ChunkedDownloader {
         }
     }
 
+    /// Leaves headroom for the `.partial` file, chunk parts, and APFS
+    /// metadata instead of filling the volume to the last byte.
+    private func ensureDiskCapacity(for jobs: [DownloadJob], totalBytes: Int64) throws {
+        guard totalBytes > 0, let first = jobs.first else { return }
+        let parent = Self.nearestExistingDirectory(
+            from: first.destination.deletingLastPathComponent()
+        )
+        guard let values = try? parent.resourceValues(
+            forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+        ), let available = values.volumeAvailableCapacityForImportantUsage else {
+            return
+        }
+        let required = totalBytes + max(512 * 1024 * 1024, totalBytes / 20)
+        guard available >= required else {
+            throw DownloadError.insufficientDiskSpace(required: required, available: available)
+        }
+    }
+
+    private static func nearestExistingDirectory(from url: URL) -> URL {
+        var current = url
+        while !FileManager.default.fileExists(atPath: current.path(percentEncoded: false)) {
+            let parent = current.deletingLastPathComponent()
+            if parent.path(percentEncoded: false) == current.path(percentEncoded: false) {
+                break
+            }
+            current = parent
+        }
+        return current
+    }
+
+    /// Number of ranges a file is split into. Exposed for tests and for
+    /// callers that want to report an accurate part count.
+    static func chunkCount(
+        totalSize: Int64,
+        preferredChunkSize: Int64,
+        maxChunksPerFile: Int
+    ) -> Int {
+        guard totalSize > 0 else { return 1 }
+        let preferred = max(256 * 1024, preferredChunkSize)
+        let natural = max(1, Int((totalSize + preferred - 1) / preferred))
+        return min(max(1, maxChunksPerFile), natural)
+    }
+
     private func downloadOne(
         _ url: URL,
         to destination: URL,
@@ -169,14 +219,14 @@ public actor ChunkedDownloader {
 
         if remote.acceptsRanges,
            totalSize >= chunkThreshold {
-            let size = try await downloadParallel(
+            let result = try await downloadParallel(
                 url: url,
                 destination: destination,
                 partial: partial,
                 totalSize: totalSize,
                 expectedSha256: expectedSha256
             )
-            return size
+            return result.size
         }
 
         if remote.acceptsRanges,
@@ -217,6 +267,11 @@ public actor ChunkedDownloader {
     private struct RemoteInfo {
         let acceptsRanges: Bool
         let contentLength: Int64
+    }
+
+    private struct DownloadResult {
+        let size: Int64
+        let sha256: String?
     }
 
     private func probe(url: URL) async throws -> RemoteInfo {
@@ -289,11 +344,21 @@ public actor ChunkedDownloader {
     /// Streams `source` onto `output` through a bounded buffer instead of
     /// loading the whole segment into memory.
     private static func appendFile(at source: URL, to output: FileHandle) throws {
+        var noHash: SHA256?
+        try appendFile(at: source, to: output, hasher: &noHash)
+    }
+
+    private static func appendFile(
+        at source: URL,
+        to output: FileHandle,
+        hasher: inout SHA256?
+    ) throws {
         let input = try FileHandle(forReadingFrom: source)
         defer { try? input.close() }
         while let chunk = try input.read(upToCount: copyBufferSize) {
             if chunk.isEmpty { break }
             try output.write(contentsOf: chunk)
+            hasher?.update(data: chunk)
         }
     }
 
@@ -303,7 +368,7 @@ public actor ChunkedDownloader {
         partial: URL,
         totalSize: Int64,
         expectedSha256: String?
-    ) async throws -> Int64 {
+    ) async throws -> DownloadResult {
         let fileManager = FileManager.default
         let workDir = partial.deletingLastPathComponent()
             .appending(path: ".\(destination.lastPathComponent).parts")
@@ -312,9 +377,10 @@ public actor ChunkedDownloader {
         // assembly.
         try fileManager.createDirectory(at: workDir, withIntermediateDirectories: true)
 
-        let chunkCount = min(
-            maxChunksPerFile,
-            max(1, Int((totalSize + preferredChunkSize - 1) / preferredChunkSize))
+        let chunkCount = Self.chunkCount(
+            totalSize: totalSize,
+            preferredChunkSize: preferredChunkSize,
+            maxChunksPerFile: maxChunksPerFile
         )
         let chunkLength = (totalSize + Int64(chunkCount) - 1) / Int64(chunkCount)
 
@@ -378,9 +444,10 @@ public actor ChunkedDownloader {
         let output = try FileHandle(forWritingTo: partial)
         defer { try? output.close() }
 
+        var hasher: SHA256? = expectedSha256 == nil ? nil : SHA256()
         for index in 0..<chunkCount {
             let partURL = workDir.appending(path: String(format: "part-%04d", index))
-            try Self.appendFile(at: partURL, to: output)
+            try Self.appendFile(at: partURL, to: output, hasher: &hasher)
         }
 
         let finalSize = fileSize(at: partial) ?? 0
@@ -390,11 +457,16 @@ public actor ChunkedDownloader {
         if finalSize != totalSize {
             throw URLError(.cannotParseResponse)
         }
-        if let sha256 = expectedSha256,
-           Self.sha256Hex(of: partial) != sha256.lowercased() {
-            try? fileManager.removeItem(at: partial)
-            try? fileManager.removeItem(at: workDir)
-            throw DownloadError.checksumMismatch(file: destination.lastPathComponent)
+        let digest = hasher.map { hash in
+            hash.finalize().map { String(format: "%02x", $0) }.joined()
+        }
+        if let sha256 = expectedSha256 {
+            let actual = digest ?? Self.sha256Hex(of: partial)
+            guard actual == sha256.lowercased() else {
+                try? fileManager.removeItem(at: partial)
+                try? fileManager.removeItem(at: workDir)
+                throw DownloadError.checksumMismatch(file: destination.lastPathComponent)
+            }
         }
 
         if fileManager.fileExists(atPath: destination.path) {
@@ -402,10 +474,38 @@ public actor ChunkedDownloader {
         }
         try fileManager.moveItem(at: partial, to: destination)
         try? fileManager.removeItem(at: workDir)
-        return finalSize
+        return DownloadResult(size: finalSize, sha256: digest)
     }
 
     private func downloadRange(
+        url: URL,
+        start: Int64,
+        end: Int64,
+        expectedBytes: Int64,
+        to destination: URL
+    ) async throws {
+        var attempt = 0
+        while true {
+            do {
+                try await downloadRangeOnce(
+                    url: url,
+                    start: start,
+                    end: end,
+                    expectedBytes: expectedBytes,
+                    to: destination
+                )
+                return
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                attempt += 1
+                guard attempt < 3 else { throw error }
+                try await Task.sleep(for: .milliseconds(250 * attempt))
+            }
+        }
+    }
+
+    private func downloadRangeOnce(
         url: URL,
         start: Int64,
         end: Int64,
@@ -416,7 +516,7 @@ public actor ChunkedDownloader {
         request.setValue("bytes=\(start)-\(end)", forHTTPHeaderField: "Range")
         let (tempURL, response) = try await session.download(for: request)
         guard let http = response as? HTTPURLResponse,
-              http.statusCode == 206 || (200..<300).contains(http.statusCode) else {
+              http.statusCode == 206 else {
             throw URLError(.badServerResponse)
         }
         if FileManager.default.fileExists(atPath: destination.path) {
@@ -425,7 +525,7 @@ public actor ChunkedDownloader {
         try FileManager.default.moveItem(at: tempURL, to: destination)
 
         let size = fileSize(at: destination) ?? 0
-        if size != expectedBytes && http.statusCode == 206 {
+        if size != expectedBytes {
             throw URLError(.cannotParseResponse)
         }
     }
