@@ -109,6 +109,42 @@ final class ProgramLaunchCoordinatorTests: XCTestCase {
         coordinator.dismiss()
     }
 
+    func testProvisioningPhaseRoundTrip() {
+        let coordinator = ProgramLaunchCoordinator.shared
+        coordinator.dismiss()
+        let bottle = Bottle(
+            bottleUrl: URL(fileURLWithPath: "/tmp/macbottle-prov-\(UUID().uuidString)"),
+            inFlight: true
+        )
+        bottle.settings.name = "Prov"
+        let programURL = URL(fileURLWithPath: "/tmp/game.exe")
+        XCTAssertTrue(coordinator.beginLaunch(
+            programURL: programURL,
+            programName: "game.exe",
+            bottle: bottle
+        ))
+        coordinator.beginProvisioning(
+            programName: "game.exe",
+            bottleName: "Prov",
+            detail: "winetricks vcrun2022"
+        )
+        XCTAssertEqual(
+            coordinator.phase,
+            .provisioning(programName: "game.exe", detail: "winetricks vcrun2022")
+        )
+        coordinator.updateProvisioning(detail: "registry HKCU")
+        XCTAssertEqual(
+            coordinator.phase,
+            .provisioning(programName: "game.exe", detail: "registry HKCU")
+        )
+        coordinator.endProvisioning(programName: "game.exe", bottleName: "Prov")
+        XCTAssertEqual(
+            coordinator.phase,
+            .launching(programName: "game.exe", bottleName: "Prov")
+        )
+        coordinator.dismiss()
+    }
+
     func testSilentExitMessageFlagsQuickEmptyExit() {
         let message = ProgramLaunchCoordinator.silentExitFailureMessage(
             secondsToExit: 4,

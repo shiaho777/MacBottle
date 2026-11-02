@@ -207,6 +207,14 @@ struct BottleView: View {
                 message: String(format: String(localized: "bottle.launch.warming.message %@"), bottleName),
                 showsProgress: true
             )
+        case .provisioning(let programName, let detail):
+            launchBanner(
+                tint: .blue,
+                systemImage: "shippingbox.fill",
+                title: String(localized: "bottle.launch.provisioning"),
+                message: "\(programName) · \(detail)",
+                showsProgress: true
+            )
         case .launching(let programName, _):
             launchBanner(
                 tint: .accentColor,

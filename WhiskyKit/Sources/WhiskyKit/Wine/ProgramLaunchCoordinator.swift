@@ -22,6 +22,7 @@ import Observation
 public enum ProgramLaunchPhase: Equatable, Sendable {
     case idle
     case warming(bottleName: String)
+    case provisioning(programName: String, detail: String)
     case launching(programName: String, bottleName: String)
     case launched(programName: String)
     case failed(programName: String, message: String)
@@ -185,6 +186,23 @@ public final class ProgramLaunchCoordinator {
         return true
     }
 
+    /// First-launch recipe provisioning can take minutes (winetricks).
+    /// Surface it instead of leaving the UI on a generic "launching"
+    /// spinner that looks hung.
+    public func beginProvisioning(programName: String, bottleName: String, detail: String) {
+        phase = .provisioning(programName: programName, detail: detail)
+    }
+
+    public func updateProvisioning(detail: String) {
+        guard case .provisioning(let programName, _) = phase else { return }
+        phase = .provisioning(programName: programName, detail: detail)
+    }
+
+    public func endProvisioning(programName: String, bottleName: String) {
+        guard case .provisioning = phase else { return }
+        phase = .launching(programName: programName, bottleName: bottleName)
+    }
+
     public func finishLaunchSuccess(programURL: URL, programName: String) {
         launchingKeys.remove(Self.programKey(programURL))
         phase = .launched(programName: programName)
@@ -212,6 +230,11 @@ public final class ProgramLaunchCoordinator {
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(8))
             guard launchingKeys.contains(key) else { return }
+            if case .provisioning = phase {
+                // Provisioning is legitimately long; keep watching.
+                scheduleLaunchWatchdog(programURL: programURL, programName: programName)
+                return
+            }
             launchingKeys.remove(key)
             if case .launching = phase {
                 phase = .launched(programName: programName)

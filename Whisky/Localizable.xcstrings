@@ -593,6 +593,28 @@
         }
       }
     },
+    "bottle.launch.provisioning": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing recipe"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备配方"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備配方"
+          }
+        }
+      }
+    },
     "bottle.launch.failed %@": {
       "localizations": {
         "en": {
