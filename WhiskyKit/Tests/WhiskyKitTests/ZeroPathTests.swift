@@ -38,8 +38,8 @@ final class ZeroPathTests: XCTestCase {
         super.tearDown()
     }
 
-    private func makeFakePrefix() -> URL {
-        let prefix = workDir.appending(component: "prefix")
+    private func makeFakePrefix(name: String = "prefix") -> URL {
+        let prefix = workDir.appending(component: name)
         try? FileManager.default.createDirectory(
             at: prefix.appending(path: "drive_c/windows"),
             withIntermediateDirectories: true
@@ -96,8 +96,35 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertFalse(plan.doubleLaunch)
     }
 
-    func testPrefixEvolutionInvalidatesReadiness() {
-        let prefix = makeFakePrefix()
+    func testBaselinesAreIndependentPerBottle() {
+        let prefixA = makeFakePrefix(name: "prefix-a")
+        let prefixB = makeFakePrefix(name: "prefix-b")
+        PrefixReadinessOracle.saveBaseline(
+            bottleKey: "bottle-a",
+            engineBuildID: "crossover-3.0.0",
+            fingerprint: fingerprint(of: prefixA)
+        )
+        PrefixReadinessOracle.saveBaseline(
+            bottleKey: "bottle-b",
+            engineBuildID: "crossover-3.0.0",
+            fingerprint: fingerprint(of: prefixB)
+        )
+
+        let planA = DoubleLaunchExecutor.plan(
+            bottle: Bottle(bottleUrl: prefixA, inFlight: true),
+            fingerprintSaved: PrefixReadinessOracle.loadBaseline(bottleKey: "bottle-a"),
+            engineBuildID: "crossover-3.0.0"
+        )
+        let planB = DoubleLaunchExecutor.plan(
+            bottle: Bottle(bottleUrl: prefixB, inFlight: true),
+            fingerprintSaved: PrefixReadinessOracle.loadBaseline(bottleKey: "bottle-b"),
+            engineBuildID: "crossover-3.0.0"
+        )
+        XCTAssertTrue(planA.readinessSkipped)
+        XCTAssertTrue(planB.readinessSkipped, "one bottle's baseline must not evict another's")
+    }
+
+    func testPrefixEvolutionInvalidatesReadiness() {        let prefix = makeFakePrefix()
         let observed = fingerprint(of: prefix)
         PrefixReadinessOracle.saveBaseline(
             bottleKey: "k",

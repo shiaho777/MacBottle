@@ -145,8 +145,7 @@ public struct BottleDXVKConfig: Codable, Equatable {
     }
 }
 
-public struct BottleSettings: Codable, Equatable {
-    static let defaultFileVersion = SemanticVersion(1, 0, 0)
+public struct BottleSettings: Codable, Equatable {    static let defaultFileVersion = SemanticVersion(1, 0, 0)
 
     var fileVersion: SemanticVersion = Self.defaultFileVersion
     private var info: BottleInfo
@@ -257,23 +256,50 @@ public struct BottleSettings: Codable, Equatable {
 
         let decoder = PropertyListDecoder()
         let data = try Data(contentsOf: metadataURL)
-        var settings = try decoder.decode(BottleSettings.self, from: data)
+        let settings: BottleSettings
+        do {
+            settings = try decoder.decode(BottleSettings.self, from: data)
+        } catch {
+            quarantine(metadataURL, reason: "decode-failed")
+            throw error
+        }
 
         guard settings.fileVersion == BottleSettings.defaultFileVersion else {
-            Logger.wineKit.warning("Invalid file version `\(settings.fileVersion)`")
-            settings = BottleSettings()
-            try settings.encode(to: metadataURL)
-            return settings
+            Logger.wineKit.error(
+                "Invalid file version `\(settings.fileVersion)`; quarantining metadata"
+            )
+            quarantine(metadataURL, reason: "unsupported-version")
+            throw BottleSettingsError.unsupportedFileVersion(settings.fileVersion)
         }
 
         return settings
+    }
+
+    /// Preserve an unreadable or unsupported metadata file instead of
+    /// letting the next settings write silently replace it.
+    private static func quarantine(_ metadataURL: URL, reason: String) {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+            .replacingOccurrences(of: ":", with: "-")
+        let backup = metadataURL
+            .deletingLastPathComponent()
+            .appending(path: "\(metadataURL.lastPathComponent).\(reason)-\(stamp)")
+        do {
+            try FileManager.default.moveItem(at: metadataURL, to: backup)
+            Logger.wineKit.error(
+                "BottleSettings: quarantined metadata at \(backup.path, privacy: .public)"
+            )
+        } catch {
+            Logger.wineKit.error(
+                "BottleSettings: could not quarantine metadata: \(error.localizedDescription, privacy: .public)"
+            )
+        }
     }
 
     func encode(to metadataUrl: URL) throws {
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .xml
         let data = try encoder.encode(self)
-        try data.write(to: metadataUrl)
+        try data.write(to: metadataUrl, options: .atomic)
     }
 
     public func environmentVariables(wineEnv: inout [String: String]) {
@@ -322,6 +348,17 @@ public struct BottleSettings: Codable, Equatable {
 
         if dxrEnabled {
             wineEnv.updateValue("1", forKey: "D3DM_SUPPORT_DXR")
+        }
+    }
+}
+
+public enum BottleSettingsError: Error, LocalizedError {
+    case unsupportedFileVersion(SemanticVersion)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unsupportedFileVersion(let version):
+            return "Unsupported bottle metadata version \(version)."
         }
     }
 }
