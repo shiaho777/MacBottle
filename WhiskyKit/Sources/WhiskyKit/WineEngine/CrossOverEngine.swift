@@ -116,10 +116,9 @@ public struct CrossOverEngine: WineEngine {
         let appFolder = Self.applicationFolder
 
         try fileManager.createDirectory(at: appFolder, withIntermediateDirectories: true)
-        if fileManager.fileExists(atPath: libraryRoot.path) {
-            try fileManager.removeItem(at: libraryRoot)
-        }
-
+        // `Tar.untar` extracts into staging, validates every entry, and
+        // swaps top-level items into place. A corrupt archive therefore
+        // leaves the previous engine intact instead of deleting it first.
         try Tar.untar(tarBall: tarball, toURL: appFolder)
         try fileManager.removeItem(at: tarball)
     }
