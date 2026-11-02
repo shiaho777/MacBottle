@@ -21292,6 +21292,50 @@
         }
       }
     },
+    "setup.engine.trust.accept": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trust and continue"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任并继续"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "信任並繼續"
+          }
+        }
+      }
+    },
+    "setup.engine.trust.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine archive changed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎压缩包已变更"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎壓縮檔已變更"
+          }
+        }
+      }
+    },
     "setup.retry": {
       "localizations": {
         "ar": {
