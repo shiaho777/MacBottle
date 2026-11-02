@@ -105,8 +105,26 @@ final class EngineDownloadServiceTests: XCTestCase {
         )
     }
 
-    func testTrustStoreForgetRestoresFirstUse() async throws {
+    func testBadHTTPStatusMapsToFeedUnavailable() async {
+        RangeStub.shared.forcedStatus = 404
         let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
+        let service = makeService(trust: trust)
+        let destination = workDir.appending(path: "engine.tar.gz")
+
+        do {
+            try await service.download(from: url, to: destination)
+            XCTFail("expected a 404 to fail")
+        } catch let error as EngineDownloadError {
+            guard case .feedUnavailable = error else {
+                return XCTFail("unexpected error: \(error)")
+            }
+        } catch {
+            XCTFail("unexpected error type: \(error)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    func testTrustStoreForgetRestoresFirstUse() async throws {        let trust = EngineArchiveTrustStore(storeURL: workDir.appending(path: "trust.json"))
         trust.record(url: url, sha256: "abc")
         XCTAssertEqual(trust.decision(url: url, sha256: "abc"), .trusted)
         trust.forget(url: url)
