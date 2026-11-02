@@ -16,12 +16,12 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import CryptoKit
 import Foundation
 import os.log
 
-/// Writers for the per-game `dxvk.conf` DXVK reads next to the
-/// executable (documented precedence: `<exe>.conf` in the game folder,
-/// then `%DXVK_CONFIG_FILE%`, then the global file).
+/// Writers for the per-game `dxvk.conf` DXVK reads through
+/// `DXVK_CONFIG_FILE`.
 ///
 /// The two levers with real frame-rate leverage on UMA Apple Silicon:
 ///
@@ -34,9 +34,11 @@ import os.log
 ///   residency heuristics; `dxgi.maxDeviceMemory`/`maxSharedMemory`
 ///   give the title an honest budget so it stops thrash-evicting.
 ///
-/// Everything written here is idempotent and reversible: the writer
-/// snapshots the prior file bytes on first write so a posture change
-/// or uninstall restores exactly what was there.
+/// The file lives under Application Support, not next to the executable:
+/// game directories can be read-only, and dropping a new file into a
+/// Steam/GOG install can trip launcher or anti-cheat integrity checks.
+/// A user-authored `<exe>.conf` still wins on DXVK's documented
+/// precedence, which is exactly the behaviour we want.
 public enum DXVKGameConf {
     public struct Posture: Sendable, Equatable {
         public var maxFrameLatency: Int
@@ -60,9 +62,26 @@ public enum DXVKGameConf {
         }
     }
 
-    static func confURL(executable: URL) -> URL {
-        executable.deletingLastPathComponent()
-            .appending(component: executable.lastPathComponent + ".conf")
+    public static func defaultRoot() -> URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appending(path: Bundle.whiskyBundleIdentifier)
+            .appending(path: "DXVKConfig")
+    }
+
+    /// Stable per-executable filename. The hash keeps two games with the
+    /// same basename (`game.exe` is common) from sharing a config.
+    public static func configurationURL(
+        for executable: URL,
+        root: URL? = nil
+    ) -> URL {
+        let base = executable.deletingPathExtension().lastPathComponent
+        let safe = base.isEmpty ? "game" : base
+        let digest = SHA256.hash(
+            data: Data(executable.standardizedFileURL.path(percentEncoded: false).utf8)
+        )
+        let suffix = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
+        return (root ?? defaultRoot())
+            .appending(path: "\(safe)-\(suffix).conf")
     }
 
     static func lines(for posture: Posture) -> [String] {
@@ -74,27 +93,21 @@ public enum DXVKGameConf {
         ]
     }
 
+    /// Writes the posture and returns the file DXVK must be pointed at
+    /// via `DXVK_CONFIG_FILE`.
     @discardableResult
     public static func apply(
         posture: Posture,
-        executable: URL
-    ) -> Bool {
-        let url = confURL(executable: executable)
+        executable: URL,
+        root: URL? = nil
+    ) -> URL {
+        let url = configurationURL(for: executable, root: root)
         let fileManager = FileManager.default
         let desired = lines(for: posture)
 
         let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         if desired.allSatisfy({ existing.contains($0) }) {
-            return false
-        }
-        // First managed write over a pre-existing file (perhaps a
-        // user-authored conf): snapshot the original bytes so removal
-        // restores them byte-for-byte.
-        let snapshotURL = url.appendingPathExtension("macbottle.orig")
-        if !existing.isEmpty,
-           !fileManager.fileExists(atPath: snapshotURL.path(percentEncoded: false)),
-           let original = fileManager.contents(atPath: url.path(percentEncoded: false)) {
-            try? original.write(to: snapshotURL)
+            return url
         }
 
         var merged = existing
@@ -103,24 +116,20 @@ public enum DXVKGameConf {
             merged = upsertLine(in: merged, key: key, line: line)
         }
         do {
+            try fileManager.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
             try merged.write(to: url, atomically: true, encoding: .utf8)
-            return true
         } catch {
             Logger.wineKit.error("DXVKGameConf write failed: \(error.localizedDescription)")
-            return false
         }
+        return url
     }
 
-    public static func remove(executable: URL) {
-        let url = confURL(executable: executable)
-        let fileManager = FileManager.default
-        let snapshotURL = url.appendingPathExtension("macbottle.orig")
-        if let original = try? Data(contentsOf: snapshotURL) {
-            try? original.write(to: url)
-            try? fileManager.removeItem(at: snapshotURL)
-        } else {
-            try? fileManager.removeItem(at: url)
-        }
+    public static func remove(executable: URL, root: URL? = nil) {
+        let url = configurationURL(for: executable, root: root)
+        try? FileManager.default.removeItem(at: url)
     }
 
     static func upsertLine(in text: String, key: String, line: String) -> String {

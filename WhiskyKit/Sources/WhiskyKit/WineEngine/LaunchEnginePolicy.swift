@@ -116,6 +116,14 @@ public enum LaunchEnginePolicy {
                     recipeRenderer: recipe.renderer,
                     bottlePinned: false
                 )
+            case .moltenvk:
+                return Decision(
+                    engineID: WineEngineCatalog.modernIdentifier,
+                    reason: "recipe.renderer=moltenvk",
+                    importProfile: importProfile,
+                    recipeRenderer: recipe.renderer,
+                    bottlePinned: false
+                )
             case .wined3d:
                 return Decision(
                     engineID: WineEngineCatalog.modernIdentifier,
@@ -159,7 +167,15 @@ public enum LaunchEnginePolicy {
             case .dxvk:
                 return Decision(
                     engineID: WineEngineCatalog.modernIdentifier,
-                    reason: "pe.vulkan/d3d10 → modern+dxvk path",
+                    reason: "pe.d3d10 → modern+dxvk path",
+                    importProfile: importProfile,
+                    recipeRenderer: nil,
+                    bottlePinned: false
+                )
+            case .moltenvk:
+                return Decision(
+                    engineID: WineEngineCatalog.modernIdentifier,
+                    reason: "pe.vulkan → modern+moltenvk path",
                     importProfile: importProfile,
                     recipeRenderer: nil,
                     bottlePinned: false

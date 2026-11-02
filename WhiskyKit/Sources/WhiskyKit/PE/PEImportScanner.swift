@@ -46,7 +46,10 @@ public struct PEImportProfile: Sendable, Hashable {
         if graphicsAPIs.contains(.d3d12) || graphicsAPIs.contains(.d3d11) {
             return .d3dmetal
         }
-        if graphicsAPIs.contains(.vulkan) || graphicsAPIs.contains(.d3d10) {
+        if graphicsAPIs.contains(.vulkan) {
+            return .moltenvk
+        }
+        if graphicsAPIs.contains(.d3d10) {
             return .dxvk
         }
         if graphicsAPIs.contains(.d3d9)

@@ -368,10 +368,13 @@ public class Wine {
             shouldApplyDXVK = false
         } else if recipe?.renderer == .d3dmetal {
             shouldApplyDXVK = false
+        } else if recipe?.renderer == .moltenvk {
+            shouldApplyDXVK = false
         } else if recipe?.renderer == .wined3d {
             shouldApplyDXVK = false
         }
 
+        var dxvkConfigURL: URL?
         if shouldApplyDXVK {
             let engineID = buildID(for: launchEngine)
             let dxvkReady = await MainActor.run {
@@ -387,13 +390,26 @@ public class Wine {
                 }
             }
             // Per-game dxvk.conf: queue depth 1 + honest UMA budget.
-            _ = DXVKGameConf.apply(
+            // Written under Application Support and handed to DXVK via
+            // DXVK_CONFIG_FILE, so the game directory stays untouched.
+            dxvkConfigURL = DXVKGameConf.apply(
                 posture: .responsive(physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory),
                 executable: url
             )
         }
 
         var environment = environment
+        if let dxvkConfigURL {
+            environment["DXVK_CONFIG_FILE"] = dxvkConfigURL.path(percentEncoded: false)
+        }
+        let isVulkanRoute = recipe?.renderer == .moltenvk
+            || (recipe == nil
+                && engineDecision?.decision.importProfile?.graphicsAPIs.contains(.vulkan) == true)
+        if isVulkanRoute {
+            RendererEnvironment.applyMoltenVK(to: &environment, engine: launchEngine)
+        } else if recipe?.renderer == .wined3d {
+            RendererEnvironment.applyWineD3D(to: &environment)
+        }
         if environment["WINEDLLOVERRIDES"]?.isEmpty == true {
             environment.removeValue(forKey: "WINEDLLOVERRIDES")
         }
