@@ -96,7 +96,16 @@ extension Program {
                             environment: environment,
                             wait: false,
                             recipe: recipe,
-                            autoSelectEngine: true
+                            autoSelectEngine: true,
+                            onRunFinished: { exitCode in
+                                Task { @MainActor in
+                                    ProgramLaunchCoordinator.shared.completeLaunch(
+                                        programURL: programURL,
+                                        programName: programName,
+                                        exitCode: exitCode
+                                    )
+                                }
+                            }
                         )
                     case .command:
                         try await Wine.runWine(
@@ -104,12 +113,13 @@ extension Program {
                             bottle: bottle,
                             environment: environment
                         )
-                    }
-                    await MainActor.run {
-                        ProgramLaunchCoordinator.shared.finishLaunchSuccess(
-                            programURL: programURL,
-                            programName: programName
-                        )
+                        await MainActor.run {
+                            ProgramLaunchCoordinator.shared.completeLaunch(
+                                programURL: programURL,
+                                programName: programName,
+                                exitCode: 0
+                            )
+                        }
                     }
                 } catch {
                     await MainActor.run {

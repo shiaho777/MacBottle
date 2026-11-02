@@ -280,7 +280,8 @@ public class Wine {
         applyDXVK: Bool = true,
         recipe: Recipe? = nil,
         autoSelectEngine: Bool = true,
-        captureRunLog: Bool = true
+        captureRunLog: Bool = true,
+        onRunFinished: (@Sendable (Int32?) -> Void)? = nil
     ) async throws {
         // Resolve the engine before prewarming: the warmup must spawn the
         // same wineserver the launch will use, and engine auto-selection
@@ -330,6 +331,7 @@ public class Wine {
             recipe: recipe,
             autoSelectEngine: autoSelectEngine,
             captureRunLog: captureRunLog,
+            onRunFinished: onRunFinished,
             context: launchContext
         )
     }
@@ -509,6 +511,7 @@ public class Wine {
         recipe: Recipe?,
         autoSelectEngine: Bool,
         captureRunLog: Bool,
+        onRunFinished: (@Sendable (Int32?) -> Void)?,
         context: ZeroPathLaunchContext
     ) async throws {
         let profile = context.profile
@@ -669,9 +672,11 @@ public class Wine {
                     applyDXVK: applyDXVK,
                     recipe: recipe,
                     autoSelectEngine: autoSelectEngine,
-                    captureRunLog: captureRunLog
+                    captureRunLog: captureRunLog,
+                    onRunFinished: nil
                 )
             }
+            onRunFinished?(exitCode)
         }
 
         if wait {

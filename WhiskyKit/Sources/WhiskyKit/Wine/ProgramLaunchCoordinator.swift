@@ -209,6 +209,28 @@ public final class ProgramLaunchCoordinator {
         scheduleClear(after: 2.5)
     }
 
+    /// Called when the spawned process actually exits. `wait: false`
+    /// means the spawn returning is not the launch finishing, so success
+    /// must come from here rather than from `runProgram` returning.
+    public func completeLaunch(programURL: URL, programName: String, exitCode: Int32?) {
+        launchingKeys.remove(Self.programKey(programURL))
+        // A silent-exit failure may already have been reported by the
+        // run finalizer; a later exit callback must not overwrite it.
+        if case .failed = phase { return }
+        if let exitCode, exitCode != 0 {
+            let message = String(
+                format: String(localized: "launch.exitCode %lld"),
+                Int64(exitCode)
+            )
+            lastErrorMessage = message
+            phase = .failed(programName: programName, message: message)
+            scheduleClear(after: 6)
+            return
+        }
+        phase = .launched(programName: programName)
+        scheduleClear(after: 2.5)
+    }
+
     public func finishLaunchFailure(programURL: URL, programName: String, message: String) {
         launchingKeys.remove(Self.programKey(programURL))
         lastErrorMessage = message
