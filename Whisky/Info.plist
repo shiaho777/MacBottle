@@ -53,6 +53,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>MBEngineManifestPublicKey</key>
+	<string>abqGeOEAtB1ntAlCsNNbi80AfWP3Tsgn3X9IWXFsLnI=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<false/>
 	<key>UTExportedTypeDeclarations</key>

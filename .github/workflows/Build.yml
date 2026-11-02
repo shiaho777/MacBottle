@@ -17,6 +17,7 @@ on:
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
       - 'WhiskyKit/Sources/WhiskyKit/Recipes/_index.json'
+      - 'engine-manifest.json'
   push:
     branches: [main]
     paths-ignore:
@@ -24,6 +25,7 @@ on:
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
       - 'WhiskyKit/Sources/WhiskyKit/Recipes/_index.json'
+      - 'engine-manifest.json'
   workflow_dispatch:
 
 jobs:
