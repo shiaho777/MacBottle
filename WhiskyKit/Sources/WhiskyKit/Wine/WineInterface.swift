@@ -90,12 +90,32 @@ extension Wine {
         let engine = engine ?? WineEngineRegistry.shared.current
         try FileManager.default.replaceDLLs(
             in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "system32"),
-            withContentsIn: engine.dxvkFolder.appending(path: "x64")
+            withContentsIn: engine.dxvkFolder.appending(path: "x64"),
+            makeOriginalCopy: true
         )
         try FileManager.default.replaceDLLs(
             in: bottle.url.appending(path: "drive_c").appending(path: "windows").appending(path: "syswow64"),
-            withContentsIn: engine.dxvkFolder.appending(path: "x32")
+            withContentsIn: engine.dxvkFolder.appending(path: "x32"),
+            makeOriginalCopy: true
         )
+        try? Data(engine.identifier.utf8).write(to: dxvkMarkerURL(for: bottle), options: .atomic)
+    }
+
+    /// Restore the Wine DLLs snapshotted by `enableDXVK`. Safe to call
+    /// when DXVK was never installed (no-op).
+    public static func disableDXVK(bottle: Bottle) throws {
+        let marker = dxvkMarkerURL(for: bottle)
+        guard FileManager.default.fileExists(atPath: marker.path(percentEncoded: false)) else {
+            return
+        }
+        let windows = bottle.url.appending(path: "drive_c").appending(path: "windows")
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "system32"))
+        try FileManager.default.restoreDLLs(in: windows.appending(path: "syswow64"))
+        try? FileManager.default.removeItem(at: marker)
+    }
+
+    private static func dxvkMarkerURL(for bottle: Bottle) -> URL {
+        bottle.url.appending(path: ".macbottle-dxvk")
     }
 }
 

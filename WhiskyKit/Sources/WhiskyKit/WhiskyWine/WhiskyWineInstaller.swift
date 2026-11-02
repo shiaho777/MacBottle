@@ -51,12 +51,8 @@ public class WhiskyWineInstaller {
         engine.isInstalled()
     }
 
-    public static func install(from: URL) {
-        do {
-            try engine.install(from: from)
-        } catch {
-            Logger.wineKit.error("Failed to install Wine engine: \(error.localizedDescription)")
-        }
+    public static func install(from: URL) throws {
+        try engine.install(from: from)
     }
 
     public static func uninstall() {

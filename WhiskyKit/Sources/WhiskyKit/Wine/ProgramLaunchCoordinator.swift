@@ -61,6 +61,11 @@ public final class ProgramLaunchCoordinator {
         dxvkReadyKeys.insert(Self.warmKey(bottle: bottle, engineID: engineID))
     }
 
+    public func clearDXVK(bottle: Bottle) {
+        let prefix = Self.bottleKey(bottle) + "|"
+        dxvkReadyKeys = dxvkReadyKeys.filter { !$0.hasPrefix(prefix) }
+    }
+
     /// Drop every piece of state that is only valid for the engine that
     /// produced it. Called when the user switches engines: a prefix warmed
     /// by CrossOver is not warm under GPTK, and DXVK DLLs copied from one

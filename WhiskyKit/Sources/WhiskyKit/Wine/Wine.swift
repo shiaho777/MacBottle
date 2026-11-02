@@ -397,6 +397,14 @@ public class Wine {
                 posture: .responsive(physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory),
                 executable: url
             )
+        } else {
+            // A recipe or engine may have overridden a bottle that had
+            // DXVK installed. Restore the Wine DLLs instead of leaving a
+            // half-switched prefix behind.
+            try? disableDXVK(bottle: bottle)
+            await MainActor.run {
+                ProgramLaunchCoordinator.shared.clearDXVK(bottle: bottle)
+            }
         }
 
         var environment = environment
