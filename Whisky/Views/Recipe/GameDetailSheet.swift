@@ -34,9 +34,9 @@ struct GameDetailSheet: View {
     @State private var steamGuardCode: String = ""
     @State private var useAnonymousSteam: Bool = false
 
-    init(recipe: Recipe) {
+    init(recipe: Recipe, installerURL: URL? = nil) {
         self.recipe = recipe
-        _installer = State(initialValue: GameInstaller(recipe: recipe))
+        _installer = State(initialValue: GameInstaller(recipe: recipe, installerURL: installerURL))
     }
 
     var body: some View {

@@ -26,24 +26,13 @@ struct ContentView: View {
     @Environment(BottleVM.self) private var bottleVM
     @Binding var showSetup: Bool
 
-    @State private var selected: URL?
+    @State private var selection: SidebarSelection? = .library
     @State private var showBottleCreation: Bool = false
     @State private var bottlesLoaded: Bool = false
-    @State private var showBottleSelection: Bool = false
     @State private var newlyCreatedBottleURL: URL?
     @State private var openedFileURL: URL?
     @State private var triggerRefresh: Bool = false
     @State private var refreshAnimation: Angle = .degrees(0)
-
-    /// Stable marker URL for the Library sidebar row. Uses a scheme that
-    /// doesn't collide with real bottle URLs (which are `file://`).
-    private static let libraryMarker: URL = {
-        guard let url = URL(string: "macbottle://library") else {
-            preconditionFailure("static library marker URL")
-        }
-        return url
-    }()
-
     @State private var bottleFilter = ""
     @State private var currentEngineID = WineEngineRegistry.shared.current.identifier
     @State private var engineBusy = false
@@ -94,17 +83,15 @@ struct ContentView: View {
         }
         .sheet(item: $openedFileURL) { url in
             FileOpenView(fileURL: url,
-                         currentBottle: selected,
+                         currentBottle: selectedBottleURL,
                          bottles: bottleVM.bottles)
         }
-        .onChange(of: selected) {
-            // Library marker is ephemeral; persist only real bottle URLs
-            // so relaunches restore the user's last bottle choice and
-            // fall back to Library when none was open.
-            if selected == Self.libraryMarker {
+        .onChange(of: selection) { _, newValue in
+            switch newValue {
+            case .bottle(let url):
+                selectedBottleURL = url
+            default:
                 selectedBottleURL = nil
-            } else {
-                selectedBottleURL = selected
             }
         }
         .handlesExternalEvents(preferring: [], allowing: ["*"])
@@ -113,6 +100,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: WineEngineRegistry.engineDidChangeNotification)) { _ in
             currentEngineID = WineEngineRegistry.shared.current.identifier
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .macbottleNewBottle)) { _ in
+            showBottleCreation = true
         }
         .alert(
             String(localized: "toolbar.engine.error.title"),
@@ -127,13 +117,11 @@ struct ContentView: View {
             bottlesLoaded = true
             currentEngineID = WineEngineRegistry.shared.current.identifier
 
-            // MacBottle: default to the Game Library unless the user has
-            // an explicit bottle selection restored from a prior session.
             if let restored = selectedBottleURL,
-               bottleVM.bottles.contains(where: { $0.url == restored && $0.isAvailable }) {
-                selected = restored
+               let bottle = bottleVM.bottles.first(where: { $0.url == restored && $0.isAvailable }) {
+                selection = .bottle(bottle.url)
             } else {
-                selected = Self.libraryMarker
+                selection = .library
             }
 
             if !WhiskyWineInstaller.isWhiskyWineInstalled() {
@@ -166,29 +154,36 @@ struct ContentView: View {
 
     var sidebar: some View {
         ScrollViewReader { proxy in
-            List(selection: $selected) {
+            List(selection: $selection) {
                 Section("sidebar.discover") {
                     Label("sidebar.library", systemImage: "square.grid.2x2.fill")
-                        .tag(Self.libraryMarker)
+                        .tag(SidebarSelection.library)
+                    Label("sidebar.activity", systemImage: "waveform.path.ecg")
+                        .tag(SidebarSelection.activity)
                 }
                 Section("sidebar.bottles") {
                     ForEach(filteredBottles) { bottle in
-                        Group {
-                            if bottle.inFlight {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "shippingbox")
-                                        .foregroundStyle(.secondary)
-                                    Text(bottle.settings.name)
-                                    Spacer()
-                                    ProgressView().controlSize(.small)
-                                }
-                                .opacity(0.5)
-                            } else {
-                                BottleListEntry(bottle: bottle, selected: $selected, refresh: $triggerRefresh)
-                                    .selectionDisabled(!bottle.isAvailable)
+                        if bottle.inFlight {
+                            HStack(spacing: 8) {
+                                Image(systemName: "shippingbox")
+                                    .foregroundStyle(.secondary)
+                                Text(bottle.settings.name)
+                                Spacer()
+                                ProgressView().controlSize(.small)
                             }
+                            .opacity(0.5)
+                            .tag(SidebarSelection.bottle(bottle.url))
+                            .id(bottle.url)
+                        } else {
+                            BottleListEntry(
+                                bottle: bottle,
+                                selection: $selection,
+                                refresh: $triggerRefresh
+                            )
+                            .selectionDisabled(!bottle.isAvailable)
+                            .tag(SidebarSelection.bottle(bottle.url))
+                            .id(bottle.url)
                         }
-                        .id(bottle.url)
                     }
                 }
             }
@@ -222,9 +217,10 @@ struct ContentView: View {
                 .background(.bar)
             }
             .onChange(of: newlyCreatedBottleURL) { _, url in
+                guard let url else { return }
                 Task { @MainActor in
                     try? await Task.sleep(for: .milliseconds(200))
-                    selected = url
+                    selection = .bottle(url)
                     withAnimation {
                         proxy.scrollTo(url, anchor: .center)
                     }
@@ -235,10 +231,13 @@ struct ContentView: View {
 
     @ViewBuilder
     var detail: some View {
-        if selected == Self.libraryMarker {
+        switch selection {
+        case .library?:
             RecipeLibraryView()
-        } else if let selectedURL = selected {
-            if let bottle = bottleVM.bottles.first(where: { $0.url == selectedURL }) {
+        case .activity?:
+            ActivityCenterView(selection: $selection)
+        case .bottle(let url)?:
+            if let bottle = bottleVM.bottles.first(where: { $0.url == url }) {
                 BottleView(bottle: bottle)
                     .disabled(bottle.inFlight)
                     .id(bottle.url)
@@ -249,7 +248,7 @@ struct ContentView: View {
                     message: "bottle.unavailable.message"
                 )
             }
-        } else {
+        case nil:
             if (bottleVM.bottles.isEmpty || bottleVM.countActive() == 0) && bottlesLoaded {
                 EmptyStateCard(
                     systemImage: "shippingbox.and.arrow.backward",
@@ -271,13 +270,11 @@ struct ContentView: View {
 
     var filteredBottles: [Bottle] {
         if bottleFilter.isEmpty {
-            bottleVM.bottles
-                .sorted()
-        } else {
-            bottleVM.bottles
-                .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
-                .sorted()
+            return bottleVM.bottles.sorted()
         }
+        return bottleVM.bottles
+            .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
+            .sorted()
     }
 
     private func switchEngine(to identifier: String) {
@@ -291,9 +288,6 @@ struct ContentView: View {
                     installIfNeeded: true
                 )
                 await MainActor.run {
-                    // Warm and DXVK state are engine-specific; keeping
-                    // them across a switch would spawn the old wineserver
-                    // and load the old DXVK DLLs under the new engine.
                     ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
                     engineBusy = false
                     currentEngineID = engine.identifier
@@ -309,7 +303,8 @@ struct ContentView: View {
 
     private func refreshBottles() {
         bottleVM.loadBottles()
-        if let bottle = bottleVM.bottles.first(where: { $0.url == selected }) {
+        if case .bottle(let url)? = selection,
+           let bottle = bottleVM.bottles.first(where: { $0.url == url }) {
             bottle.updateInstalledPrograms()
         }
         triggerRefresh.toggle()
@@ -324,4 +319,8 @@ struct ContentView: View {
 #Preview {
     ContentView(showSetup: .constant(false))
         .environment(BottleVM.shared)
+}
+
+extension Notification.Name {
+    static let macbottleNewBottle = Notification.Name("app.macbottle.newBottle")
 }

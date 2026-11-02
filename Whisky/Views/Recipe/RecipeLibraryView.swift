@@ -16,7 +16,9 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import WhiskyKit
 
 /// Global library of every recipe MacBottle currently knows about.
@@ -34,6 +36,13 @@ struct RecipeLibraryView: View {
     @State private var installedIDs: Set<String> = []
     @State private var query: String = ""
     @State private var selectedRecipe: Recipe?
+    @State private var installRequest: InstallRequest?
+
+    private struct InstallRequest: Identifiable {
+        let id = UUID()
+        let recipe: Recipe
+        let installerURL: URL
+    }
 
     private let columns = [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 18)]
 
@@ -56,6 +65,16 @@ struct RecipeLibraryView: View {
         }
         .navigationTitle("library.title")
         .searchable(text: $query, placement: .toolbar, prompt: "library.search")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    pickInstaller()
+                } label: {
+                    Label("library.installExe", systemImage: "plus.app")
+                }
+                .help("library.installExe")
+            }
+        }
         .overlay {
             if recipes.isEmpty {
                 emptyState
@@ -75,6 +94,9 @@ struct RecipeLibraryView: View {
         .sheet(item: $selectedRecipe) { recipe in
             GameDetailSheet(recipe: recipe)
         }
+        .sheet(item: $installRequest) { request in
+            GameDetailSheet(recipe: request.recipe, installerURL: request.installerURL)
+        }
     }
 
     private var filtered: [Recipe] {
@@ -89,8 +111,39 @@ struct RecipeLibraryView: View {
         EmptyStateCard(
             systemImage: "gamecontroller.fill",
             title: "library.empty.title",
-            message: "library.empty.message"
-        )
+            message: "library.empty.message",
+            actionTitle: "library.installExe"
+        ) {
+            pickInstaller()
+        }
+    }
+
+    private func pickInstaller() {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = [
+            UTType(filenameExtension: "exe") ?? .data,
+            UTType(filenameExtension: "msi") ?? .data
+        ].compactMap { $0 }
+        panel.allowsOtherFileTypes = true
+        panel.message = String(localized: "library.installExe.panel")
+        panel.prompt = String(localized: "library.installExe.prompt")
+        panel.begin { result in
+            guard result == .OK, let url = panel.url else { return }
+            let title = url.deletingPathExtension().lastPathComponent
+            let recipe = Recipe(
+                id: "generic.\(UUID().uuidString.lowercased())",
+                title: title,
+                dxVersion: .d3d11,
+                minMacOS: "14.0",
+                renderer: .d3dmetal,
+                installer: .custom,
+                compatibility: .silver
+            )
+            installRequest = InstallRequest(recipe: recipe, installerURL: url)
+        }
     }
 
     private func reload() {

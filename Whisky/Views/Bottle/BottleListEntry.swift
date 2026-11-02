@@ -22,7 +22,7 @@ import UniformTypeIdentifiers
 
 struct BottleListEntry: View {
     let bottle: Bottle
-    @Binding var selected: URL?
+    @Binding var selection: SidebarSelection?
     @Binding var refresh: Bool
 
     @State private var showBottleRename: Bool = false
@@ -75,7 +75,7 @@ struct BottleListEntry: View {
                                     .appending(path: bottle.url.lastPathComponent)
 
                                 bottle.move(destination: newBottePath)
-                                selected = newBottePath
+                                selection = .bottle(newBottePath)
                             }
                         }
                     }
@@ -129,8 +129,8 @@ struct BottleListEntry: View {
 
         if response == .alertFirstButtonReturn {
             Task(priority: .userInitiated) {
-                if selected == bottle.url {
-                    selected = nil
+                if selection == .bottle(bottle.url) {
+                    selection = nil
                 }
 
                 bottle.remove(delete: checkbox.state == .on)
@@ -142,7 +142,7 @@ struct BottleListEntry: View {
 #Preview {
     BottleListEntry(
         bottle: Bottle(bottleUrl: URL(filePath: "")),
-        selected: .constant(nil),
+        selection: .constant(nil),
         refresh: .constant(false)
     )
 }

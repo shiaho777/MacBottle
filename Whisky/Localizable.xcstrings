@@ -1,6 +1,230 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "sidebar.activity": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+      }
+    },
+    "activity.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+      }
+    },
+    "activity.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Downloads, installs, and running games in one place." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下载、安装与运行中的游戏集中在这里。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "下載、安裝與執行中的遊戲集中在這裡。" } }
+      }
+    },
+    "activity.idle.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Nothing running" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前没有运行中的任务" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "目前沒有執行中的工作" } }
+      }
+    },
+    "activity.idle.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Launch a game or install one from the Library." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从游戏库启动或安装游戏。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從遊戲庫啟動或安裝遊戲。" } }
+      }
+    },
+    "activity.failed.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Last launch failed" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "上次启动失败" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "上次啟動失敗" } }
+      }
+    },
+    "activity.running": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Running now" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在运行" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在執行" } }
+      }
+    },
+    "activity.running.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No bottles have running processes." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有正在运行的瓶子。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有正在執行的瓶子。" } }
+      }
+    },
+    "activity.running.count %lld": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "%lld processes" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld 个进程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "%lld 個程序" } }
+      }
+    },
+    "activity.openBottle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open bottle" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开瓶子" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開啟瓶子" } }
+      }
+    },
+    "bottle.tabs": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Switch section" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换分区" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換分區" } }
+      }
+    },
+    "bottle.tab.overview": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Overview" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "概览" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "概覽" } }
+      }
+    },
+    "bottle.tab.games": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Games" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "遊戲" } }
+      }
+    },
+    "bottle.tab.settings": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Settings" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "设置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "設定" } }
+      }
+    },
+    "bottle.tab.activity": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+      }
+    },
+    "bottle.continue.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Continue playing" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "繼續遊戲" } }
+      }
+    },
+    "bottle.continue.play": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Play" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "开始游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開始遊戲" } }
+      }
+    },
+    "bottle.continue.playSelected %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Play %@" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启动 %@" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟動 %@" } }
+      }
+    },
+    "bottle.section.allGames": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "All games" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全部游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全部遊戲" } }
+      }
+    },
+    "bottle.empty.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No games yet" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "还没有游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "還沒有遊戲" } }
+      }
+    },
+    "bottle.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Install a .exe or add a game from the Library." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装 .exe，或从游戏库添加游戏。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝 .exe，或從遊戲庫新增遊戲。" } }
+      }
+    },
+    "bottle.empty.action": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Install a game" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装游戏" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝遊戲" } }
+      }
+    },
+    "bottle.more": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "More" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "更多" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "更多" } }
+      }
+    },
+    "bottle.forceStop.confirm.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Force stop this bottle?" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "强制停止这个瓶子？" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "強制停止這個瓶子？" } }
+      }
+    },
+    "bottle.forceStop.confirm.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Running games will be terminated immediately." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在运行的游戏会立即终止。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在執行的遊戲會立即終止。" } }
+      }
+    },
+    "bottle.forceStop.confirm.action": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Force stop" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "强制停止" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "強制停止" } }
+      }
+    },
+    "bottle.activity.processes": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Processes" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "进程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "程序" } }
+      }
+    },
+    "bottle.activity.logs": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Logs" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日志" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日誌" } }
+      }
+    },
+    "bottle.activity": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+      }
+    },
+    "library.installExe": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Install a .exe…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装 .exe…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝 .exe…" } }
+      }
+    },
+    "library.installExe.panel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a Windows installer or executable." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择 Windows 安装程序或可执行文件。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇 Windows 安裝程式或執行檔。" } }
+      }
+    },
+    "library.installExe.prompt": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇" } }
+      }
+    },
     "alert.cli.installed.message %@": {
       "localizations": {
         "en": {
@@ -7774,6 +7998,13 @@
             "value": "Metal"
           }
         }
+      }
+    },
+    "config.title.tools": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Windows tools" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Windows 工具" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Windows 工具" } }
       }
     },
     "config.title.wine": {
