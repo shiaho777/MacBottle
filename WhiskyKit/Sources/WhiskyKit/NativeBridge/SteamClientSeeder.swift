@@ -93,6 +93,25 @@ public final class SteamClientSeeder: @unchecked Sendable {
         let manifestText = manifest.text
         guard !packages.isEmpty else { throw SteamClientSeederError.noPackages }
 
+        let bottleSteam = bottleURL
+            .appending(path: "drive_c")
+            .appending(path: "Program Files (x86)")
+            .appending(path: "Steam")
+        let stampURL = bottleSteam.appending(path: ".macbottle_native_seed")
+        if let stamp = try? String(contentsOf: stampURL, encoding: .utf8),
+           stamp.contains("version=\(version)"),
+           FileManager.default.fileExists(
+               atPath: bottleSteam.appending(path: "Steam.exe").path(percentEncoded: false)
+           ) {
+            let totalBytes = packages.reduce(Int64(0)) { $0 + $1.size }
+            return SteamClientSeedResult(
+                version: version,
+                packageCount: packages.count,
+                totalBytes: totalBytes,
+                steamRoot: bottleSteam
+            )
+        }
+
         let versionDir = store.steamClientVersionDir(version)
         let packagesDir = versionDir.appending(path: "packages")
         let extractDir = versionDir.appending(path: "extract")
@@ -170,10 +189,6 @@ public final class SteamClientSeeder: @unchecked Sendable {
             throw SteamClientSeederError.missingSteamExecutable
         }
 
-        let bottleSteam = bottleURL
-            .appending(path: "drive_c")
-            .appending(path: "Program Files (x86)")
-            .appending(path: "Steam")
         try store.ensureDir(bottleSteam)
 
         onProgress?(

@@ -11347,6 +11347,13 @@
         }
       }
     },
+    "game.install.reusingSteam": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Reusing the shared Steam library…" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在复用共享 Steam 库…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在重複使用共用 Steam 庫…" } }
+      }
+    },
     "game.install.creatingBottle": {
       "localizations": {
         "en": {
