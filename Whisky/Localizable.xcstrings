@@ -8000,6 +8000,27 @@
         }
       }
     },
+    "config.title.app": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "MacBottle" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle" } }
+      }
+    },
+    "config.appSettings": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Global settings" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全局设置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全域設定" } }
+      }
+    },
+    "settings.open": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open Settings" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开设置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開啟設定" } }
+      }
+    },
     "config.title.tools": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Windows tools" } },
