@@ -140,6 +140,35 @@ cd WhiskyKit && swift test
 Result at the time of writing: 0 SwiftLint violations, Debug build
 succeeds, 209 tests pass.
 
+## Follow-up: appearance, settings entry, and the toolbar band
+
+The first pass left two visible gaps that users hit immediately:
+
+- **No way to choose dark mode.** The app followed the system, but Settings
+  did not expose an override, and the Settings window was easy to miss.
+- **The first card row could sit half-cut under the toolbar glass.**
+  Scrolling the Library and coming back restored an offset that tucked the
+  cards under the toolbar. A fixed 80 pt inset fixed the cut but left a
+  visibly empty band at wide sizes.
+
+Changes:
+
+- Added an **Appearance** section to Settings with System / Light / Dark.
+  The choice is stored in `appearanceMode`, applied at launch in
+  `applicationWillFinishLaunching`, and applied immediately on change.
+- Added an always-visible gear to the sidebar bottom bar. The Settings
+  window is still available from the app menu and `⌘,`.
+- Measured the real titlebar + toolbar band with
+  `NSWindow.contentLayoutRect`: it is 52 pt at both 860 × 560 and
+  1180 × 720. `AppSpacing.toolbarInset` is now 52 pt, and Library,
+  Activity, and the bottle tab strip all use it.
+- The Library `ScrollView` gets a fresh identity on launch and whenever
+  the user returns to Library, so it opens at the top instead of restoring
+  a scrolled offset. The welcome card moved inside the scroll content.
+- The sidebar bottom bar keeps “创建容器” on one line and uses an
+  icon-only gear for Settings, so Chinese labels no longer wrap into
+  vertical columns at the minimum sidebar width.
+
 ## Remaining limitations
 
 - Automated VoiceOver traversal was not possible in the QA environment

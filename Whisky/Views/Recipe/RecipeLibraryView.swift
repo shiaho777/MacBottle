@@ -32,6 +32,8 @@ import WhiskyKit
 /// the remote sync cache. The view re-queries on every appear so post-
 /// sync additions show up immediately.
 struct RecipeLibraryView: View {
+    var resetToken: Int = 0
+
     @State private var recipes: [Recipe] = []
     @State private var installedIDs: Set<String> = []
     @State private var query: String = ""
@@ -47,13 +49,13 @@ struct RecipeLibraryView: View {
     private let columns = [GridItem(.adaptive(minimum: 230, maximum: 300), spacing: 18)]
 
     var body: some View {
-        VStack(spacing: 0) {
-            if installedIDs.isEmpty {
-                welcomeCard
-                    .padding(.horizontal, MacBottleTheme.pagePadding)
-                    .padding(.top, MacBottleTheme.pagePadding)
-            }
-            ScrollView {
+        ScrollView {
+            VStack(spacing: 0) {
+                if installedIDs.isEmpty {
+                    welcomeCard
+                        .padding(.horizontal, MacBottleTheme.pagePadding)
+                        .padding(.top, MacBottleTheme.pagePadding)
+                }
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(filtered) { recipe in
                         Button {
@@ -65,12 +67,14 @@ struct RecipeLibraryView: View {
                             )
                         }
                         .buttonStyle(.plain)
-                    .accessibilityLabel(Text(recipe.title))
+                        .accessibilityLabel(Text(recipe.title))
                     }
                 }
                 .padding(MacBottleTheme.pagePadding)
             }
         }
+        .defaultScrollAnchor(.top)
+        .id(resetToken)
         .navigationTitle("library.title")
         .searchable(text: $query, placement: .toolbar, prompt: "library.search")
         .toolbar {

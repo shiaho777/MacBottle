@@ -34,6 +34,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        AppAppearance.applyStored()
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG
         applyQAWindowOptions()

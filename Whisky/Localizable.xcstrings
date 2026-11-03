@@ -27337,6 +27337,48 @@
         "zh-Hans": { "stringUnit": { "state": "translated", "value": "启动游戏后，它的 Windows 进程会显示在这里。" } },
         "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟動遊戲後，它的 Windows 程序會顯示在這裡。" } }
       }
+    },
+    "settings.appearance.section": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Appearance" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "外观" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "外觀" } }
+      }
+    },
+    "settings.appearance": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Appearance mode" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "外观模式" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "外觀模式" } }
+      }
+    },
+    "settings.appearance.system": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "System" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "跟随系统" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "跟隨系統" } }
+      }
+    },
+    "settings.appearance.light": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Light" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "浅色" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "淺色" } }
+      }
+    },
+    "settings.appearance.dark": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Dark" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "深色" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "深色" } }
+      }
+    },
+    "settings.appearance.help": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "System follows the macOS appearance. Light and Dark only affect MacBottle." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "跟随系统会随 macOS 外观自动切换；浅色和深色只影响 MacBottle。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "跟隨系統會隨 macOS 外觀自動切換；淺色和深色只影響 MacBottle。" } }
+      }
     }
   },
   "version": "1.0"

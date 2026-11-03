@@ -35,6 +35,7 @@ struct ContentView: View {
     @State private var triggerRefresh: Bool = false
     @State private var refreshAnimation: Angle = .degrees(0)
     @State private var bottleFilter = ""
+    @State private var libraryResetToken = Int(Date().timeIntervalSince1970)
     @State private var currentEngineID = WineEngineRegistry.shared.current.identifier
     @State private var engineBusy = false
     @State private var engineError: String?
@@ -44,6 +45,7 @@ struct ContentView: View {
             sidebar
         } detail: {
             detail
+                .padding(.top, detailTopInset)
         }
         .toolbar {
             if !selectionIsBottle {
@@ -90,6 +92,9 @@ struct ContentView: View {
                          bottles: bottleVM.bottles)
         }
         .onChange(of: selection) { _, newValue in
+            if newValue == .library {
+                libraryResetToken += 1
+            }
             #if DEBUG
             if Self.qaRoute != nil { return }
             #endif
@@ -229,6 +234,8 @@ struct ContentView: View {
                         showBottleCreation.toggle()
                     } label: {
                         Label("button.createBottle", systemImage: "plus")
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                     .help("button.createBottle")
 
@@ -242,6 +249,14 @@ struct ContentView: View {
                     .accessibilityLabel(Text("button.refresh"))
 
                     Spacer()
+
+                    SettingsLink {
+                        Label("settings.title", systemImage: "gearshape")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("settings.open")
+                    .accessibilityLabel(Text("settings.title"))
                 }
                 .buttonStyle(.borderless)
                 .padding(.horizontal, 12)
@@ -265,7 +280,7 @@ struct ContentView: View {
     var detail: some View {
         switch selection {
         case .library?:
-            RecipeLibraryView()
+            RecipeLibraryView(resetToken: libraryResetToken)
         case .activity?:
             ActivityCenterView(selection: $selection)
         case .bottle(let url)?:
@@ -314,6 +329,15 @@ struct ContentView: View {
             return true
         }
         return false
+    }
+
+    private var detailTopInset: CGFloat {
+        switch selection {
+        case .library?, .activity?:
+            return AppSpacing.toolbarInset
+        default:
+            return 0
+        }
     }
 
     private static func canonicalPath(_ url: URL) -> String {

@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import SemanticVersion
 import SwiftUI
 import WhiskyKit
@@ -25,6 +26,7 @@ struct SettingsView: View {
     @AppStorage("killOnTerminate") var killOnTerminate = true
     @AppStorage("checkWhiskyWineUpdates") var checkWhiskyWineUpdates = true
     @AppStorage("defaultBottleLocation") var defaultBottleLocation = BottleData.defaultBottleDir
+    @AppStorage("appearanceMode") var appearanceMode = AppAppearance.system.rawValue
 
     @State private var selectedEngineID = WineEngineRegistry.shared.current.identifier
     @State private var engineBusy = false
@@ -34,6 +36,21 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("settings.appearance.section") {
+                Picker("settings.appearance", selection: $appearanceMode) {
+                    ForEach(AppAppearance.allCases) { mode in
+                        Text(mode.title).tag(mode.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: appearanceMode) { _, newValue in
+                    AppAppearance.apply(rawValue: newValue)
+                }
+                Text("settings.appearance.help")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("settings.general") {
                 Toggle("settings.toggle.kill.on.terminate", isOn: $killOnTerminate)
                 ActionView(
@@ -115,6 +132,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .defaultScrollAnchor(.top)
         .frame(minWidth: 560, idealWidth: 620, minHeight: 560)
         .navigationTitle("settings.title")
         .onAppear {
@@ -255,6 +273,39 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+}
+
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringKey {
+        switch self {
+        case .system: return "settings.appearance.system"
+        case .light: return "settings.appearance.light"
+        case .dark: return "settings.appearance.dark"
+        }
+    }
+
+    static func applyStored() {
+        let rawValue = UserDefaults.standard.string(forKey: "appearanceMode")
+            ?? AppAppearance.system.rawValue
+        apply(rawValue: rawValue)
+    }
+
+    static func apply(rawValue: String) {
+        switch AppAppearance(rawValue: rawValue) ?? .system {
+        case .system:
+            NSApp.appearance = nil
+        case .light:
+            NSApp.appearance = NSAppearance(named: .aqua)
+        case .dark:
+            NSApp.appearance = NSAppearance(named: .darkAqua)
         }
     }
 }
