@@ -44,7 +44,7 @@ struct WhiskyApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(showSetup: $showSetup)
-                .frame(minWidth: 860, minHeight: 560)
+                .frame(minWidth: 860, idealWidth: 1180, minHeight: 560, idealHeight: 720)
                 .environment(BottleVM.shared)
                 .onAppear {
                     NSWindow.allowsAutomaticWindowTabbing = false
@@ -54,6 +54,7 @@ struct WhiskyApp: App {
                     }
                 }
         }
+        .defaultSize(width: 1180, height: 720)
         // Don't ask me how this works, it just does
         .handlesExternalEvents(matching: ["{same path of URL?}"])
         .commands {

@@ -52,7 +52,7 @@ struct BottleView: View {
     @Bindable var bottle: Bottle
     @State private var launchCoordinator = ProgramLaunchCoordinator.shared
     @State private var path = NavigationPath()
-    @State private var tab: BottleTab = .overview
+    @State private var tab: BottleTab = BottleView.initialTab
     @State private var selectedProgramURL: URL?
     @State private var showWinetricksSheet = false
     @State private var showWorkspaceImport = false
@@ -63,6 +63,17 @@ struct BottleView: View {
     private let gridLayout = [
         GridItem(.adaptive(minimum: 112, maximum: 140), spacing: MacBottleTheme.gridSpacing)
     ]
+
+    private static var initialTab: BottleTab {
+        #if DEBUG
+        let prefix = "--ui-tab="
+        if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
+           let tab = BottleTab(rawValue: String(argument.dropFirst(prefix.count))) {
+            return tab
+        }
+        #endif
+        return .overview
+    }
 
     private var recentPrograms: [Program] {
         bottle.programs
@@ -92,7 +103,7 @@ struct BottleView: View {
                 overviewTab
                     .tabItem { Text("bottle.tab.overview") }
                     .tag(BottleTab.overview)
-                ProgramsView(bottle: bottle, path: $path)
+                ProgramsView(bottle: bottle, path: $path, browsePrograms: runExternalProgram)
                     .tabItem { Text("bottle.tab.games") }
                     .tag(BottleTab.games)
                 ConfigView(bottle: bottle)
@@ -258,20 +269,22 @@ struct BottleView: View {
 
     private var toolbarContent: some ToolbarContent {
         Group {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    if let program = primaryProgram {
-                        selectedProgramURL = program.url
-                        program.run()
-                    } else {
-                        runExternalProgram()
+            if tab != .games {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        if let program = primaryProgram {
+                            selectedProgramURL = program.url
+                            program.run()
+                        } else {
+                            runExternalProgram()
+                        }
+                    } label: {
+                        Label(primaryActionTitle, systemImage: "play.fill")
                     }
-                } label: {
-                    Label(primaryActionTitle, systemImage: "play.fill")
+                    .buttonStyle(.borderedProminent)
+                    .disabled(programLoading || !bottle.isAvailable)
+                    .keyboardShortcut("r", modifiers: .command)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(programLoading || !bottle.isAvailable)
-                .keyboardShortcut("r", modifiers: .command)
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -517,7 +530,18 @@ struct BottleView: View {
 
 struct BottleActivityTab: View {
     @Bindable var bottle: Bottle
-    @State private var pane: ActivityPane = .processes
+    @State private var pane: ActivityPane = BottleActivityTab.initialPane
+
+    private static var initialPane: ActivityPane {
+        #if DEBUG
+        let prefix = "--ui-activity="
+        if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
+           let pane = ActivityPane(rawValue: String(argument.dropFirst(prefix.count))) {
+            return pane
+        }
+        #endif
+        return .processes
+    }
 
     enum ActivityPane: String, CaseIterable, Identifiable {
         case processes

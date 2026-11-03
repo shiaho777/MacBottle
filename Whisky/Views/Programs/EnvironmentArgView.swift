@@ -160,11 +160,12 @@ struct KeyItem: View {
                 environmentKeys.removeAll(where: { $0.id == key.id })
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .help("environment.remove")
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
             .opacity(hovered ? 1 : 0)
+            .help("environment.remove")
+            .accessibilityLabel(Text("environment.remove"))
         }
         .padding(.vertical, 4)
         .onHover { hover in

@@ -37,6 +37,7 @@ struct RecipeSyncToolbarButton: View {
             icon
                 .help(helpText)
         }
+        .accessibilityLabel(Text(helpText))
         .disabled(isBusy)
         .sheet(item: $controller.pending) { pending in
             RecipeSyncView(controller: controller, pending: pending)

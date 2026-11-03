@@ -45,72 +45,14 @@ struct ProgramLogsView: View {
     }
 
     var body: some View {
-        HSplitView {
-            programSidebar
-                .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
-
-            runList
-                .frame(minWidth: 240, idealWidth: 300, maxWidth: 380)
-
-            logDetail
-                .frame(minWidth: 360)
-        }
-        .navigationTitle("logs.title")
-        .toolbar {
-            ToolbarItemGroup {
-                Picker("logs.sort", selection: $sort) {
-                    ForEach(ProgramRunLogSort.allCases) { item in
-                        Text(item.title).tag(item)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(width: 120)
-
-                Toggle("logs.verbose", isOn: $verboseWineDebug)
-                    .toggleStyle(.checkbox)
-                    .help("logs.verbose.help")
-                    .onChange(of: verboseWineDebug) { _, newValue in
-                        ProgramRunLogStore.verboseWineDebugEnabled = newValue
-                    }
-
-                Button("logs.export", systemImage: "square.and.arrow.down") {
-                    exportSelected()
-                }
-                .disabled(selectedRun == nil)
-
-                Button("logs.copy", systemImage: "doc.on.doc") {
-                    copySelected()
-                }
-                .disabled(detailText.isEmpty)
-
-                Button("logs.delete", systemImage: "trash", role: .destructive) {
-                    showDeleteConfirm = true
-                }
-                .disabled(selectedRunIDs.isEmpty && selectedRun == nil)
-
-                Menu("logs.clean", systemImage: "trash.slash") {
-                    Button("logs.clean.program", role: .destructive) {
-                        if let selectedProgramKey {
-                            store.clearProgram(bottle: bottle, programKey: selectedProgramKey)
-                            self.selectedRunID = nil
-                            selectedRunIDs = []
-                            detailText = ""
-                            reloadCaches()
-                        }
-                    }
-                    .disabled(selectedProgramKey == nil)
-
-                    Button("logs.clean.bottle", role: .destructive) {
-                        store.clearBottle(bottle)
-                        selectedProgramKey = nil
-                        selectedRunID = nil
-                        selectedRunIDs = []
-                        detailText = ""
-                        reloadCaches()
-                    }
-                }
+        GeometryReader { proxy in
+            if proxy.size.width < 800 {
+                compactLayout
+            } else {
+                regularLayout
             }
         }
+        .toolbar { toolbarContent }
         .onAppear {
             store.reconcileStaleRunningRuns(for: bottle)
             reloadCaches()
@@ -171,6 +113,92 @@ struct ProgramLogsView: View {
         }
     }
 
+    private var regularLayout: some View {
+        HSplitView {
+            programSidebar
+                .frame(minWidth: 180, idealWidth: 220, maxWidth: 280)
+
+            runList(showsProgramPicker: false)
+                .frame(minWidth: 240, idealWidth: 300, maxWidth: 380)
+
+            logDetail
+                .frame(minWidth: 360)
+        }
+    }
+
+    private var compactLayout: some View {
+        HSplitView {
+            runList(showsProgramPicker: true)
+                .frame(minWidth: 230, idealWidth: 260, maxWidth: 300)
+
+            logDetail
+                .frame(minWidth: 340)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItemGroup {
+            Picker("logs.sort", selection: $sort) {
+                ForEach(ProgramRunLogSort.allCases) { item in
+                    Text(item.title).tag(item)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(width: 120)
+
+            Button("logs.export", systemImage: "square.and.arrow.down") {
+                exportSelected()
+            }
+            .disabled(selectedRun == nil)
+
+            Button("logs.copy", systemImage: "doc.on.doc") {
+                copySelected()
+            }
+            .disabled(detailText.isEmpty)
+
+            Menu {
+                Button("logs.delete", systemImage: "trash", role: .destructive) {
+                    showDeleteConfirm = true
+                }
+                .disabled(selectedRunIDs.isEmpty && selectedRun == nil)
+
+                Divider()
+
+                Button("logs.clean.program", role: .destructive) {
+                    if let selectedProgramKey {
+                        store.clearProgram(bottle: bottle, programKey: selectedProgramKey)
+                        self.selectedRunID = nil
+                        selectedRunIDs = []
+                        detailText = ""
+                        reloadCaches()
+                    }
+                }
+                .disabled(selectedProgramKey == nil)
+
+                Button("logs.clean.bottle", role: .destructive) {
+                    store.clearBottle(bottle)
+                    selectedProgramKey = nil
+                    selectedRunID = nil
+                    selectedRunIDs = []
+                    detailText = ""
+                    reloadCaches()
+                }
+
+                Divider()
+
+                Toggle("logs.verbose", isOn: $verboseWineDebug)
+                    .onChange(of: verboseWineDebug) { _, newValue in
+                        ProgramRunLogStore.verboseWineDebugEnabled = newValue
+                    }
+            } label: {
+                Label("logs.actions", systemImage: "ellipsis.circle")
+            }
+            .help("logs.actions")
+            .accessibilityLabel(Text("logs.actions"))
+        }
+    }
+
     private var programSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("logs.sidebar.programs")
@@ -208,8 +236,19 @@ struct ProgramLogsView: View {
         .background(Color(nsColor: .controlBackgroundColor))
     }
 
-    private var runList: some View {
+    private func runList(showsProgramPicker: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if showsProgramPicker, !programsCache.isEmpty {
+                Picker("logs.sidebar.programs", selection: $selectedProgramKey) {
+                    ForEach(programsCache, id: \.programKey) { program in
+                        Text(program.programName).tag(Optional(program.programKey))
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .padding(.horizontal, 12)
+                .padding(.top, 10)
+            }
             HStack {
                 Text("logs.section.runs")
                     .font(.headline)

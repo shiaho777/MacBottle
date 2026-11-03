@@ -24,6 +24,7 @@ import SemanticVersion
 struct ContentView: View {
     @AppStorage("selectedBottleURL") private var selectedBottleURL: URL?
     @Environment(BottleVM.self) private var bottleVM
+    @Environment(\.openSettings) private var openSettings
     @Binding var showSetup: Bool
 
     @State private var selection: SidebarSelection? = .library
@@ -45,34 +46,36 @@ struct ContentView: View {
             detail
         }
         .toolbar {
-            ToolbarItem(placement: .automatic) {
-                Menu {
-                    ForEach(WineEngineCatalog.allEngines(), id: \.identifier) { engine in
-                        Button {
-                            switchEngine(to: engine.identifier)
-                        } label: {
-                            if engine.identifier == currentEngineID {
-                                Label(WineEngineCatalog.describe(engine), systemImage: "checkmark")
-                            } else {
-                                Text(WineEngineCatalog.describe(engine))
+            if !selectionIsBottle {
+                ToolbarItem(placement: .automatic) {
+                    Menu {
+                        ForEach(WineEngineCatalog.allEngines(), id: \.identifier) { engine in
+                            Button {
+                                switchEngine(to: engine.identifier)
+                            } label: {
+                                if engine.identifier == currentEngineID {
+                                    Label(WineEngineCatalog.describe(engine), systemImage: "checkmark")
+                                } else {
+                                    Text(WineEngineCatalog.describe(engine))
+                                }
                             }
                         }
+                    } label: {
+                        if engineBusy {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            StatusPill(
+                                title: MacBottleTheme.engineLabel(for: currentEngineID),
+                                systemImage: "cpu",
+                                color: MacBottleTheme.engineColor(for: currentEngineID)
+                            )
+                        }
                     }
-                } label: {
-                    if engineBusy {
-                        ProgressView().controlSize(.small)
-                    } else {
-                        StatusPill(
-                            title: MacBottleTheme.engineLabel(for: currentEngineID),
-                            systemImage: "cpu",
-                            color: MacBottleTheme.engineColor(for: currentEngineID)
-                        )
-                    }
+                    .help("toolbar.engine.help")
                 }
-                .help("toolbar.engine.help")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                RecipeSyncToolbarButton()
+                ToolbarItem(placement: .primaryAction) {
+                    RecipeSyncToolbarButton()
+                }
             }
         }
         .sheet(isPresented: $showBottleCreation) {
@@ -87,6 +90,9 @@ struct ContentView: View {
                          bottles: bottleVM.bottles)
         }
         .onChange(of: selection) { _, newValue in
+            #if DEBUG
+            if Self.qaRoute != nil { return }
+            #endif
             switch newValue {
             case .bottle(let url):
                 selectedBottleURL = url
@@ -117,10 +123,19 @@ struct ContentView: View {
             bottlesLoaded = true
             currentEngineID = WineEngineRegistry.shared.current.identifier
 
-            if let restored = selectedBottleURL,
-               let bottle = bottleVM.bottles.first(where: {
-                   $0.isAvailable && Self.canonicalPath($0.url) == Self.canonicalPath(restored)
-               }) {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-settings") {
+                try? await Task.sleep(for: .milliseconds(600))
+                openSettings()
+            }
+            #endif
+
+            if let route = Self.qaRoute {
+                selection = route
+            } else if let restored = selectedBottleURL,
+                      let bottle = bottleVM.bottles.first(where: {
+                          $0.isAvailable && Self.canonicalPath($0.url) == Self.canonicalPath(restored)
+                      }) {
                 selection = .bottle(bottle.url)
             } else {
                 selection = .library
@@ -224,6 +239,7 @@ struct ContentView: View {
                             .rotationEffect(refreshAnimation)
                     }
                     .help("button.refresh")
+                    .accessibilityLabel(Text("button.refresh"))
 
                     Spacer()
                 }
@@ -293,8 +309,31 @@ struct ContentView: View {
             .sorted()
     }
 
+    private var selectionIsBottle: Bool {
+        if case .bottle = selection {
+            return true
+        }
+        return false
+    }
+
     private static func canonicalPath(_ url: URL) -> String {
         (url.path(percentEncoded: false) as NSString).expandingTildeInPath
+    }
+
+    private static var qaRoute: SidebarSelection? {
+        #if DEBUG
+        let prefix = "--ui-route="
+        guard let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }) else {
+            return nil
+        }
+        switch argument.dropFirst(prefix.count) {
+        case "library": return .library
+        case "activity": return .activity
+        default: return nil
+        }
+        #else
+        return nil
+        #endif
     }
 
     private func confirmEngineSwitch() -> Bool {

@@ -33,9 +33,14 @@ struct BottleListEntry: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .lineLimit(1)
-                Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID))
-                    .font(.caption2)
-                    .foregroundStyle(MacBottleTheme.engineColor(for: bottle.settings.engineID))
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(MacBottleTheme.engineColor(for: bottle.settings.engineID))
+                        .frame(width: 5, height: 5)
+                    Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
         } icon: {
             Image(systemName: bottle.isAvailable ? "shippingbox.fill" : "shippingbox")

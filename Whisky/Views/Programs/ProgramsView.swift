@@ -111,6 +111,7 @@ private struct ProgramFolderGroup: Identifiable {
 struct ProgramsView: View {
     @Bindable var bottle: Bottle
     @Binding var path: NavigationPath
+    var browsePrograms: () -> Void = {}
 
     @State private var pane: ProgramsPane = .library
     @State private var filter: ProgramFilter = .all
@@ -241,12 +242,13 @@ struct ProgramsView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                    Picker("programs.pane.library", selection: $pane) {
+                Picker("programs.pane.library", selection: $pane) {
                     ForEach(ProgramsPane.allCases) { item in
                         Text(item.title).tag(item)
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
                 .frame(maxWidth: 360)
 
                 Spacer()
@@ -256,45 +258,70 @@ struct ProgramsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if pane == .library {
-                HStack(spacing: 10) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(ProgramFilter.allCases) { item in
-                                FilterChip(title: item.title, isSelected: filter == item) {
-                                    filter = item
+            if pane == .library || pane == .recent {
+                HStack(spacing: AppSpacing.small) {
+                    if pane == .library {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(ProgramFilter.allCases) { item in
+                                    FilterChip(title: item.title, isSelected: filter == item) {
+                                        filter = item
+                                    }
                                 }
                             }
                         }
+                    } else {
+                        Spacer()
                     }
 
+                    Button {
+                        browsePrograms()
+                    } label: {
+                        Label("bottle.bar.browsePrograms", systemImage: "plus")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.borderless)
+                    .help("bottle.bar.browsePrograms")
+                    .accessibilityLabel(Text("bottle.bar.browsePrograms"))
+
+                    viewMenu
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+    }
+
+    private var viewMenu: some View {
+        Menu {
+            if pane == .library {
+                Section("programs.layout.section") {
                     Picker("programs.layout.flat", selection: $layout) {
                         ForEach(ProgramLayout.allCases) { item in
                             Label(item.title, systemImage: item.systemImage).tag(item)
                         }
                     }
-                    .labelsHidden()
-                    .frame(width: 120)
-
+                }
+                Section("programs.sort.section") {
                     Picker("programs.sort.name", selection: $sort) {
                         ForEach(ProgramSort.allCases) { item in
                             Text(item.title).tag(item)
                         }
                     }
-                    .labelsHidden()
-                    .frame(width: 120)
-
-                    Toggle("programs.hideNoise", isOn: $hideSystemNoise)
-                        .toggleStyle(.checkbox)
-                        .help("programs.hideNoise.help")
                 }
-            } else if pane == .recent {
-                Toggle("programs.hideNoise", isOn: $hideSystemNoise)
-                    .toggleStyle(.checkbox)
             }
+            Section {
+                Toggle("programs.hideNoise", isOn: $hideSystemNoise)
+                    .help("programs.hideNoise.help")
+            }
+        } label: {
+            Label("programs.view", systemImage: "slider.horizontal.3")
+                .labelStyle(.iconOnly)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("programs.view.help")
+        .accessibilityLabel(Text("programs.view"))
     }
 
     @ViewBuilder
@@ -306,8 +333,8 @@ struct ProgramsView: View {
                 message: searchText.isEmpty
                     ? "programs.empty.message"
                     : "programs.empty.search.message",
-                actionTitle: searchText.isEmpty ? "programs.empty.action" : nil,
-                action: searchText.isEmpty ? { refreshPrograms() } : nil
+                actionTitle: searchText.isEmpty ? "bottle.bar.browsePrograms" : nil,
+                action: searchText.isEmpty ? browsePrograms : nil
             )
         } else if layout == .folders {
             folderLibraryList
@@ -481,6 +508,7 @@ struct ProgramsView: View {
                     Label("programs.run", systemImage: "play.fill")
                 }
                 .disabled(selectedProgramObjects.isEmpty && currentList.isEmpty)
+                .keyboardShortcut("r", modifiers: .command)
 
                 Button {
                     togglePinSelected()
@@ -835,6 +863,7 @@ private struct ProgramLibraryRow: View {
             }
             .buttonStyle(.borderless)
             .help(program.pinned ? "programs.unpin" : "programs.pin")
+            .accessibilityLabel(Text(program.pinned ? "programs.unpin" : "programs.pin"))
 
             Button {
                 program.run()
@@ -843,6 +872,7 @@ private struct ProgramLibraryRow: View {
             }
             .buttonStyle(.borderless)
             .help("programs.run")
+            .accessibilityLabel(Text("programs.run"))
         }
         .padding(.vertical, 4)
         .task(id: program.url) {

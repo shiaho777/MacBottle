@@ -44,7 +44,7 @@ struct RecipeLibraryView: View {
         let installerURL: URL
     }
 
-    private let columns = [GridItem(.adaptive(minimum: 210, maximum: 280), spacing: 18)]
+    private let columns = [GridItem(.adaptive(minimum: 230, maximum: 300), spacing: 18)]
 
     var body: some View {
         VStack(spacing: 0) {

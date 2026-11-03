@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import Foundation
 import SwiftUI
 import os.log
@@ -34,6 +35,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        applyQAWindowOptions()
+        #endif
         if !hasShownMoveToApplicationsAlert && !AppDelegate.insideAppsFolder {
             Task { @MainActor in
                 NSApp.activate(ignoringOtherApps: true)
@@ -42,6 +46,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
+
+    #if DEBUG
+    /// Debug-only launch switches used by the UI audit:
+    /// `--ui-light`, `--ui-dark`, `--ui-narrow`, `--ui-wide`.
+    @MainActor
+    private func applyQAWindowOptions() {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--ui-light") {
+            NSApp.appearance = NSAppearance(named: .aqua)
+        } else if arguments.contains("--ui-dark") {
+            NSApp.appearance = NSAppearance(named: .darkAqua)
+        }
+        let wantsNarrow = arguments.contains("--ui-narrow")
+        let wantsWide = arguments.contains("--ui-wide")
+        guard wantsNarrow || wantsWide else { return }
+        DispatchQueue.main.async {
+            guard let window = NSApp.windows.first(where: { $0.contentView != nil }) else {
+                return
+            }
+            window.setContentSize(wantsNarrow
+                ? NSSize(width: 860, height: 560)
+                : NSSize(width: 1180, height: 720))
+            window.center()
+        }
+    }
+    #endif
 
     func applicationWillTerminate(_ notification: Notification) {
         let defaults = UserDefaults.standard
