@@ -18158,13 +18158,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Click refresh in the toolbar to scan drive_c. You can also import from the pinned area or “Browse other programs” at the bottom."
+            "value": "Click refresh in the toolbar to scan drive_c, or import an .exe with the + button."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点右上角刷新扫描 drive_c。也可从固定区或底部「浏览其他程序」导入。"
+            "value": "点右上角刷新扫描 drive_c，或点 + 导入 .exe。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點右上角重新整理掃描 drive_c，或點 + 匯入 .exe。"
           }
         }
       }
@@ -27274,6 +27280,62 @@
             "value": "选择文件或文件夹"
           }
         }
+      }
+    },
+    "settings.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Settings" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "设置" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "設定" } }
+      }
+    },
+    "programs.view": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "View" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "视图" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檢視" } }
+      }
+    },
+    "programs.view.help": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Change layout, sorting, and visibility" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "更改布局、排序与显示" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "變更佈局、排序與顯示" } }
+      }
+    },
+    "programs.layout.section": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Layout" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "布局" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "佈局" } }
+      }
+    },
+    "programs.sort.section": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sort" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "排序" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "排序" } }
+      }
+    },
+    "logs.actions": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Log actions" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日志操作" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日誌操作" } }
+      }
+    },
+    "process.table.empty.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No running processes" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有正在运行的进程" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有正在執行的程序" } }
+      }
+    },
+    "process.table.empty.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Launch a game and its Windows processes will appear here." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启动游戏后，它的 Windows 进程会显示在这里。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟動遊戲後，它的 Windows 程序會顯示在這裡。" } }
       }
     }
   },

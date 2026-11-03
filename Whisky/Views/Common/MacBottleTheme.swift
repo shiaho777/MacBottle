@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import SwiftUI
 import WhiskyKit
 
@@ -87,6 +88,8 @@ struct StatusPill: View {
         .padding(.vertical, 4)
         .foregroundStyle(color)
         .background(color.opacity(MacBottleTheme.badgeFillOpacity), in: Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: title))
     }
 }
 
@@ -168,27 +171,34 @@ struct BottleHeroHeader: View {
                         .foregroundStyle(.white)
                 }
                 .frame(width: MacBottleTheme.heroIconSize, height: MacBottleTheme.heroIconSize)
+                .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: MacBottleTheme.tightSpacing) {
                     Text(bottle.settings.name)
                         .font(.title2.weight(.bold))
                         .lineLimit(1)
-                    Text(bottle.url.path(percentEncoded: false))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    Button {
+                        NSWorkspace.shared.activateFileViewerSelecting([bottle.url])
+                    } label: {
+                        Label("button.showInFinder", systemImage: "folder")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .help(bottle.url.path(percentEncoded: false))
                     HStack(spacing: 8) {
                         StatusPill(
                             title: MacBottleTheme.engineLabel(for: engineID),
                             systemImage: "cpu",
                             color: MacBottleTheme.engineColor(for: engineID)
                         )
-                        StatusPill(
-                            title: "\(pinCount) \(String(localized: "bottle.pinned"))",
-                            systemImage: "pin.fill",
-                            color: .orange
-                        )
+                        if pinCount > 0 {
+                            StatusPill(
+                                title: "\(pinCount) \(String(localized: "bottle.pinned"))",
+                                systemImage: "pin.fill",
+                                color: .orange
+                            )
+                        }
                         StatusPill(
                             title: bottle.settings.windowsVersion.pretty(),
                             systemImage: "desktopcomputer",
@@ -198,11 +208,11 @@ struct BottleHeroHeader: View {
                             StatusPill(title: "DXVK", systemImage: "hare.fill", color: .green)
                         }
                     }
+                    .accessibilityElement(children: .combine)
                 }
                 Spacer(minLength: 0)
             }
         }
-        .accessibilityElement(children: .combine)
     }
 }
 

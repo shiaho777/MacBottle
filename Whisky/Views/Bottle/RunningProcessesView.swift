@@ -33,29 +33,49 @@ struct RunningProcessesView: View {
     @State private var processes = [BottleProcess]()
     @State private var processSortOrder = [KeyPathComparator(\BottleProcess.pid)]
     @State private var selectedProcess: BottleProcess.ID?
+    @State private var hasLoaded = false
 
     var body: some View {
         ZStack {
-            if !processes.isEmpty {
+            if !hasLoaded {
+                HStack(alignment: .center) {
+                    Spacer()
+                    VStack(alignment: .center) {
+                        ProgressView()
+                            .padding()
+                        Text("process.table.loading")
+                    }
+                    Spacer()
+                }
+            } else if processes.isEmpty {
+                EmptyStateCard(
+                    systemImage: "moon.zzz",
+                    title: "process.table.empty.title",
+                    message: "process.table.empty.message",
+                    actionTitle: "process.table.refresh"
+                ) {
+                    refreshProcesses()
+                }
+            } else {
                 VStack {
                     Table(processes, selection: $selectedProcess, sortOrder: $processSortOrder) {
                         TableColumn("process.table.pid", value: \.pid)
                         TableColumn("process.table.executable", value: \.procName)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .alternatingRowBackgrounds(.disabled)
 
                     HStack {
                         Spacer()
                         Button("process.table.refresh") {
-                            Task.detached(priority: .userInitiated) {
-                                await fetchProcesses()
-                            }
+                            refreshProcesses()
                         }
                         Button("process.table.kill") {
                             Task.detached(priority: .userInitiated) {
                                 await killProcess()
                             }
                         }
+                        .disabled(selectedProcess == nil)
                         Button("processes.forceStop", role: .destructive) {
                             BottleForceStop.forceStop(bottle: bottle, reason: "processes-view")
                             Task.detached(priority: .userInitiated) {
@@ -66,16 +86,6 @@ struct RunningProcessesView: View {
                     }
                     .padding()
                 }
-            } else {
-                HStack(alignment: .center) {
-                    Spacer()
-                    VStack(alignment: .center) {
-                        ProgressView()
-                            .padding()
-                        Text("process.table.loading")
-                    }
-                    Spacer()
-                }
             }
         }
         .onAppear {
@@ -85,8 +95,15 @@ struct RunningProcessesView: View {
         }
     }
 
+    private func refreshProcesses() {
+        Task.detached(priority: .userInitiated) {
+            await fetchProcesses()
+        }
+    }
+
     @MainActor
     func fetchProcesses() async {
+        defer { hasLoaded = true }
         var newProcessList = [BottleProcess]()
         let output: String?
 

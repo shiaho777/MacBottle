@@ -42,7 +42,6 @@ struct ActivityCenterView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MacBottleTheme.sectionSpacing) {
-                header
                 currentActivity
                 runningSection
             }
@@ -50,25 +49,11 @@ struct ActivityCenterView: View {
         }
         .navigationTitle("activity.title")
         .task {
-            bottles = BottleVM.shared.bottles
-        }
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: AppSpacing.medium) {
-            PageHeader(
-                title: "activity.title",
-                subtitle: "activity.subtitle",
-                systemImage: "waveform.path.ecg"
-            )
-            Button {
+            while !Task.isCancelled {
                 bottles = BottleVM.shared.bottles
                 refreshToken += 1
-            } label: {
-                Label("button.refresh", systemImage: "arrow.clockwise")
+                try? await Task.sleep(for: .seconds(2))
             }
-            .buttonStyle(.borderless)
-            .accessibilityLabel(Text("button.refresh"))
         }
     }
 
@@ -90,6 +75,7 @@ struct ActivityCenterView: View {
                         .controlSize(.small)
                 }
             }
+            .accessibilityElement(children: .combine)
         }
     }
 

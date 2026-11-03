@@ -63,49 +63,6 @@ enum AppMotion {
     }
 }
 
-struct PageHeader: View {
-    let title: LocalizedStringKey
-    let subtitle: LocalizedStringKey?
-    var systemImage: String?
-
-    init(
-        title: LocalizedStringKey,
-        subtitle: LocalizedStringKey? = nil,
-        systemImage: String? = nil
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.systemImage = systemImage
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: AppSpacing.medium) {
-            if let systemImage {
-                ZStack {
-                    RoundedRectangle(cornerRadius: AppRadius.medium, style: .continuous)
-                        .fill(AppColor.accent.opacity(0.14))
-                    Image(systemName: systemImage)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(AppColor.accent)
-                }
-                .frame(width: 48, height: 48)
-            }
-            VStack(alignment: .leading, spacing: AppSpacing.tiny) {
-                Text(title)
-                    .font(.title2.weight(.bold))
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 struct SectionHeader: View {
     let title: LocalizedStringKey
     var trailingTitle: LocalizedStringKey?
