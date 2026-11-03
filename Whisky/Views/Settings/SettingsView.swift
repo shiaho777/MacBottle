@@ -292,12 +292,14 @@ enum AppAppearance: String, CaseIterable, Identifiable {
         }
     }
 
+    @MainActor
     static func applyStored() {
         let rawValue = UserDefaults.standard.string(forKey: "appearanceMode")
             ?? AppAppearance.system.rawValue
         apply(rawValue: rawValue)
     }
 
+    @MainActor
     static func apply(rawValue: String) {
         switch AppAppearance(rawValue: rawValue) ?? .system {
         case .system:

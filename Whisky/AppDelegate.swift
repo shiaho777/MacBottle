@@ -34,6 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    @MainActor
     func applicationWillFinishLaunching(_ notification: Notification) {
         AppAppearance.applyStored()
     }
