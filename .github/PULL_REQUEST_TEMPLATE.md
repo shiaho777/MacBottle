@@ -4,7 +4,7 @@ https://github.com/shiaho777/MacBottle
 
 Pick the section that matches your change and delete the others.
 
-- Recipe: adding/updating files under WhiskyKit/Sources/WhiskyKit/Recipes/
+- Recipe: adding/updating files under MacBottleKit/Sources/MacBottleKit/Recipes/
 - Code / Docs: Swift, docs, workflows, delivery process
 -->
 
@@ -66,11 +66,11 @@ Bot/catalog PRs (for example recipe index regeneration) may omit Fixes.
 
 ### Test plan
 
-- [ ] `swift test` passes locally (from `WhiskyKit/`)
+- [ ] `swift test` passes locally (from `MacBottleKit/`)
 - [ ] The app builds in Xcode without new SwiftLint violations
 - [ ] I have added tests for new non-trivial logic, or explained why not
 - [ ] Required CI is green before merge
-  - Code: `xcodebuild Debug`, `WhiskyKit tests`, and `SwiftLint` when Swift changes
+  - Code: `xcodebuild Debug`, `MacBottleKit tests`, and `SwiftLint` when Swift changes
   - Recipes: `RecipeLint` when recipe paths change
   - Docs-only: Build may be skipped by path filters; still wait for any checks that did run
 

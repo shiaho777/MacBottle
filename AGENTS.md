@@ -50,7 +50,7 @@ Documented from real workflow files under [.github/workflows/](.github/workflows
 | When | Workflow file | Job id | Check name |
 |------|---------------|--------|------------|
 | App/code changes (most paths) | [Build.yml](.github/workflows/Build.yml) | `build` | `xcodebuild Debug` |
-| App/code changes | [Build.yml](.github/workflows/Build.yml) | `test` | `WhiskyKit tests` |
+| App/code changes | [Build.yml](.github/workflows/Build.yml) | `test` | `MacBottleKit tests` |
 | Swift sources changed | [SwiftLint.yml](.github/workflows/SwiftLint.yml) | `SwiftLint` | `SwiftLint` |
 | Recipe sources/tests changed | [RecipeLint.yml](.github/workflows/RecipeLint.yml) | `RecipeLint` | `RecipeLint` |
 
@@ -62,8 +62,8 @@ Notes:
 
 ### Local verify (before PR)
 
-- Debug build: `xcodebuild -project Whisky.xcodeproj -scheme Whisky -configuration Debug CODE_SIGNING_ALLOWED=NO build`
-- Tests: `cd WhiskyKit && swift test`
+- Debug build: `xcodebuild -project MacBottle.xcodeproj -scheme MacBottle -configuration Debug CODE_SIGNING_ALLOWED=NO build`
+- Tests: `cd MacBottleKit && swift test`
 - SwiftLint when Swift changed: `swiftlint lint --strict`
 
 ### Human docs

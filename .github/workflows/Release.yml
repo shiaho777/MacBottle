@@ -74,8 +74,8 @@ jobs:
         if: steps.signing.outputs.enabled == 'true'
         run: |
           xcodebuild \
-            -project Whisky.xcodeproj \
-            -scheme Whisky \
+            -project MacBottle.xcodeproj \
+            -scheme MacBottle \
             -configuration Release \
             -derivedDataPath build \
             -destination 'platform=macOS' \
@@ -91,8 +91,8 @@ jobs:
         if: steps.signing.outputs.enabled != 'true'
         run: |
           xcodebuild \
-            -project Whisky.xcodeproj \
-            -scheme Whisky \
+            -project MacBottle.xcodeproj \
+            -scheme MacBottle \
             -configuration Release \
             -derivedDataPath build \
             -destination 'platform=macOS' \
@@ -104,7 +104,7 @@ jobs:
       - name: Package
         run: |
           ditto -c -k --keepParent \
-            build/Build/Products/Release/Whisky.app \
+            build/Build/Products/Release/MacBottle.app \
             MacBottle.zip
           shasum -a 256 MacBottle.zip > MacBottle.zip.sha256
 
@@ -120,10 +120,10 @@ jobs:
             --team-id "$APPLE_TEAM_ID" \
             --password "$APPLE_APP_PASSWORD" \
             --wait
-          xcrun stapler staple build/Build/Products/Release/Whisky.app
+          xcrun stapler staple build/Build/Products/Release/MacBottle.app
           rm -f MacBottle.zip
           ditto -c -k --keepParent \
-            build/Build/Products/Release/Whisky.app \
+            build/Build/Products/Release/MacBottle.app \
             MacBottle.zip
           shasum -a 256 MacBottle.zip > MacBottle.zip.sha256
 

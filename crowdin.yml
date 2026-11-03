@@ -1,4 +1,4 @@
 files:
-  - source: /Whisky/Localizable.xcstrings
-    translation: /Whisky/Localizable.xcstrings
+  - source: /MacBottle/Localizable.xcstrings
+    translation: /MacBottle/Localizable.xcstrings
     multilingual: 1

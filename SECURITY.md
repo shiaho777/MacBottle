@@ -7,7 +7,7 @@ on this repository. Do not open a public issue for a vulnerability that
 could be exploited before a fix ships.
 
 Please include the affected version, macOS version, steps to reproduce,
-and whether the issue is in the app, WhiskyKit, a recipe, or the engine
+and whether the issue is in the app, MacBottleKit, a recipe, or the engine
 download path.
 
 ## Trust model (current)

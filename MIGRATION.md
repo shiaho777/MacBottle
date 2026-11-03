@@ -2,7 +2,7 @@
 
 本文档跟踪从 Whisky 迁移到 MacBottle 过程中需要改动的所有地方。
 
-**重要原则：** 代码层面的模块名（Swift module `Whisky` / `WhiskyKit`）暂不重命名。Xcode project 重命名风险高；是否以及何时统一做一次"大改名"，是 `PROJECT_PLAN.md` Track D 中待决的事项。
+**重要原则：** 代码层面的大改名已完成（`MacBottle.xcodeproj`、`MacBottleKit`、`MacBottleCmd`、`MacBottleThumbnail`）。为兼容已有安装和保留署名，GPL 许可头、磁盘上的 `WhiskyWineVersion.plist`、旧版 `com.isaacmarovitz.Whisky` 恢复路径、`@AppStorage` 键与本地化键保持不变。
 
 ## 分类
 
@@ -15,23 +15,23 @@
 | 位置 | 改动内容 | 状态 |
 | --- | --- | --- |
 | `README.md` | 重写为 MacBottle 品牌，保留 Whisky 致谢 | ✅ 已完成 |
-| `Whisky/Info.plist` → `CFBundleDisplayName` | `Whisky` → `MacBottle` | ⏳ |
-| `Whisky/Info.plist` → `CFBundleName` | `Whisky` → `MacBottle` | ⏳ |
-| `Whisky.xcodeproj` → `PRODUCT_BUNDLE_IDENTIFIER` | `com.isaacmarovitz.Whisky` → `app.macbottle.MacBottle`（含 Cmd / Thumbnail 变体）+ 源码里 fallback 同步更新 | ✅ 已完成 |
+| `MacBottle/Info.plist` → `CFBundleDisplayName` | `Whisky` → `MacBottle`（由 target 名 `MacBottle` 经 `PRODUCT_NAME` 生成） | ✅ 已完成 |
+| `MacBottle/Info.plist` → `CFBundleName` | `Whisky` → `MacBottle`（由 target 名 `MacBottle` 经 `PRODUCT_NAME` 生成） | ✅ 已完成 |
+| `MacBottle.xcodeproj` → `PRODUCT_BUNDLE_IDENTIFIER` | `com.isaacmarovitz.Whisky` → `app.macbottle.MacBottle`（含 Cmd / Thumbnail 变体）+ 源码里 fallback 同步更新 | ✅ 已完成 |
 | `Assets.xcassets` → AppIcon | 替换为 MacBottle 图标（临时占位可接受） | ⏳ |
 | 应用更新源 | 已移除 Sparkle 及 `SUFeedURL` / `SUEnableAutomaticChecks`;改为读取本仓库 GitHub Releases 的 latest-release API(见 `docs/RELEASE.md`) | ✅ 已完成 |
 | Crowdin 配置（`crowdin.yml`） | 暂时保留，后期切换到 MacBottle 自己的 Crowdin 项目 | ⏳ |
 | `LICENSE` | 保持逐字不动（GPL-3.0 禁止修改）。衍生声明另放 `NOTICE` 文件 | ✅ 已完成 |
 
-### 🔜 v0.1 末期再做的"内在代码"改动（风险高，统一时机做）
+### ✅ "内在代码"改名
 
-| 位置 | 改动内容 |
-| --- | --- |
-| Xcode project target 名 | `Whisky` → `MacBottle` |
-| Swift Package `WhiskyKit` | → `MacBottleKit` |
-| Swift Package `WhiskyCmd` | → `macbottle`（CLI 工具） |
-| Extension bundle `WhiskyThumbnail` | → `MacBottleThumbnail` |
-| 所有 Swift 源码中的 `Whisky` 字样 | 在 Xcode 中批量 rename |
+| 位置 | 改动内容 | 状态 |
+| --- | --- | --- |
+| Xcode project 与 target 名 | `Whisky` → `MacBottle` | ✅ 已完成 |
+| Swift Package `WhiskyKit` | → `MacBottleKit` | ✅ 已完成 |
+| CLI `WhiskyCmd` | → `MacBottleCmd`，命令名 `macbottle` | ✅ 已完成 |
+| Extension bundle `WhiskyThumbnail` | → `MacBottleThumbnail` | ✅ 已完成 |
+| Swift 源码中的 `Whisky` 字样 | 已改名；许可头与兼容性相关的名字保留 | ✅ 已完成 |
 
 ### ❌ 永不改动（保留上游痕迹）
 

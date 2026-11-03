@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="../../Whisky/Assets.xcassets/AppIcon.appiconset/512@2x.png" width="96" alt="MacBottle 图标" />
+<img src="../../MacBottle/Assets.xcassets/AppIcon.appiconset/512@2x.png" width="96" alt="MacBottle 图标" />
 
 # MacBottle 🍾
 
@@ -55,7 +55,7 @@
 | **Wine 引擎层** | 目前为 CrossOver 系引擎;可插拔的 `WineEngine` 协议,为将来接入纯上游 Wine 留好位置 |
 | **启动体验** | wineserver 预热、启动状态反馈、每个程序的运行日志、冻结运行时强制停止、陈旧状态对账 |
 | **瓶子内部** | Winetricks 分类动词表、环境变量、Windows 版本与增强同步(msync/esync)、AVX 开关 |
-| **集成与工具** | CLI 伴生工具(`WhiskyCmd`)、Finder 中 `.exe` 文件的缩略图预览、着色器缓存清理 |
+| **集成与工具** | CLI 伴生工具(`MacBottleCmd`)、Finder 中 `.exe` 文件的缩略图预览、着色器缓存清理 |
 
 ---
 
@@ -121,7 +121,7 @@ MacBottle 的开关比表面看起来多得多。下面按使用场景分组,全
 <details>
 <summary><b>🔌 集成与工具</b></summary>
 
-- **CLI 伴生工具** —— `WhiskyCmd` 把瓶子与启动工作流带进终端,从 App 菜单一键安装。
+- **CLI 伴生工具** —— `MacBottleCmd` 把瓶子与启动工作流带进终端,从 App 菜单一键安装。
 - **Finder 缩略图** —— 扩展为 Windows 可执行文件在 Finder 中渲染预览。
 - **着色器缓存管理** —— 图形异常时,一个菜单项即可杀瓶子并清掉 D3DMetal 着色器缓存。
 - **首次启动向导** —— 引导安装 Rosetta 2 与 Wine 引擎下载/安装,全新 Mac 一次坐定,从零到能玩。
@@ -135,7 +135,7 @@ MacBottle 的开关比表面看起来多得多。下面按使用场景分组,全
 配方是 MacBottle 作为独立 fork 存在的理由,也是项目最主要的增长机制。一份配方就是一个 JSON 文件——贡献它不需要懂 Swift:
 
 ```
-WhiskyKit/Sources/WhiskyKit/Recipes/
+MacBottleKit/Sources/MacBottleKit/Recipes/
   steam/<AppID>.json       # 例:steam/2050650.json(黑神话:悟空)
   gog/<ProductID>.json     # 例:gog/1207658924.json(巫师 2)
   generic/<slug>.json      # 平台外的作品或零售安装器
@@ -150,16 +150,16 @@ WhiskyKit/Sources/WhiskyKit/Recipes/
 ## 架构
 
 ```
-Whisky/                  macOS App 目标 —— SwiftUI 视图、瓶子/程序交互
-WhiskyKit/               核心库(SwiftPM)—— 模型、Wine 调用、配方
+MacBottle/                  macOS App 目标 —— SwiftUI 视图、瓶子/程序交互
+MacBottleKit/               核心库(SwiftPM)—— 模型、Wine 调用、配方
   ├─ Recipe/             配方类型、加载器、应用器、远程同步、diff
   ├─ Recipes/            随包发布的配方 JSON
   ├─ WineEngine/         引擎协议、CrossOverEngine、目录、启动策略
-  ├─ Whisky/             Bottle / Program / 设置模型
+  ├─ MacBottle/             Bottle / Program / 设置模型
   ├─ Wine/               启动协调器、运行日志、强制停止、优化器
   └─ PE/                 Windows PE 解析器(导入、架构、图形 API)
-WhiskyCmd/               CLI 伴生工具
-WhiskyThumbnail/         Finder 缩略图扩展(PE 文件)
+MacBottleCmd/               CLI 伴生工具
+MacBottleThumbnail/         Finder 缩略图扩展(PE 文件)
 ```
 
 游戏启动按严格顺序合并环境变量——程序默认值 → 瓶子设置 → 配方覆盖(配方优先)——再经由 `LaunchEnginePolicy` 选中的引擎执行 `wine <exe>`。未挂配方时,代码路径与上游 Whisky 完全一致;配方层纯粹是增量。
@@ -204,7 +204,7 @@ MacBottle **不提供游戏本体**。游戏通过 Steam、Epic、GOG、Battle.n
 | --- | --- | --- |
 | **配方** | 把一款游戏跑起来,然后新增或更新它的 JSON 配方——影响力最大的贡献方式 | 数小时 |
 | **Issue** | 报 bug、提需求,或为跑不起来的游戏提交配方请求 | 几分钟 |
-| **代码** | 在 Swift App / WhiskyKit 里修 bug 或做功能 | 数天 |
+| **代码** | 在 Swift App / MacBottleKit 里修 bug 或做功能 | 数天 |
 | **翻译** | 帮助界面文案与文档保持双语(中文 / English) | 视情况 |
 
 所有工作遵循同一条交付闭环——**Issue → PR → main → CI → merge**(Issue 仅在合并时通过 `Fixes #N` 关闭)。完整指南,包括必检 CI 与代码风格,见 [`CONTRIBUTING.md`](../../CONTRIBUTING.md)。

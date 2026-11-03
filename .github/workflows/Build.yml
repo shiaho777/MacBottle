@@ -16,7 +16,7 @@ on:
       - '**/*.md'
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
-      - 'WhiskyKit/Sources/WhiskyKit/Recipes/_index.json'
+      - 'MacBottleKit/Sources/MacBottleKit/Recipes/_index.json'
       - 'engine-manifest.json'
   push:
     branches: [main]
@@ -24,7 +24,7 @@ on:
       - '**/*.md'
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
-      - 'WhiskyKit/Sources/WhiskyKit/Recipes/_index.json'
+      - 'MacBottleKit/Sources/MacBottleKit/Recipes/_index.json'
       - 'engine-manifest.json'
   workflow_dispatch:
 
@@ -44,8 +44,8 @@ jobs:
       - name: Build app (unsigned)
         run: |
           xcodebuild \
-            -project Whisky.xcodeproj \
-            -scheme Whisky \
+            -project MacBottle.xcodeproj \
+            -scheme MacBottle \
             -configuration Debug \
             -destination 'platform=macOS' \
             -skipPackagePluginValidation \
@@ -66,7 +66,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   test:
-    name: WhiskyKit tests
+    name: MacBottleKit tests
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +75,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.app || true
 
       - name: Run unit tests
-        working-directory: WhiskyKit
+        working-directory: MacBottleKit
         run: swift test
 
       - name: Delivery policy summary

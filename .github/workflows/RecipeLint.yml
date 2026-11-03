@@ -12,9 +12,9 @@ concurrency:
 on:
   pull_request:
     paths:
-      - 'WhiskyKit/Sources/WhiskyKit/Recipes/**'
-      - 'WhiskyKit/Sources/WhiskyKit/Recipe/**'
-      - 'WhiskyKit/Tests/WhiskyKitTests/RecipeTests.swift'
+      - 'MacBottleKit/Sources/MacBottleKit/Recipes/**'
+      - 'MacBottleKit/Sources/MacBottleKit/Recipe/**'
+      - 'MacBottleKit/Tests/MacBottleKitTests/RecipeTests.swift'
       - '.github/workflows/RecipeLint.yml'
   push:
     branches: [main]
@@ -24,7 +24,7 @@ jobs:
   RecipeLint:
     # Recipes are validated by decoding every JSON file through the real
     # Swift `Recipe` type, which is the canonical schema. Running on macOS
-    # because WhiskyKit requires macOS 14.0 as a platform target.
+    # because MacBottleKit requires macOS 14.0 as a platform target.
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -42,10 +42,10 @@ jobs:
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app || true
 
-      - name: Build WhiskyKit
-        working-directory: WhiskyKit
+      - name: Build MacBottleKit
+        working-directory: MacBottleKit
         run: swift build
 
       - name: Run Recipe tests
-        working-directory: WhiskyKit
+        working-directory: MacBottleKit
         run: swift test --filter RecipeTests

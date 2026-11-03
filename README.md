@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="Whisky/Assets.xcassets/AppIcon.appiconset/512@2x.png" width="96" alt="MacBottle icon" />
+<img src="MacBottle/Assets.xcassets/AppIcon.appiconset/512@2x.png" width="96" alt="MacBottle icon" />
 
 # MacBottle 🍾
 
@@ -55,7 +55,7 @@ A quick scan of what's in the box.
 | **Wine engine layer** | CrossOver-based engine today; pluggable `WineEngine` protocol so pure upstream Wine can slot in later |
 | **Launch experience** | Wineserver prewarm, launch-status feedback, per-program run logs, force-stop for frozen runtimes, stale-status reconciliation |
 | **Bottle internals** | Winetricks catalog with categorized verbs, environment variables, Windows version & enhanced-sync (msync/esync) selection, AVX toggle |
-| **Integration** | CLI companion (`WhiskyCmd`), Finder thumbnail previews for `.exe` files, shader-cache wiping |
+| **Integration** | CLI companion (`MacBottleCmd`), Finder thumbnail previews for `.exe` files, shader-cache wiping |
 
 ---
 
@@ -121,7 +121,7 @@ MacBottle has more switches than a casual glance suggests. The sections below gr
 <details>
 <summary><b>🔌 Integration & tooling</b></summary>
 
-- **CLI companion** — `WhiskyCmd` exposes bottle and launch workflows from the terminal, installed from the app menu.
+- **CLI companion** — `MacBottleCmd` exposes bottle and launch workflows from the terminal, installed from the app menu.
 - **Finder thumbnails** — a Quick Look–style extension renders previews for Windows executables in Finder.
 - **Shader-cache management** — one menu item kills bottles and wipes D3DMetal shader caches when graphics misbehave.
 - **Setup flow** — first-run assistant for Rosetta 2 and the Wine engine download/install, so a brand-new Mac goes from zero to gaming in one sitting.
@@ -135,7 +135,7 @@ MacBottle has more switches than a casual glance suggests. The sections below gr
 Recipes are the reason this project exists as a distinct fork, and they are MacBottle's primary growth mechanism. A recipe is a single JSON file — no Swift knowledge required to contribute one:
 
 ```
-WhiskyKit/Sources/WhiskyKit/Recipes/
+MacBottleKit/Sources/MacBottleKit/Recipes/
   steam/<AppID>.json       # e.g. steam/2050650.json for Black Myth: Wukong
   gog/<ProductID>.json     # e.g. gog/1207658924.json for The Witcher 2
   generic/<slug>.json      # out-of-platform titles or retail installers
@@ -150,16 +150,16 @@ The full schema, examples, and review criteria live in [`docs/RECIPE_AUTHORING.m
 ## Architecture
 
 ```
-Whisky/                  macOS app target — SwiftUI views, bottle/program UX
-WhiskyKit/               Core library (SwiftPM) — models, Wine invocation, recipes
+MacBottle/                  macOS app target — SwiftUI views, bottle/program UX
+MacBottleKit/               Core library (SwiftPM) — models, Wine invocation, recipes
   ├─ Recipe/             Recipe types, loader, applier, remote sync, diff
   ├─ Recipes/            Shipped recipe JSON files
   ├─ WineEngine/         Engine protocol, CrossOverEngine, catalog, launch policy
-  ├─ Whisky/             Bottle / Program / settings models
+  ├─ MacBottle/             Bottle / Program / settings models
   ├─ Wine/               Launch coordinator, run logs, force-stop, optimizers
   └─ PE/                 Windows PE parser (imports, architecture, graphics API)
-WhiskyCmd/               CLI companion
-WhiskyThumbnail/         Finder thumbnail extension for PE files
+MacBottleCmd/               CLI companion
+MacBottleThumbnail/         Finder thumbnail extension for PE files
 ```
 
 A game launch merges environments in a strict order — program defaults → bottle settings → recipe overrides (recipe wins) — then spawns `wine <exe>` through the engine selected by `LaunchEnginePolicy`. Side-effectful recipe fields (winetricks, registry) run once per bottle before the first launch, with a resumable on-disk receipt. If no recipe is attached, the path is identical to upstream Whisky; the recipe layer is purely additive.
@@ -207,7 +207,7 @@ MacBottle does not ship game content. You obtain games through legitimate channe
 | --- | --- | --- |
 | **Recipes** | Get a game running, then add or update its JSON recipe — the highest-impact contribution there is | hours |
 | **Issues** | Report a bug, request a feature, or file a recipe request for a game you can't run | minutes |
-| **Code** | Fix a bug or build a feature in the Swift app / WhiskyKit | days |
+| **Code** | Fix a bug or build a feature in the Swift app / MacBottleKit | days |
 | **Translation** | Help keep UI copy and docs bilingual (中文 / English) | varies |
 
 All work follows one delivery loop — **Issue → PR → main → CI → merge** (issues close on merge via `Fixes #N` only). The full guide, including the required CI checks and code style, is in [`CONTRIBUTING.md`](CONTRIBUTING.md).

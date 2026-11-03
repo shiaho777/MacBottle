@@ -10,7 +10,7 @@
 //      MACBOTTLE_ENGINE_SIGNING_KEY=<base64> \
 //          swift scripts/sign-engine-manifest.swift [engine-manifest.json]
 //
-//  The corresponding public key is embedded in Whisky/Info.plist as
+//  The corresponding public key is embedded in MacBottle/Info.plist as
 //  MBEngineManifestPublicKey. Rotating the key pair requires updating
 //  both, which is deliberate: the trust root ships with the notarized app.
 //

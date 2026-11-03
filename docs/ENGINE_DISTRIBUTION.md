@@ -2,7 +2,7 @@
 
 MacBottle no longer depends on the archived Whisky feed. Engine metadata
 lives in `engine-manifest.json` and is signed with an Ed25519 key whose
-public half is embedded in `Whisky/Info.plist` as
+public half is embedded in `MacBottle/Info.plist` as
 `MBEngineManifestPublicKey`.
 
 ## Trust chain
@@ -41,7 +41,7 @@ the current engine stays usable if the download fails.
 
 ```sh
 # One-time: private key, mode 0600, never committed.
-# The public half must already be in Whisky/Info.plist.
+# The public half must already be in MacBottle/Info.plist.
 export MACBOTTLE_ENGINE_SIGNING_KEY="$(cat ~/.macbottle-engine-signing-key)"
 
 ./scripts/update-engine-manifest.sh
@@ -58,7 +58,7 @@ it never commits an unsigned manifest.
 ## Rotating the key
 
 1. Generate a new key pair.
-2. Replace `MBEngineManifestPublicKey` in `Whisky/Info.plist`.
+2. Replace `MBEngineManifestPublicKey` in `MacBottle/Info.plist`.
 3. Sign `engine-manifest.json` with the new private key.
 4. Update the `ENGINE_SIGNING_KEY` repository secret.
 5. Ship an app release before or together with the new manifest. Old
