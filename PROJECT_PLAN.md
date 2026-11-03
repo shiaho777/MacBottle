@@ -45,8 +45,10 @@
 
 - ✅ v0.4:`WineEngine` 协议抽象,`CrossOverEngine` 为首个实现
 - ✅ 用户可切换引擎:`WineEngineRegistry` 持久化、Settings 切换 UI、D3DMetal 变体引擎、`LaunchEnginePolicy` 自动选型
-- 🔜 **引擎分发自主权(v1.0 硬前置)**:引擎下载与更新检查目前指向已归档上游的服务器(`data.getwhisky.app`),是全项目最大的单点风险。迁移到自有清单(GitHub Releases + manifest),复用配方同步已验证的 ETag 增量模式。
-  - ⚠️ 2026-11 现状:该上游地址已返回 404。安装向导现在提供本地导入与旧 Whisky 引擎复用;自有分发从"风险"升级为 v0.7 的发布硬阻塞。
+- 🚧 **引擎分发自主权(v1.0 硬前置)**:已归档上游的服务器(`data.getwhisky.app`)自 2026-11 起返回 404。
+  - ✅ 自有清单:`engine-manifest.json` 由 Ed25519 签名,公钥内置于 `Info.plist`(`MBEngineManifestPublicKey`),CI 每周重签,详见 [`docs/ENGINE_DISTRIBUTION.md`](docs/ENGINE_DISTRIBUTION.md)。
+  - ✅ 不再向已归档上游发起引擎更新检查;安装向导提供本地导入、旧 Whisky 引擎复用、经签名清单校验的开源 Wine 回退包与 ARM64 自建脚本。
+  - 🔜 剩余:自有的 CrossOver 兼容引擎包(含 D3DMetal/DXVK 支持)经同一清单分发,并接回引擎更新检查。仍是 v0.7 的发布硬阻塞。
 - 🔜 **引擎目录清单驱动**:把硬编码的 `WineEngineCatalog` 枚举改为 manifest 描述的可插拔引擎包(manifest 描述 + 按需下载安装)。这比手写第二个引擎子类更能兑现抽象层的承诺。
 - 🔜 第二个引擎实现(纯上游 Wine):依赖自建 Wine 构建流水线,成本高,单列评估、可推迟;GPTK2 因 Apple 授权不可再分发,维持"运行时本地检测"模式不变。
 
@@ -60,8 +62,8 @@
 
 ### Track C · 发布工程
 
-- 🔜 **真实更新渠道**:生成 EdDSA 密钥对,替换 Sparkle 占位 URL 与占位公钥(MIGRATION.md 已标注"发布前必须")。
-- 🔜 **Release 工作流**:CI 目前只构建未签名的 Debug 包;需补签名 + 公证 + GitHub Release 产物上传。
+- 🔜 **真实更新渠道**:`SUFeedURL` 已指向本仓库的 `appcast.xml`,但该文件尚不存在、`Info.plist` 中没有 `SUPublicEDKey`,Sparkle 以 `startingUpdater: false` 关闭。需生成 EdDSA 密钥对、发布 appcast 后再启用(见 [`docs/RELEASE.md`](docs/RELEASE.md))。
+- 🚧 **Release 工作流**:`.github/workflows/Release.yml` 已就绪,`v*` tag 触发 Release 构建,密钥存在时签名 + 公证 + staple,并上传 `MacBottle.zip` 与 SHA-256 到 GitHub Release。剩余:配置 Apple Developer 密钥并在干净的 Mac 上验证首个公证包。
 - 🔜 **v1.0 完成定义**:经过公证的正式包、可用的自动更新渠道、各兼容性档位均有已验证配方、双语文档齐备。满足后才算"正式发布"。
 
 ### Track D · 平台与品牌
@@ -90,7 +92,7 @@ v1.0 之后:**只合 PR,只做引擎层维护。** 配方由社区贡献者自�
 
 - 本项目:**GPL-3.0**(继承自 Whisky,永久)
 - D3DMetal:Apple 闭源,不随包分发,运行时检测本地 GPTK
-- CrossOver:v0.1 沿用 Whisky 的打包方式;是否迁移纯上游 Wine 由 Track A 评估决定
+- CrossOver:沿用 Whisky 的打包格式;已归档上游不再提供下载,自有分发与是否迁移纯上游 Wine 由 Track A 推进
 
 ## 致谢
 
