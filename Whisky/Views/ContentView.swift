@@ -45,7 +45,6 @@ struct ContentView: View {
             sidebar
         } detail: {
             detail
-                .padding(.top, detailTopInset)
         }
         .toolbar {
             if !selectionIsBottle {
@@ -329,15 +328,6 @@ struct ContentView: View {
             return true
         }
         return false
-    }
-
-    private var detailTopInset: CGFloat {
-        switch selection {
-        case .library?, .activity?:
-            return AppSpacing.toolbarInset
-        default:
-            return 0
-        }
     }
 
     private static func canonicalPath(_ url: URL) -> String {

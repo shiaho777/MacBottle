@@ -31,13 +31,6 @@ enum AppSpacing {
     static let page: CGFloat = 20
     static let section: CGFloat = 18
     static let grid: CGFloat = 14
-
-    /// The window's titlebar + toolbar band measured with
-    /// `NSWindow.contentLayoutRect` (720 − 668 at the wide size,
-    /// 612 − 560 at the narrow size). Content under this band is drawn
-    /// behind the macOS 26 glass, so pages that manage their own scroll
-    /// view start below it.
-    static let toolbarInset: CGFloat = 52
 }
 
 enum AppRadius {
