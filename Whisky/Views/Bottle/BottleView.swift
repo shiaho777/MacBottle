@@ -88,11 +88,21 @@ struct BottleView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            VStack(spacing: 0) {
-                tabPicker
-                Divider()
-                tabContent
+            TabView(selection: $tab) {
+                overviewTab
+                    .tabItem { Text("bottle.tab.overview") }
+                    .tag(BottleTab.overview)
+                ProgramsView(bottle: bottle, path: $path)
+                    .tabItem { Text("bottle.tab.games") }
+                    .tag(BottleTab.games)
+                ConfigView(bottle: bottle)
+                    .tabItem { Text("bottle.tab.settings") }
+                    .tag(BottleTab.settings)
+                BottleActivityTab(bottle: bottle)
+                    .tabItem { Text("bottle.tab.activity") }
+                    .tag(BottleTab.activity)
             }
+            .padding(.top, AppSpacing.toolbarInset)
             .background(Color(nsColor: .windowBackgroundColor))
             .navigationTitle(bottle.settings.name)
             .toolbar { toolbarContent }
@@ -127,37 +137,6 @@ struct BottleView: View {
                 selectedProgramURL = urls.first
             }
             .disabled(!bottle.isAvailable)
-        }
-    }
-
-    private var tabPicker: some View {
-        HStack {
-            Picker("bottle.tabs", selection: $tab) {
-                ForEach(BottleTab.allCases) { item in
-                    Label(item.title, systemImage: item.systemImage)
-                        .tag(item)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(maxWidth: 520)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, MacBottleTheme.pagePadding)
-        .padding(.vertical, 10)
-    }
-
-    @ViewBuilder
-    private var tabContent: some View {
-        switch tab {
-        case .overview:
-            overviewTab
-        case .games:
-            ProgramsView(bottle: bottle, path: $path)
-        case .settings:
-            ConfigView(bottle: bottle)
-        case .activity:
-            BottleActivityTab(bottle: bottle)
         }
     }
 

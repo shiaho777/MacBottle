@@ -31,6 +31,10 @@ enum AppSpacing {
     static let page: CGFloat = 20
     static let section: CGFloat = 18
     static let grid: CGFloat = 14
+
+    /// macOS 26 draws content under the translucent toolbar; tab strips
+    /// need to clear that band or their labels are invisible.
+    static let toolbarInset: CGFloat = 44
 }
 
 enum AppRadius {
