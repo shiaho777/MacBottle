@@ -32,9 +32,12 @@ enum AppSpacing {
     static let section: CGFloat = 18
     static let grid: CGFloat = 14
 
-    /// macOS 26 draws content under the translucent toolbar; tab strips
-    /// need to clear that band or their labels are invisible.
-    static let toolbarInset: CGFloat = 44
+    /// The window's titlebar + toolbar band measured with
+    /// `NSWindow.contentLayoutRect` (720 − 668 at the wide size,
+    /// 612 − 560 at the narrow size). Content under this band is drawn
+    /// behind the macOS 26 glass, so pages that manage their own scroll
+    /// view start below it.
+    static let toolbarInset: CGFloat = 52
 }
 
 enum AppRadius {
