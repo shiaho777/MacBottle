@@ -118,7 +118,9 @@ struct ContentView: View {
             currentEngineID = WineEngineRegistry.shared.current.identifier
 
             if let restored = selectedBottleURL,
-               let bottle = bottleVM.bottles.first(where: { $0.url == restored && $0.isAvailable }) {
+               let bottle = bottleVM.bottles.first(where: {
+                   $0.isAvailable && Self.canonicalPath($0.url) == Self.canonicalPath(restored)
+               }) {
                 selection = .bottle(bottle.url)
             } else {
                 selection = .library
@@ -155,13 +157,27 @@ struct ContentView: View {
     var sidebar: some View {
         ScrollViewReader { proxy in
             List(selection: $selection) {
-                Section("sidebar.discover") {
+                Section {
+                    HStack {
+                        Text("sidebar.discover")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .selectionDisabled(true)
                     Label("sidebar.library", systemImage: "square.grid.2x2.fill")
                         .tag(SidebarSelection.library)
                     Label("sidebar.activity", systemImage: "waveform.path.ecg")
                         .tag(SidebarSelection.activity)
                 }
-                Section("sidebar.bottles") {
+                Section {
+                    HStack {
+                        Text("sidebar.bottles")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .selectionDisabled(true)
                     ForEach(filteredBottles) { bottle in
                         if bottle.inFlight {
                             HStack(spacing: 8) {
@@ -275,6 +291,10 @@ struct ContentView: View {
         return bottleVM.bottles
             .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
             .sorted()
+    }
+
+    private static func canonicalPath(_ url: URL) -> String {
+        (url.path(percentEncoded: false) as NSString).expandingTildeInPath
     }
 
     private func confirmEngineSwitch() -> Bool {
