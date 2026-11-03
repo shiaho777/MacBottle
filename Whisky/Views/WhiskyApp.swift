@@ -17,7 +17,6 @@
 //
 
 import SwiftUI
-import Sparkle
 import WhiskyKit
 import os.log
 
@@ -26,20 +25,7 @@ struct WhiskyApp: App {
     @State var showSetup: Bool = false
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.openURL) var openURL
-    private let updaterController: SPUStandardUpdaterController
-
-    init() {
-        // MacBottle: keep Sparkle wired in so we can re-enable it once
-        // we have a real appcast and EdDSA key pair, but do not start
-        // the updater at launch. A running updater with an unconfigured
-        // feed/public key causes "Unable to Check For Updates" dialogs
-        // during development. Re-enable by flipping the flag back to
-        // true once `SUFeedURL` and `SUPublicEDKey` in Info.plist are
-        // populated with real values.
-        updaterController = SPUStandardUpdaterController(startingUpdater: false,
-                                                         updaterDelegate: nil,
-                                                         userDriverDelegate: nil)
-    }
+    @AppStorage("checkAppUpdates") var checkAppUpdates = true
 
     var body: some Scene {
         WindowGroup {
@@ -52,16 +38,25 @@ struct WhiskyApp: App {
                     Task.detached {
                         await WhiskyApp.deleteOldLogs()
                     }
+
+                    if checkAppUpdates {
+                        Task {
+                            await WhiskyApp.checkForAppUpdates(userInitiated: false)
+                        }
+                    }
                 }
         }
         .defaultSize(width: 1180, height: 720)
         // Don't ask me how this works, it just does
         .handlesExternalEvents(matching: ["{same path of URL?}"])
         .commands {
-            // MacBottle: "Check for Updates…" menu entry is removed
-            // until a real appcast and EdDSA key pair are provisioned.
-            // See `init()` above for the matching `startingUpdater:
-            // false` flag. Re-add once releases ship.
+            CommandGroup(after: .appInfo) {
+                Button("check.updates") {
+                    Task {
+                        await WhiskyApp.checkForAppUpdates(userInitiated: true)
+                    }
+                }
+            }
             CommandGroup(before: .systemServices) {
                 Divider()
                 Button("open.setup") {
@@ -147,6 +142,44 @@ struct WhiskyApp: App {
                 }
             }
         }
+    }
+
+    @MainActor
+    static func checkForAppUpdates(userInitiated: Bool) async {
+        guard let current = AppUpdateChecker.currentVersion() else { return }
+        let currentText = "\(current.major).\(current.minor).\(current.patch)"
+        let alert = NSAlert()
+        do {
+            let status = try await AppUpdateChecker().check(currentVersion: current)
+            switch status {
+            case .available(let release):
+                alert.messageText = String(localized: "update.app.available.title")
+                alert.informativeText = String(
+                    localized: "update.app.available.message \(release.tagName) \(currentText)"
+                )
+                alert.addButton(withTitle: String(localized: "update.app.download"))
+                alert.addButton(withTitle: String(localized: "button.removeAlert.cancel"))
+                if alert.runModal() == .alertFirstButtonReturn {
+                    NSWorkspace.shared.open(release.pageURL)
+                }
+                return
+            case .upToDate:
+                guard userInitiated else { return }
+                alert.messageText = String(localized: "update.app.upToDate.title")
+                alert.informativeText = String(localized: "update.app.upToDate.message \(currentText)")
+            case .noPublishedRelease:
+                guard userInitiated else { return }
+                alert.messageText = String(localized: "update.app.noRelease.title")
+                alert.informativeText = String(localized: "update.app.noRelease.message")
+            }
+        } catch {
+            Logger.app.info("App update check failed: \(error.localizedDescription)")
+            guard userInitiated else { return }
+            alert.messageText = String(localized: "update.app.failed.title")
+            alert.informativeText = error.localizedDescription
+        }
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     static func openLogsFolder() {

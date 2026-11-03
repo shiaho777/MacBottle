@@ -142,6 +142,6 @@ jobs:
             echo "- Signing: ${{ steps.signing.outputs.enabled }}"
             echo "- Notarization: ${{ steps.notary.outputs.enabled }}"
             echo ""
-            echo "The appcast is generated separately with"
-            echo "\`scripts/generate-appcast.sh\` after the zip is published."
+            echo "Installed apps discover this release through the GitHub"
+            echo "latest-release API once it is published (not draft/prerelease)."
           } >> "$GITHUB_STEP_SUMMARY"

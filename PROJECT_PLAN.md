@@ -62,7 +62,7 @@
 
 ### Track C · 发布工程
 
-- 🔜 **真实更新渠道**:`SUFeedURL` 已指向本仓库的 `appcast.xml`,但该文件尚不存在、`Info.plist` 中没有 `SUPublicEDKey`,Sparkle 以 `startingUpdater: false` 关闭。需生成 EdDSA 密钥对、发布 appcast 后再启用(见 [`docs/RELEASE.md`](docs/RELEASE.md))。
+- 🚧 **真实更新渠道**:已移除 Sparkle,改为 `AppUpdateChecker` 读取 GitHub latest-release API(跳过草稿与预发布),发现新版本时引导用户到 Release 页面下载。剩余:发布第一个 `v*` Release;`MARKETING_VERSION` 仍是继承自 Whisky 的 `2.3.5`,已安装应用只会在 Release 版本严格高于自身版本时提示更新,因此首个 tag 必须高于 `2.3.5`(或先下调 `MARKETING_VERSION`)(见 [`docs/RELEASE.md`](docs/RELEASE.md))。
 - 🚧 **Release 工作流**:`.github/workflows/Release.yml` 已就绪,`v*` tag 触发 Release 构建,密钥存在时签名 + 公证 + staple,并上传 `MacBottle.zip` 与 SHA-256 到 GitHub Release。剩余:配置 Apple Developer 密钥并在干净的 Mac 上验证首个公证包。
 - 🔜 **v1.0 完成定义**:经过公证的正式包、可用的自动更新渠道、各兼容性档位均有已验证配方、双语文档齐备。满足后才算"正式发布"。
 
