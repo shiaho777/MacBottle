@@ -55,10 +55,6 @@
 	</array>
 	<key>MBEngineManifestPublicKey</key>
 	<string>abqGeOEAtB1ntAlCsNNbi80AfWP3Tsgn3X9IWXFsLnI=</string>
-	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/shiaho777/MacBottle/main/appcast.xml</string>
-	<key>SUEnableAutomaticChecks</key>
-	<false/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

@@ -19,8 +19,6 @@
 		63FFDE862ADF0C7700178665 /* BottomBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63FFDE852ADF0C7700178665 /* BottomBar.swift */; };
 		6763D8F62BC6314100651D27 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6763D8F52BC6314100651D27 /* Constants.swift */; };
 		67D278512BC5907E006F9A1E /* ActionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D278502BC5907E006F9A1E /* ActionView.swift */; };
-		6E064B1229DD32A200D9A2D2 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 6E064B1129DD32A200D9A2D2 /* Sparkle */; };
-		6E064B1429DD331F00D9A2D2 /* SparkleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E064B1329DD331F00D9A2D2 /* SparkleView.swift */; };
 		6E17B6462AF3FDC100831173 /* PinView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E17B6452AF3FDC100831173 /* PinView.swift */; };
 		6E17B6492AF4118F00831173 /* EnvironmentArgView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E17B6482AF4118F00831173 /* EnvironmentArgView.swift */; };
 		ECE00000000000000000001A /* RecipeSyncController.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000001B /* RecipeSyncController.swift */; };
@@ -137,7 +135,6 @@
 		63FFDE852ADF0C7700178665 /* BottomBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BottomBar.swift; sourceTree = "<group>"; };
 		6763D8F52BC6314100651D27 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		67D278502BC5907E006F9A1E /* ActionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionView.swift; sourceTree = "<group>"; };
-		6E064B1329DD331F00D9A2D2 /* SparkleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleView.swift; sourceTree = "<group>"; };
 		6E17B6452AF3FDC100831173 /* PinView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinView.swift; sourceTree = "<group>"; };
 		6E17B6482AF4118F00831173 /* EnvironmentArgView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvironmentArgView.swift; sourceTree = "<group>"; };
 		ECE00000000000000000001B /* RecipeSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecipeSyncController.swift; sourceTree = "<group>"; };
@@ -200,7 +197,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				8C2AEFC82AED79B700CB568F /* WhiskyKit in Frameworks */,
-				6E064B1229DD32A200D9A2D2 /* Sparkle in Frameworks */,
 				EB58FB552A499896002DC184 /* SemanticVersion in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -378,7 +374,6 @@
 				ECE00000000000000000003C /* Recipe */,
 				6E40495529CCA19C006E3F1B /* WhiskyApp.swift */,
 				6E40495729CCA19C006E3F1B /* ContentView.swift */,
-				6E064B1329DD331F00D9A2D2 /* SparkleView.swift */,
 				6E7C07BF2AAF570100F6E66B /* FileOpenView.swift */,
 			);
 			path = Views;
@@ -478,7 +473,6 @@
 			);
 			name = Whisky;
 			packageProductDependencies = (
-				6E064B1129DD32A200D9A2D2 /* Sparkle */,
 				EB58FB542A499896002DC184 /* SemanticVersion */,
 				8C2AEFC72AED79B700CB568F /* WhiskyKit */,
 			);
@@ -582,7 +576,6 @@
 			);
 			mainGroup = 6E40494929CCA19C006E3F1B;
 			packageReferences = (
-				6E064B1029DD32A200D9A2D2 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				EB58FB532A499896002DC184 /* XCRemoteSwiftPackageReference "SemanticVersion" */,
 				6E5967682A9A421800D64F70 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 				6E95F66E2AB3F33C00D585D1 /* XCRemoteSwiftPackageReference "SwiftyTextTable" */,
@@ -679,7 +672,6 @@
 				6E40498329CCA91B006E3F1B /* Bottle+Extensions.swift in Sources */,
 				6E621CEF2A5F631300C9AAB3 /* Winetricks.swift in Sources */,
 				6E17B6462AF3FDC100831173 /* PinView.swift in Sources */,
-				6E064B1429DD331F00D9A2D2 /* SparkleView.swift in Sources */,
 				6E40495629CCA19C006E3F1B /* WhiskyApp.swift in Sources */,
 				8C73E1342AF472FC00B6FB45 /* ProgramMenuView.swift in Sources */,
 				6E50D98329CD6066008C39F6 /* BottleVM.swift in Sources */,
@@ -1101,14 +1093,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6E064B1029DD32A200D9A2D2 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sparkle-project/Sparkle";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.9.4;
-			};
-		};
 		6E5967682A9A421800D64F70 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
@@ -1144,11 +1128,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		6E064B1129DD32A200D9A2D2 /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6E064B1029DD32A200D9A2D2 /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
 		6E59676A2A9A424900D64F70 /* ArgumentParser */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6E5967682A9A421800D64F70 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;

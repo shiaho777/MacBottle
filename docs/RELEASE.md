@@ -24,27 +24,36 @@ the step summary says so. It never labels an unsigned build notarized.
 | `APPLE_ID` | Apple ID for notarytool |
 | `APPLE_APP_PASSWORD` | app-specific password for notarytool |
 | `ENGINE_SIGNING_KEY` | Ed25519 key for `engine-manifest.json` |
-| `SPARKLE_ED_PRIVATE_KEY` | Sparkle EdDSA key for the appcast (when enabled) |
 
-## Appcast
+## App updates
 
-`scripts/generate-appcast.sh` wraps Sparkle's `generate_appcast`. Put the
-release zip in a directory, point `SPARKLE_BIN` at Sparkle's `bin`, and
-set `SPARKLE_ED_PRIVATE_KEY_FILE` to the private key. Commit the
-generated `appcast.xml` to the repository root, which is the
-`SUFeedURL` in `Info.plist`.
+MacBottle does not use Sparkle. `AppUpdateChecker` (WhiskyKit) reads
+`https://api.github.com/repos/shiaho777/MacBottle/releases/latest`,
+skips drafts and prereleases, and compares the release tag with
+`CFBundleShortVersionString`. When a newer release exists the app offers
+to open the GitHub Release page; the user downloads and replaces the app
+themselves. No update keys or appcast are required.
 
-Sparkle is intentionally **not started** in `WhiskyApp.init()` yet. Set
-`startingUpdater: true` and add `SUPublicEDKey` to `Info.plist` only
-after the first signed appcast is published; starting it with a missing
-feed/key produces “Unable to Check For Updates” dialogs.
+- **App menu → Check for Updates…** runs a manual check and always
+  reports the result.
+- The automatic-update toggle under **Settings → Updates**
+  (`checkAppUpdates`, on by default) runs a silent check at launch that
+  only speaks up when a newer release exists.
+
+The tag must parse as a version: an optional `v`, then one to three
+numeric parts (`v1.2.3`, `1.2`). Anything after `-` or `+` is ignored
+for comparison; only GitHub's prerelease flag excludes a release. Keep
+`MARKETING_VERSION` in the Xcode project in step with the tag, otherwise
+the comparison is meaningless. An update is reported only when the
+release is strictly newer; `MARKETING_VERSION` is still Whisky's `2.3.5`,
+so the first tag must be higher than that (or lower `MARKETING_VERSION`
+first).
 
 ## Versioning
 
 - Tag `v<semver>` on `main` after CI is green.
 - The tag is the release identity; do not move tags.
-- `MacBottle.zip.sha256` is the external integrity check for downloads
-  that do not go through Sparkle.
+- `MacBottle.zip.sha256` is the integrity check for the downloaded zip.
 
 ## Remaining manual step
 

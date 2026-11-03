@@ -1,6 +1,62 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "update.app.available.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "A new version of MacBottle is available" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 有新版本可用" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 有新版本可用" } }
+      }
+    },
+    "update.app.available.message %@ %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ is available. You are running %2$@." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ 已发布，你当前使用的是 %2$@。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ 已發佈，你目前使用的是 %2$@。" } }
+      }
+    },
+    "update.app.download": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open Release Page" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开发布页面" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "打開發佈頁面" } }
+      }
+    },
+    "update.app.upToDate.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "MacBottle is up to date" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 已是最新版本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 已是最新版本" } }
+      }
+    },
+    "update.app.upToDate.message %@": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "You are running the latest version (%@)." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "你使用的已是最新版本(%@)。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "你使用的已是最新版本(%@)。" } }
+      }
+    },
+    "update.app.noRelease.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No release published yet" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "尚未发布任何版本" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "尚未發佈任何版本" } }
+      }
+    },
+    "update.app.noRelease.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "MacBottle has no published release yet. Check the GitHub Releases page later." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 还没有发布正式版本，请稍后到 GitHub Releases 页面查看。" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 還沒有發佈正式版本，請稍後到 GitHub Releases 頁面查看。" } }
+      }
+    },
+    "update.app.failed.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not check for updates" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法检查更新" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法檢查更新" } }
+      }
+    },
     "sidebar.activity": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
