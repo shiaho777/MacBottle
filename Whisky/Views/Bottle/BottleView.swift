@@ -113,7 +113,6 @@ struct BottleView: View {
                     .tabItem { Text("bottle.tab.activity") }
                     .tag(BottleTab.activity)
             }
-            .padding(.top, AppSpacing.toolbarInset)
             .background(Color(nsColor: .windowBackgroundColor))
             .navigationTitle(bottle.settings.name)
             .toolbar { toolbarContent }

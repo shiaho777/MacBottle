@@ -148,8 +148,9 @@ The first pass left two visible gaps that users hit immediately:
   did not expose an override, and the Settings window was easy to miss.
 - **The first card row could sit half-cut under the toolbar glass.**
   Scrolling the Library and coming back restored an offset that tucked the
-  cards under the toolbar. A fixed 80 pt inset fixed the cut but left a
-  visibly empty band at wide sizes.
+  cards under the toolbar. A temporary top inset fixed the cut but added
+  a visibly empty band; the inset was removed once the real cause (the
+  restored scroll offset) was fixed.
 
 Changes:
 
@@ -158,10 +159,10 @@ Changes:
   `applicationWillFinishLaunching`, and applied immediately on change.
 - Added an always-visible gear to the sidebar bottom bar. The Settings
   window is still available from the app menu and `⌘,`.
-- Measured the real titlebar + toolbar band with
-  `NSWindow.contentLayoutRect`: it is 52 pt at both 860 × 560 and
-  1180 × 720. `AppSpacing.toolbarInset` is now 52 pt, and Library,
-  Activity, and the bottle tab strip all use it.
+- Removed the extra top inset entirely. The window already lays the
+  detail view below the titlebar/toolbar, and the native bottle `TabView`
+  places its tab strip directly under the toolbar. No manual 52/80 pt
+  padding is needed.
 - The Library `ScrollView` gets a fresh identity on launch and whenever
   the user returns to Library, so it opens at the top instead of restoring
   a scrolled offset. The welcome card moved inside the scroll content.
