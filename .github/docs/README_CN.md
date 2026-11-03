@@ -191,6 +191,11 @@ WhiskyThumbnail/         Finder 缩略图扩展(PE 文件)
 
 MacBottle **不提供游戏本体**。游戏通过 Steam、Epic、GOG、Battle.net 等合法渠道获取;MacBottle 只负责让它们在你的 Mac 上跑起来。
 
+> **引擎可用性(2026-11):** 已归档上游的下载地址(`data.getwhisky.app`)现已返回 404。
+> 在自有引擎分发上线之前,请使用 **安装向导 → 导入 Wine 引擎**,或在同一界面复用已有的
+> Whisky/CrossOver 安装、下载固定版本的开源 Wine 11.21 后备引擎(x86_64,不含 D3DMetal/DXVK),
+> 也可以用 [`scripts/build-wine-arm64.sh`](../../scripts/build-wine-arm64.sh) 构建原生 ARM64 引擎。
+
 ---
 
 ## 如何参与

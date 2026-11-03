@@ -38,9 +38,11 @@ final class WineEngineTests: XCTestCase {
             "wineBinary must live under libraryRoot; got \(binPath) vs \(libPath)")
     }
 
-    func testCrossOverEngineDefaultUpdateFeedIsReachableURL() {
+    func testCrossOverEngineDefaultHasNoUpdateFeed() async {
         let engine = CrossOverEngine.default
-        XCTAssertEqual(engine.updateFeedURL.scheme, "https")
+        XCTAssertNil(engine.updateFeedURL)
+        let result = await engine.checkForUpdate()
+        XCTAssertFalse(result.hasUpdate)
     }
 
     // MARK: - Registry behaviour

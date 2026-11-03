@@ -43,20 +43,14 @@ public struct CrossOverEngine: WineEngine {
     public let identifier = "crossover"
     public let displayName = "CrossOver Wine (Whisky build)"
 
-    /// URL the installer polls for the current remote version. Kept as a
-    /// property so tests and future engine subclasses can override.
-    public let updateFeedURL: URL
+    /// URL the installer polls for the current remote version, or `nil` to
+    /// disable update checks. Kept as a property so tests and future engine
+    /// subclasses can override.
+    public let updateFeedURL: URL?
 
-    public init(updateFeedURL: URL = Self.defaultUpdateFeedURL) {
+    public init(updateFeedURL: URL? = nil) {
         self.updateFeedURL = updateFeedURL
     }
-
-    public static let defaultUpdateFeedURL: URL = {
-        guard let url = URL(string: "https://data.getwhisky.app/Wine/WhiskyWineVersion.plist") else {
-            fatalError("CrossOverEngine.defaultUpdateFeedURL: hardcoded URL failed to parse")
-        }
-        return url
-    }()
 
     // MARK: - Disk layout
 
@@ -132,13 +126,13 @@ public struct CrossOverEngine: WineEngine {
     public func checkForUpdate() async -> (hasUpdate: Bool, remoteVersion: SemanticVersion) {
         let local = installedVersion() ?? SemanticVersion(0, 0, 0)
 
-        guard let remote = await fetchRemoteVersion() else {
+        guard let updateFeedURL, let remote = await fetchRemoteVersion(from: updateFeedURL) else {
             return (false, local)
         }
         return (local < remote, remote)
     }
 
-    private func fetchRemoteVersion() async -> SemanticVersion? {
+    private func fetchRemoteVersion(from updateFeedURL: URL) async -> SemanticVersion? {
         await withCheckedContinuation { continuation in
             let session = URLSession(configuration: .ephemeral)
             let task = session.dataTask(with: URLRequest(url: updateFeedURL)) { data, _, error in

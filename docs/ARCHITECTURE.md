@@ -34,9 +34,9 @@ changes. The visible differences are:
 | `WhiskyThumbnail/` | Finder thumbnail extension for PE files |
 | `docs/` | This directory and recipe authoring guide |
 
-Do not rename the Swift modules yet. A project-wide rename from `Whisky`
-to `MacBottle` is planned but deferred until v0.1 is verified to compile
-and run (tracked in `MIGRATION.md`).
+Do not rename the Swift modules yet. Whether and when to rename `Whisky`
+to `MacBottle` internally is an open decision tracked in Track D of
+`PROJECT_PLAN.md`; the affected targets are listed in `MIGRATION.md`.
 
 ## Runtime flow of a game launch
 
@@ -188,8 +188,11 @@ authenticate the first download, but it turns every later silent
 replacement into an explicit user decision. `Tar.untar` extracts into
 staging, rejects `..`/absolute entries, resolves every path with
 `realpath(3)` to catch symlink escapes, and swaps top-level items into
-place with rollback. A signed release manifest remains the next step;
-until then the client does not claim cryptographic provenance.
+place with rollback. Download URLs and digests come from
+`engine-manifest.json`, which is Ed25519-signed and verified against
+`MBEngineManifestPublicKey` before use; an unsigned or tampered manifest
+falls back to the digest compiled into the binary (see
+`docs/ENGINE_DISTRIBUTION.md`).
 
 The archived upstream feed (`https://data.getwhisky.app/Wine/Libraries.tar.gz`)
 returned 404 as of 2026-11. The setup flow therefore treats the network

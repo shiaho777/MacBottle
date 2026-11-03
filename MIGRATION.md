@@ -2,7 +2,7 @@
 
 本文档跟踪从 Whisky 迁移到 MacBottle 过程中需要改动的所有地方。
 
-**重要原则：** 代码层面的模块名（Swift module `Whisky` / `WhiskyKit`）暂不重命名。Xcode project 重命名风险高，等 v0.1 末期、所有功能跑通后再统一做一次"大改名"。
+**重要原则：** 代码层面的模块名（Swift module `Whisky` / `WhiskyKit`）暂不重命名。Xcode project 重命名风险高；是否以及何时统一做一次"大改名"，是 `PROJECT_PLAN.md` Track D 中待决的事项。
 
 ## 分类
 
@@ -19,7 +19,7 @@
 | `Whisky/Info.plist` → `CFBundleName` | `Whisky` → `MacBottle` | ⏳ |
 | `Whisky.xcodeproj` → `PRODUCT_BUNDLE_IDENTIFIER` | `com.isaacmarovitz.Whisky` → `app.macbottle.MacBottle`（含 Cmd / Thumbnail 变体）+ 源码里 fallback 同步更新 | ✅ 已完成 |
 | `Assets.xcassets` → AppIcon | 替换为 MacBottle 图标（临时占位可接受） | ⏳ |
-| Sparkle 更新源 URL | 原指向 getwhisky.app —— 已换为占位 URL 和占位公钥。**发布前必须生成真实 EdDSA 密钥对并替换** | ✅ 已处理（占位） |
+| Sparkle 更新源 | 已不再指向 getwhisky.app;`SUFeedURL` 指向本仓库的 `appcast.xml`(尚未发布),`Info.plist` 中没有 `SUPublicEDKey`,更新器以 `startingUpdater: false` 关闭。**发布前必须生成 EdDSA 密钥对、发布 appcast 后再启用**(见 `docs/RELEASE.md`) | ⏳ |
 | Crowdin 配置（`crowdin.yml`） | 暂时保留，后期切换到 MacBottle 自己的 Crowdin 项目 | ⏳ |
 | `LICENSE` | 保持逐字不动（GPL-3.0 禁止修改）。衍生声明另放 `NOTICE` 文件 | ✅ 已完成 |
 
