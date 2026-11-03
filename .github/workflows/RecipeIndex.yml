@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'WhiskyKit/Sources/WhiskyKit/Recipes/**'
+      - 'MacBottleKit/Sources/MacBottleKit/Recipes/**'
       - 'scripts/generate-recipe-index.swift'
       - '.github/workflows/RecipeIndex.yml'
   workflow_dispatch:
@@ -38,12 +38,12 @@ jobs:
 
       - name: Commit and push if changed
         run: |
-          if git diff --quiet -- WhiskyKit/Sources/WhiskyKit/Recipes/_index.json; then
+          if git diff --quiet -- MacBottleKit/Sources/MacBottleKit/Recipes/_index.json; then
             echo "Index unchanged, skipping commit."
             exit 0
           fi
           git config user.name "macbottle-bot"
           git config user.email "macbottle-bot@users.noreply.github.com"
-          git add WhiskyKit/Sources/WhiskyKit/Recipes/_index.json
+          git add MacBottleKit/Sources/MacBottleKit/Recipes/_index.json
           git commit -m "chore(recipes): regenerate _index.json [skip ci]"
           git push

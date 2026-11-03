@@ -131,10 +131,10 @@ open -n "$APP" --args --ui-light --ui-narrow --ui-tab=games
 
 ```sh
 swiftlint lint --strict
-xcodebuild -project Whisky.xcodeproj -scheme Whisky -configuration Debug \
+xcodebuild -project MacBottle.xcodeproj -scheme MacBottle -configuration Debug \
   -destination 'platform=macOS' \
   CODE_SIGN_IDENTITY="-" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build
-cd WhiskyKit && swift test
+cd MacBottleKit && swift test
 ```
 
 Result at the time of writing: 0 SwiftLint violations, Debug build

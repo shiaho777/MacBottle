@@ -2,7 +2,7 @@
 #
 # Prerequisites:
 # - Repository secret ENGINE_SIGNING_KEY = base64 Ed25519 private key whose
-#   public key is embedded in Whisky/Info.plist (MBEngineManifestPublicKey).
+#   public key is embedded in MacBottle/Info.plist (MBEngineManifestPublicKey).
 # - The pinned release URL in scripts/update-engine-manifest.sh.
 #
 # Manual runs and a weekly schedule keep the digest and version current.

@@ -19,19 +19,18 @@ changes. The visible differences are:
 
 | Path | Role |
 | --- | --- |
-| `Whisky/` | Top-level macOS app target — AppDelegate, Views, Assets, localization |
-| `WhiskyKit/` | Core library consumed by app and CLI (SwiftPM package) |
-| `WhiskyKit/Recipe/` | MacBottle-only: recipe types, loader, applier, remote sync |
-| `WhiskyKit/Recipes/` | MacBottle-only: shipped recipe JSON files |
-| `WhiskyKit/WineEngine/` | MacBottle-only: `WineEngine` protocol, `CrossOverEngine`, catalog, launch policy |
-| `WhiskyKit/Whisky/` | Bottle / Program / BottleSettings models |
-| `WhiskyKit/Wine/` | Wine command invocation (uses WineEngine), launch coordinator, run logs |
-| `WhiskyKit/NativeBridge/` | MacBottle-only: native Steam install path — `SteamCMDEngine` (login, app_update, validate, progress), `ChunkedDownloader`, `DepotStore`/`ContentStore`, `SteamClientSeeder`, VDF parser. Drives `Views/Recipe/GameInstaller`. |
-| `WhiskyKit/WhiskyWine/` | Legacy shim. Forwards to `WineEngineRegistry`. |
-| `WhiskyKit/PE/` | Windows PE file parser (imports, architecture, graphics API) |
-| `WhiskyKit/Extensions/` | Foundation extensions |
-| `WhiskyCmd/` | CLI companion |
-| `WhiskyThumbnail/` | Finder thumbnail extension for PE files |
+| `MacBottle/` | Top-level macOS app target — AppDelegate, Views, Assets, localization |
+| `MacBottleKit/` | Core library consumed by app and CLI (SwiftPM package) |
+| `MacBottleKit/Recipe/` | MacBottle-only: recipe types, loader, applier, remote sync |
+| `MacBottleKit/Recipes/` | MacBottle-only: shipped recipe JSON files |
+| `MacBottleKit/WineEngine/` | MacBottle-only: `WineEngine` protocol, `CrossOverEngine`, catalog, launch policy |
+| `MacBottleKit/Bottle/` | Bottle / Program / BottleSettings models |
+| `MacBottleKit/Wine/` | Wine command invocation (uses WineEngine), launch coordinator, run logs |
+| `MacBottleKit/NativeBridge/` | MacBottle-only: native Steam install path — `SteamCMDEngine` (login, app_update, validate, progress), `ChunkedDownloader`, `DepotStore`/`ContentStore`, `SteamClientSeeder`, VDF parser. Drives `Views/Recipe/GameInstaller`. |
+| `MacBottleKit/PE/` | Windows PE file parser (imports, architecture, graphics API) |
+| `MacBottleKit/Extensions/` | Foundation extensions |
+| `MacBottleCmd/` | CLI companion |
+| `MacBottleThumbnail/` | Finder thumbnail extension for PE files |
 | `docs/` | This directory and recipe authoring guide |
 
 Do not rename the Swift modules yet. Whether and when to rename `Whisky`
@@ -60,7 +59,7 @@ code path is identical to upstream Whisky.
 See `docs/RECIPE_AUTHORING.md` for the file format. The Swift side spans
 two layers.
 
-**Data layer (WhiskyKit):**
+**Data layer (MacBottleKit):**
 
 | Type | Responsibility |
 | --- | --- |
@@ -128,7 +127,7 @@ Design choices worth knowing:
 
 ## Wine engine abstraction
 
-The `WineEngine` protocol under `WhiskyKit/Sources/WhiskyKit/WineEngine/`
+The `WineEngine` protocol under `MacBottleKit/Sources/MacBottleKit/WineEngine/`
 isolates everything about "which Wine build this install uses" into a single
 type. Today two concrete implementations ship — `CrossOverEngine` (the
 Whisky/CrossOver-derived packaging) and `LocalPathEngine` (a locally
@@ -153,7 +152,7 @@ scans (`PEImportScanner`, `RuntimeLaunchOptimizer`), not from guesses, and
 auto-selected engines are applied for the launch only, with the user's
 saved selection restored afterwards.
 
-`WhiskyWineInstaller` is preserved as a thin shim forwarding to
+`EngineInstaller` is preserved as a thin shim forwarding to
 `WineEngineRegistry.shared.current`, so every existing call site keeps
 working. New code should call the registry directly.
 
@@ -245,7 +244,7 @@ aligned-image W^X flip-storm (issue #100).
 
 ## Launch experience layer
 
-The `WhiskyKit/Wine/` folder hosts the pieces that make launches reliable
+The `MacBottleKit/Wine/` folder hosts the pieces that make launches reliable
 on real hardware, each independently testable:
 
 - `ProgramLaunchCoordinator` — owns the launch lifecycle and status flow.
@@ -259,7 +258,7 @@ on real hardware, each independently testable:
 
 ## Testing
 
-Unit tests live under `WhiskyKit/Tests/WhiskyKitTests/`. MacBottle-added
+Unit tests live under `MacBottleKit/Tests/MacBottleKitTests/`. MacBottle-added
 tests use the `Recipe*` prefix (recipes, sync, cache, diff) or descriptive
 suffixes for the launch layer (launch coordinator, runtime optimizer, engine
 policy, display policy, run log store). `RecipeApplier` should have 100%

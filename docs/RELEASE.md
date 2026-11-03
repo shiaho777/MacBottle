@@ -27,7 +27,7 @@ the step summary says so. It never labels an unsigned build notarized.
 
 ## App updates
 
-MacBottle does not use Sparkle. `AppUpdateChecker` (WhiskyKit) reads
+MacBottle does not use Sparkle. `AppUpdateChecker` (MacBottleKit) reads
 `https://api.github.com/repos/shiaho777/MacBottle/releases/latest`,
 skips drafts and prereleases, and compares the release tag with
 `CFBundleShortVersionString`. When a newer release exists the app offers

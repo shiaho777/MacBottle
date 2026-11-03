@@ -41,7 +41,7 @@ Issue open → branch from main → PR into main (Fixes #N) → CI green → mer
 | When | Workflow | Job id | Check name |
 |------|----------|--------|------------|
 | App/code changes | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `build` | `xcodebuild Debug` |
-| App/code changes | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `test` | `WhiskyKit tests` |
+| App/code changes | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `test` | `MacBottleKit tests` |
 | Swift sources changed | [`.github/workflows/SwiftLint.yml`](./.github/workflows/SwiftLint.yml) | `SwiftLint` | `SwiftLint` |
 | Recipe sources/tests changed | [`.github/workflows/RecipeLint.yml`](./.github/workflows/RecipeLint.yml) | `RecipeLint` | `RecipeLint` |
 
@@ -58,7 +58,7 @@ Issue open → branch from main → PR into main (Fixes #N) → CI green → mer
 ## 1. Add a game recipe (easiest, highest impact)
 
 A recipe is a single JSON file under
-`WhiskyKit/Sources/WhiskyKit/Recipes/<platform>/<id>.json` describing how to
+`MacBottleKit/Sources/MacBottleKit/Recipes/<platform>/<id>.json` describing how to
 run a specific Windows game. This is the primary way MacBottle grows.
 
 **Workflow:**
@@ -102,7 +102,7 @@ for the module layout and the runtime flow of a game launch.
 
 - Build the app in Xcode (`⌘B`). SwiftLint runs as a build phase; zero
   violations is a merge requirement.
-- From `WhiskyKit/`, run `swift test`. All tests must pass.
+- From `MacBottleKit/`, run `swift test`. All tests must pass.
 - If you touched recipe code, the `RecipeTests` suite must still pass.
 - If you added non-trivial logic, add a test. If you chose not to, explain
   why in the PR.
@@ -113,7 +113,7 @@ for the module layout and the runtime flow of a game launch.
 - No SwiftLint suppressions without a comment justifying the exception
 - New files use the file header pattern enforced by `.swiftlint.yml`
 - Public API has DocC comments
-- User-facing strings go into `Whisky/Localizable.xcstrings`. Add only the
+- User-facing strings go into `MacBottle/Localizable.xcstrings`. Add only the
   English key; translation happens separately
 
 **Scope:**
@@ -176,7 +176,7 @@ Apple Silicon Mac 上跑起来。贡献方式按「大家实际会怎么做」�
 | 何时触发 | Workflow | Job id | 检查名 |
 |------|----------|--------|------------|
 | App/代码改动 | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `build` | `xcodebuild Debug` |
-| App/代码改动 | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `test` | `WhiskyKit tests` |
+| App/代码改动 | [`.github/workflows/Build.yml`](./.github/workflows/Build.yml) | `test` | `MacBottleKit tests` |
 | Swift 源码改动 | [`.github/workflows/SwiftLint.yml`](./.github/workflows/SwiftLint.yml) | `SwiftLint` | `SwiftLint` |
 | 配方源码/测试改动 | [`.github/workflows/RecipeLint.yml`](./.github/workflows/RecipeLint.yml) | `RecipeLint` | `RecipeLint` |
 
@@ -191,7 +191,7 @@ Apple Silicon Mac 上跑起来。贡献方式按「大家实际会怎么做」�
 
 ### 1. 新增游戏配方(最容易、影响力最大)
 
-一份配方就是 `WhiskyKit/Sources/WhiskyKit/Recipes/<platform>/<id>.json`
+一份配方就是 `MacBottleKit/Sources/MacBottleKit/Recipes/<platform>/<id>.json`
 下的一个 JSON 文件,描述如何运行某款 Windows 游戏。这是 MacBottle
 成长的主要方式。
 
@@ -231,7 +231,7 @@ Apple Silicon Mac 上跑起来。贡献方式按「大家实际会怎么做」�
 **开 PR 之前:**
 
 - 在 Xcode 里构建 App(`⌘B`)。SwiftLint 作为 build phase 运行;零违规是合并要求。
-- 在 `WhiskyKit/` 下运行 `swift test`,全部通过。
+- 在 `MacBottleKit/` 下运行 `swift test`,全部通过。
 - 改过配方代码,`RecipeTests` 必须仍然通过。
 - 新增非琐碎逻辑要配测试;不配就在 PR 里说明理由。
 
@@ -241,7 +241,7 @@ Apple Silicon Mac 上跑起来。贡献方式按「大家实际会怎么做」�
 - 不允许无注释理由的 SwiftLint 豁免
 - 新文件遵守 `.swiftlint.yml` 强制的文件头模式
 - Public API 有 DocC 注释
-- 用户可见字符串进 `Whisky/Localizable.xcstrings`,只加英文 key;翻译另行进行
+- 用户可见字符串进 `MacBottle/Localizable.xcstrings`,只加英文 key;翻译另行进行
 
 **范围:**
 

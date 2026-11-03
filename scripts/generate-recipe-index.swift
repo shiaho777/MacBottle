@@ -3,7 +3,7 @@
 //  generate-recipe-index.swift
 //  MacBottle
 //
-//  Walks WhiskyKit/Sources/WhiskyKit/Recipes/ and produces a manifest
+//  Walks MacBottleKit/Sources/MacBottleKit/Recipes/ and produces a manifest
 //  (`_index.json`) enumerating every recipe with its git blob sha and a
 //  SHA-256 digest of the raw bytes. The manifest is consumed by the
 //  client at runtime (`RemoteRecipeSource`) to decide what needs
@@ -45,7 +45,7 @@ struct Manifest: Codable {
 }
 
 // Minimal recipe decoder — we only need `id` out of each file for the
-// manifest, so keeping this local avoids pulling in the full WhiskyKit
+// manifest, so keeping this local avoids pulling in the full MacBottleKit
 // module just to run the script.
 struct RecipeID: Decodable {
     let id: String
@@ -100,7 +100,7 @@ func sha256Hex(of file: String) throws -> String {
 
 let fileManager = FileManager.default
 let repoRoot = fileManager.currentDirectoryPath
-let recipesRoot = "WhiskyKit/Sources/WhiskyKit/Recipes"
+let recipesRoot = "MacBottleKit/Sources/MacBottleKit/Recipes"
 let absoluteRecipesRoot = repoRoot + "/" + recipesRoot
 let outputPath = absoluteRecipesRoot + "/_index.json"
 

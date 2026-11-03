@@ -29,7 +29,7 @@
 
 这是 MacBottle 与 Whisky 的核心区别。一份配方是一份 JSON 文件,描述"让这个游戏跑起来需要哪些设置"。
 
-- 位置:`WhiskyKit/Sources/WhiskyKit/Recipes/<platform>/<id>.json`
+- 位置:`MacBottleKit/Sources/MacBottleKit/Recipes/<platform>/<id>.json`
 - 格式:JSON,经 `RecipeLint` CI 用真实的 Swift `Recipe` 类型校验
 - 贡献方式:开发者提交 PR,加一个 JSON 文件(不需要懂 Swift)
 - 运行时:App 启动时从 bundle 加载所有配方,用户对一个 bottle 挂载某个配方后,启动游戏时配方里的 env、winetricks、注册表自动应用

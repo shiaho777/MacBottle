@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json, sys
 
-PATH = "Whisky/Localizable.xcstrings"
+PATH = "MacBottle/Localizable.xcstrings"
 
 CATALOG = {
     # --- engine / theme ---
@@ -165,7 +165,7 @@ CATALOG = {
     "logs.empty.output.subtitle": ("This run has not produced any displayable log yet", "该次运行尚未产生可显示日志"),
     "logs.export.failed": ("Export failed", "导出失败"),
 
-    # --- log sort / status (WhiskyKit display, moved to app) ---
+    # --- log sort / status (MacBottleKit display, moved to app) ---
     "logs.sort.newest": ("Newest first", "最新优先"),
     "logs.sort.oldest": ("Oldest first", "最旧优先"),
     "logs.sort.failedFirst": ("Failed first", "失败优先"),

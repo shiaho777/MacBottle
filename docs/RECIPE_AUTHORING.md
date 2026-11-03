@@ -25,7 +25,7 @@ applies it automatically.
 ## File location
 
 ```
-WhiskyKit/Sources/WhiskyKit/Recipes/
+MacBottleKit/Sources/MacBottleKit/Recipes/
   steam/<AppID>.json         # e.g. steam/2050650.json for Black Myth: Wukong
   gog/<ProductID>.json       # e.g. gog/1207658924.json for The Witcher 2
   generic/<slug>.json        # out-of-platform titles or retail installers
@@ -153,7 +153,7 @@ PRs are reviewed against these rules; violations block merge.
 
 ## Testing your recipe locally
 
-1. Build WhiskyKit: `cd WhiskyKit && swift build`.
+1. Build MacBottleKit: `cd MacBottleKit && swift build`.
 2. Run the unit tests: `swift test` (see `docs/ARCHITECTURE.md` for test
    structure).
 3. Run the app from Xcode and confirm your recipe appears in the bottle's
