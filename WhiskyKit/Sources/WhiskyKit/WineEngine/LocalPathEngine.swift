@@ -23,11 +23,18 @@ public struct LocalPathEngine: WineEngine, Sendable, Equatable {
     public let identifier: String
     public let displayName: String
     public let libraryRoot: URL
+    public let manifestEngineID: String?
 
-    public init(identifier: String, displayName: String, libraryRoot: URL) {
+    public init(
+        identifier: String,
+        displayName: String,
+        libraryRoot: URL,
+        manifestEngineID: String? = nil
+    ) {
         self.identifier = identifier
         self.displayName = displayName
         self.libraryRoot = libraryRoot
+        self.manifestEngineID = manifestEngineID
     }
 
     public var wineBinary: URL {
@@ -79,7 +86,11 @@ public struct LocalPathEngine: WineEngine, Sendable, Equatable {
 
     public func checkForUpdate() async -> (hasUpdate: Bool, remoteVersion: SemanticVersion) {
         let local = installedVersion() ?? SemanticVersion(0, 0, 0)
-        return (false, local)
+        guard let manifestEngineID, isInstalled() else {
+            return (false, local)
+        }
+        let remote = await EngineFallbackCatalog.signedRelease(engineID: manifestEngineID)
+        return EngineFallbackCatalog.updateStatus(installed: local, remote: remote)
     }
 
     public var supportsD3DMetalBridge: Bool {

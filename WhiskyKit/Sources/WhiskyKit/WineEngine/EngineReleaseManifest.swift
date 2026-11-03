@@ -19,6 +19,7 @@
 import CryptoKit
 import Foundation
 import os.log
+import SemanticVersion
 
 public struct EngineReleaseManifest: Codable, Sendable, Equatable {
     public let schema: Int
@@ -62,6 +63,22 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
             self.size = size
             self.minMacOS = minMacOS
             self.arch = arch
+        }
+
+        public var semanticVersion: SemanticVersion? {
+            let parts = version.split(separator: ".", omittingEmptySubsequences: false)
+            guard (1...3).contains(parts.count) else { return nil }
+            var numbers: [Int] = []
+            for part in parts {
+                guard !part.isEmpty, part.allSatisfy(\.isNumber), let value = Int(part) else {
+                    return nil
+                }
+                numbers.append(value)
+            }
+            while numbers.count < 3 {
+                numbers.append(0)
+            }
+            return SemanticVersion(numbers[0], numbers[1], numbers[2])
         }
     }
 
@@ -149,6 +166,7 @@ extension String {
 public enum EngineManifestError: Error, LocalizedError {
     case unsupportedSchema(Int)
     case invalidSignature
+    case missingPublicKey
     case noMatchingRelease(String)
 
     public var errorDescription: String? {
@@ -157,6 +175,8 @@ public enum EngineManifestError: Error, LocalizedError {
             return "Unsupported engine manifest schema \(schema)."
         case .invalidSignature:
             return "The engine manifest signature is invalid."
+        case .missingPublicKey:
+            return "No engine manifest public key is configured."
         case .noMatchingRelease(let engineID):
             return "No engine release matches \(engineID) on this Mac."
         }
@@ -192,11 +212,12 @@ public struct EngineManifestLoader: Sendable {
     }
 
     public func load(publicKeyBase64: String?) async throws -> EngineReleaseManifest {
+        guard let publicKeyBase64, !publicKeyBase64.isEmpty else {
+            throw EngineManifestError.missingPublicKey
+        }
         let data = try await fetcher(url)
         let manifest = try JSONDecoder().decode(EngineReleaseManifest.self, from: data)
-        if let publicKeyBase64 {
-            try manifest.verify(publicKeyBase64: publicKeyBase64)
-        }
+        try manifest.verify(publicKeyBase64: publicKeyBase64)
         return manifest
     }
 

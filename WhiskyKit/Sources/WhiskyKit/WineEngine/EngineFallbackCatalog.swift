@@ -17,6 +17,7 @@
 //
 
 import Foundation
+import SemanticVersion
 
 public struct EngineFallbackRelease: Sendable, Equatable {
     public let engineID: String
@@ -76,9 +77,7 @@ public enum EngineFallbackCatalog {
     /// signature does not silently upgrade to an unsigned release: the
     /// loader throws and the pinned catalog wins.
     public static func preferredFallback() async -> EngineFallbackRelease {
-        guard let manifest = try? await EngineManifestLoader().load(
-            publicKeyBase64: EngineManifestLoader.bundledPublicKey()
-        ), let release = manifest.release(engineID: gcenxWine.engineID, arch: "x86_64") else {
+        guard let release = await signedRelease(engineID: gcenxWine.engineID) else {
             return gcenxWine
         }
         return EngineFallbackRelease(
@@ -90,5 +89,27 @@ public enum EngineFallbackCatalog {
             size: release.size,
             licenseNote: gcenxWine.licenseNote
         )
+    }
+
+    public static func signedRelease(
+        engineID: String,
+        arch: String = "x86_64",
+        loader: EngineManifestLoader = EngineManifestLoader(),
+        publicKeyBase64: String? = EngineManifestLoader.bundledPublicKey()
+    ) async -> EngineReleaseManifest.EngineRelease? {
+        guard let manifest = try? await loader.load(publicKeyBase64: publicKeyBase64) else {
+            return nil
+        }
+        return manifest.release(engineID: engineID, arch: arch)
+    }
+
+    public static func updateStatus(
+        installed: SemanticVersion,
+        remote: EngineReleaseManifest.EngineRelease?
+    ) -> (hasUpdate: Bool, remoteVersion: SemanticVersion) {
+        guard let remoteVersion = remote?.semanticVersion else {
+            return (false, installed)
+        }
+        return (installed < remoteVersion, remoteVersion)
     }
 }

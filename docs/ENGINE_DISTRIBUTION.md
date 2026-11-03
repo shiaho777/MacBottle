@@ -11,7 +11,8 @@ public half is embedded in `Whisky/Info.plist` as
 2. `EngineReleaseManifest` reconstructs the deterministic signing payload
    (schema, timestamp, one line per release in fixed field order).
 3. `Curve25519.Signing.PublicKey` verifies the signature from
-   `Info.plist`.
+   `Info.plist`. `EngineManifestLoader` fails closed: with no public key
+   configured it rejects the manifest instead of trusting it unverified.
 4. Only then does `EngineFallbackCatalog.preferredFallback()` use the
    manifest's URL and SHA-256. If the manifest is missing, unsigned,
    tampered with, or has no matching release, the app falls back to the
@@ -22,6 +23,19 @@ public half is embedded in `Whisky/Info.plist` as
 The signature is the outer trust boundary; the SHA-256 is the inner one.
 A compromised CDN cannot swap the archive without the private key, and a
 compromised archive cannot pass the digest check.
+
+## Update checks
+
+The Gcenx engine (`LocalPathEngine` with `manifestEngineID`) checks for
+updates against the same signed manifest. At launch, `ContentView` asks
+the active engine for an update; the manifest version (for example
+`11.21`) is padded to a semantic version and compared with the installed
+`WhiskyWineVersion.plist`. A missing, unsigned, or tampered manifest
+reports no update.
+
+Accepting the update no longer uninstalls the engine first. Setup opens
+at the download step, and the import swaps the new build into place, so
+the current engine stays usable if the download fails.
 
 ## Updating the manifest
 

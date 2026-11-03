@@ -72,7 +72,8 @@ public enum WineEngineCatalog {
         LocalPathEngine(
             identifier: gcenxIdentifier,
             displayName: "Wine 11.21 (Gcenx, x86_64)",
-            libraryRoot: gcenxLibraryRoot
+            libraryRoot: gcenxLibraryRoot,
+            manifestEngineID: gcenxIdentifier
         )
     }
 

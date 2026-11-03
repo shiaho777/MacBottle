@@ -39,6 +39,7 @@ struct ContentView: View {
     @State private var currentEngineID = WineEngineRegistry.shared.current.identifier
     @State private var engineBusy = false
     @State private var engineError: String?
+    @State private var setupStartsAtDownload = false
 
     var body: some View {
         NavigationSplitView {
@@ -82,8 +83,12 @@ struct ContentView: View {
         .sheet(isPresented: $showBottleCreation) {
             BottleCreationView(newlyCreatedBottleURL: $newlyCreatedBottleURL)
         }
-        .sheet(isPresented: $showSetup) {
-            SetupView(showSetup: $showSetup, firstTime: false)
+        .sheet(isPresented: $showSetup, onDismiss: resetSetupStart) {
+            SetupView(
+                showSetup: $showSetup,
+                firstTime: false,
+                initialPath: setupStartsAtDownload ? [.whiskyWineDownload] : []
+            )
         }
         .sheet(item: $openedFileURL) { url in
             FileOpenView(fileURL: url,
@@ -166,11 +171,15 @@ struct ContentView: View {
                 let response = alert.runModal()
 
                 if response == .alertFirstButtonReturn {
-                    WhiskyWineInstaller.uninstall()
+                    setupStartsAtDownload = true
                     showSetup = true
                 }
             }
         }
+    }
+
+    private func resetSetupStart() {
+        setupStartsAtDownload = false
     }
 
     var sidebar: some View {

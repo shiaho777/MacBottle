@@ -25,10 +25,16 @@ enum SetupStage {
 }
 
 struct SetupView: View {
-    @State private var path: [SetupStage] = []
+    @State private var path: [SetupStage]
     @State var tarLocation: URL = URL(fileURLWithPath: "")
     @Binding var showSetup: Bool
-    var firstTime: Bool = true
+    var firstTime: Bool
+
+    init(showSetup: Binding<Bool>, firstTime: Bool = true, initialPath: [SetupStage] = []) {
+        _showSetup = showSetup
+        self.firstTime = firstTime
+        _path = State(initialValue: initialPath)
+    }
 
     var body: some View {
         VStack {
