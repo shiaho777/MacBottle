@@ -219,21 +219,16 @@ struct MacBottleApp: App {
     }
 
     static func wipeShaderCaches() {
-        let getconf = Process()
-        getconf.executableURL = URL(fileURLWithPath: "/usr/bin/getconf")
-        getconf.arguments = ["DARWIN_USER_CACHE_DIR"]
-        let pipe = Pipe()
-        getconf.standardOutput = pipe
-        do {
-            try getconf.run()
-            getconf.waitUntilExit()
-            let getconfOutput = try pipe.fileHandleForReading.readToEnd() ?? Data()
-            guard let getconfOutputString = String(data: getconfOutput, encoding: .utf8) else { return }
-            let d3dmPath = URL(fileURLWithPath: getconfOutputString.trimmingCharacters(in: .whitespacesAndNewlines))
-                .appending(path: "d3dm")
-            try? FileManager.default.removeItem(at: d3dmPath)
-        } catch {
+        guard let result = try? ProcessRunner.runSync(
+            executable: URL(fileURLWithPath: "/usr/bin/getconf"),
+            arguments: ["DARWIN_USER_CACHE_DIR"],
+            timeout: .seconds(10)
+        ) else {
             return
         }
+        let directory = result.standardOutputString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !directory.isEmpty else { return }
+        let d3dmPath = URL(fileURLWithPath: directory).appending(path: "d3dm")
+        try? FileManager.default.removeItem(at: d3dmPath)
     }
 }

@@ -41,4 +41,57 @@ final class ProcessRunnerTests: XCTestCase {
         XCTAssertEqual(result.standardOutputString.trimmingCharacters(in: .whitespacesAndNewlines), "out")
         XCTAssertEqual(result.standardErrorString.trimmingCharacters(in: .whitespacesAndNewlines), "err")
     }
+
+    func testAsyncTimeoutKillsTheChild() async {
+        let started = Date()
+        do {
+            _ = try await ProcessRunner.run(
+                path: "/bin/sh",
+                arguments: ["-c", "sleep 30"],
+                timeout: .milliseconds(200)
+            )
+            XCTFail("expected a timeout")
+        } catch let error as ProcessRunnerError {
+            XCTAssertEqual(error, .timedOut(seconds: 0.2))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(started), 10, "timeout must not wait for the child")
+    }
+
+    func testSyncRunCapturesOutput() throws {
+        let result = try ProcessRunner.runSync(
+            path: "/bin/sh",
+            arguments: ["-c", "echo sync-out; exit 3"],
+            timeout: .seconds(10)
+        )
+        XCTAssertEqual(result.exitCode, 3)
+        XCTAssertEqual(result.standardOutputString.trimmingCharacters(in: .whitespacesAndNewlines), "sync-out")
+    }
+
+    func testSyncTimeoutKillsTheChild() {
+        do {
+            _ = try ProcessRunner.runSync(
+                path: "/bin/sh",
+                arguments: ["-c", "sleep 30"],
+                timeout: .milliseconds(200)
+            )
+            XCTFail("expected a timeout")
+        } catch let error as ProcessRunnerError {
+            XCTAssertEqual(error, .timedOut(seconds: 0.2))
+        } catch {
+            XCTFail("unexpected error: \(error)")
+        }
+    }
+
+    func testLaunchReturnsRunningProcess() throws {
+        let process = try ProcessRunner.launch(
+            path: "/bin/sh",
+            arguments: ["-c", "sleep 5"]
+        )
+        XCTAssertTrue(process.isRunning)
+        ProcessRunner.terminate(process)
+        process.waitUntilExit()
+        XCTAssertFalse(process.isRunning)
+    }
 }
