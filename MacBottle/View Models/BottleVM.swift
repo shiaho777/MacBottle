@@ -23,14 +23,14 @@ import SemanticVersion
 import MacBottleKit
 import os.log
 
+@MainActor
 @Observable
-final class BottleVM: @unchecked Sendable {
-    @MainActor static let shared = BottleVM()
+final class BottleVM {
+    static let shared = BottleVM()
 
     var bottlesList = BottleData()
     var bottles: [Bottle] = []
 
-    @MainActor
     func loadBottles() {
         bottles = bottlesList.loadBottles()
     }
@@ -68,8 +68,6 @@ final class BottleVM: @unchecked Sendable {
                 bottleId = bottle
 
                 await MainActor.run {
-                    // All mutable Bottle state stays on the main actor;
-                    // `Bottle` is only @unchecked Sendable for transport.
                     bottle.settings.windowsVersion = winVersion
                     bottle.settings.name = bottleName
                     self.bottles.append(bottle)

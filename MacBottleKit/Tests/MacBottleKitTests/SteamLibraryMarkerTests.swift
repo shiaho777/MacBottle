@@ -34,6 +34,7 @@ final class SteamLibraryMarkerTests: XCTestCase {
         super.tearDown()
     }
 
+    @MainActor
     private func makeBottle(_ name: String) throws -> Bottle {
         let url = workDir.appending(path: name)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -42,7 +43,8 @@ final class SteamLibraryMarkerTests: XCTestCase {
         return bottle
     }
 
-    func testMarkAndFind() throws {
+    @MainActor
+    func testMarkAndFind() async throws {
         let plain = try makeBottle("plain")
         let shared = try makeBottle("shared")
         XCTAssertFalse(SteamLibraryMarker.isMarked(shared))
@@ -51,7 +53,8 @@ final class SteamLibraryMarkerTests: XCTestCase {
         XCTAssertEqual(SteamLibraryMarker.find(in: [plain, shared]), shared)
     }
 
-    func testFindIgnoresUnavailableBottles() throws {
+    @MainActor
+    func testFindIgnoresUnavailableBottles() async throws {
         let shared = try makeBottle("shared")
         try SteamLibraryMarker.mark(shared)
         shared.isAvailable = false

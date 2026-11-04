@@ -194,8 +194,14 @@ struct ProgramView: View {
         panel.begin { result in
             if result == .OK, let url = panel.url {
                 let name = url.deletingPathExtension().lastPathComponent
+                let terminalCommand = program.generateTerminalCommand()
                 Task(priority: .userInitiated) {
-                    await ProgramShortcut.createShortcut(program, app: url, name: name)
+                    await ProgramShortcut.createShortcut(
+                        program,
+                        app: url,
+                        name: name,
+                        terminalCommand: terminalCommand
+                    )
                 }
             }
         }

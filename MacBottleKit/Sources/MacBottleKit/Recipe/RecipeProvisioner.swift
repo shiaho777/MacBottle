@@ -319,7 +319,7 @@ public actor RecipeProvisioner {
     }
 
     private static func engine(for bottle: Bottle) -> any WineEngine {
-        if let id = bottle.settings.engineID,
+        if let id = bottle.settingsSnapshot.engineID,
            let engine = WineEngineCatalog.engine(id: id),
            engine.isInstalled() {
             return engine

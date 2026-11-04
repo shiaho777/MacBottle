@@ -20,6 +20,7 @@ import Foundation
 import AppKit
 
 public struct ShellLinkHeader {
+    @MainActor
     public static func getProgram(url: URL, handle: FileHandle, bottle: Bottle) -> Program? {
         var offset: UInt64 = 0
         let headerSize = handle.extract(UInt32.self) ?? 0
@@ -61,6 +62,7 @@ public struct LinkInfo: Hashable {
     public var linkInfoFlags: LinkInfoFlags
     public var program: Program?
 
+    @MainActor
     public init(handle: FileHandle, bottle: Bottle, offset: inout UInt64) {
         let startOfSection = offset
 
@@ -98,6 +100,7 @@ public struct LinkInfo: Hashable {
         offset = startOfSection + UInt64(linkInfoSize)
     }
 
+    @MainActor
     func getProgram(handle: FileHandle, offset: UInt64, bottle: Bottle, unicode: Bool) -> Program? {
         do {
             try handle.seek(toOffset: offset)

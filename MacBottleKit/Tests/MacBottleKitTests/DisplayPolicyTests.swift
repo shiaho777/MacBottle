@@ -20,7 +20,8 @@ import XCTest
 @testable import MacBottleKit
 
 final class DisplayPolicyTests: XCTestCase {
-    func testRegistryUpsertStringAndDword() throws {
+    @MainActor
+    func testRegistryUpsertStringAndDword() async throws {
         let temp = FileManager.default.temporaryDirectory
             .appending(path: "MacBottleRegistryTest-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)

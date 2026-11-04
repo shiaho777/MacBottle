@@ -44,21 +44,23 @@ extension MacBottle {
         static let configuration = CommandConfiguration(abstract: "List existing bottles.")
 
         mutating func run() throws {
-            var bottlesList = BottleData()
-            let bottles = bottlesList.loadBottles()
+            MainActor.assumeIsolated {
+                var bottlesList = BottleData()
+                let bottles = bottlesList.loadBottles()
 
-            let nameCol = TextTableColumn(header: "Name")
-            let winVerCol = TextTableColumn(header: "Windows Version")
-            let pathCol = TextTableColumn(header: "Path")
+                let nameCol = TextTableColumn(header: "Name")
+                let winVerCol = TextTableColumn(header: "Windows Version")
+                let pathCol = TextTableColumn(header: "Path")
 
-            var table = TextTable(columns: [nameCol, winVerCol, pathCol])
-            for bottle in bottles {
-                table.addRow(values: [bottle.settings.name,
-                                      bottle.settings.windowsVersion.pretty(),
-                                      bottle.url.prettyPath()])
+                var table = TextTable(columns: [nameCol, winVerCol, pathCol])
+                for bottle in bottles {
+                    table.addRow(values: [bottle.settings.name,
+                                          bottle.settings.windowsVersion.pretty(),
+                                          bottle.url.prettyPath()])
+                }
+
+                print(table.render())
             }
-
-            print(table.render())
         }
     }
 
@@ -69,17 +71,20 @@ extension MacBottle {
 
         mutating func run() throws {
             let bottleURL = BottleData.defaultBottleDir.appending(path: UUID().uuidString)
+            let name = name
 
             do {
                 try FileManager.default.createDirectory(atPath: bottleURL.path(percentEncoded: false),
                                                         withIntermediateDirectories: true)
-                let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
-                // Should allow customisation
-                bottle.settings.windowsVersion = .win10
-                bottle.settings.name = name
-//                try await Wine.changeWinVersion(bottle: bottle, win: winVersion)
-//                let wineVer = try await Wine.wineVersion()
-                bottle.settings.wineVersion = SemanticVersion(0, 0, 0)
+                MainActor.assumeIsolated {
+                    let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+                    // Should allow customisation
+                    bottle.settings.windowsVersion = .win10
+                    bottle.settings.name = name
+//                    try await Wine.changeWinVersion(bottle: bottle, win: winVersion)
+//                    let wineVer = try await Wine.wineVersion()
+                    bottle.settings.wineVersion = SemanticVersion(0, 0, 0)
+                }
 
                 var bottlesList = BottleData()
                 bottlesList.paths.append(bottleURL)
@@ -119,21 +124,24 @@ extension MacBottle {
         @Argument var name: String
 
         mutating func run() throws {
-            var bottlesList = BottleData()
-            let bottles = bottlesList.loadBottles()
+            let name = name
+            try MainActor.assumeIsolated {
+                var bottlesList = BottleData()
+                let bottles = bottlesList.loadBottles()
 
-            // Should ask for confirmation
-            let bottleToRemove = bottles.first(where: { $0.settings.name == name })
-            if let bottleToRemove = bottleToRemove {
-                bottlesList.paths.removeAll(where: { $0 == bottleToRemove.url })
-                do {
-                    try FileManager.default.removeItem(at: bottleToRemove.url)
-                    print("Deleted \"\(name)\".")
-                } catch {
-                    print(error)
+                // Should ask for confirmation
+                let bottleToRemove = bottles.first(where: { $0.settings.name == name })
+                if let bottleToRemove = bottleToRemove {
+                    bottlesList.paths.removeAll(where: { $0 == bottleToRemove.url })
+                    do {
+                        try FileManager.default.removeItem(at: bottleToRemove.url)
+                        print("Deleted \"\(name)\".")
+                    } catch {
+                        print(error)
+                    }
+                } else {
+                    throw ValidationError("No bottle called \"\(name)\" found.")
                 }
-            } else {
-                throw ValidationError("No bottle called \"\(name)\" found.")
             }
         }
     }
@@ -145,15 +153,18 @@ extension MacBottle {
         @Argument var name: String
 
         mutating func run() throws {
-            var bottlesList = BottleData()
-            let bottles = bottlesList.loadBottles()
+            let name = name
+            try MainActor.assumeIsolated {
+                var bottlesList = BottleData()
+                let bottles = bottlesList.loadBottles()
 
-            let bottleToRemove = bottles.first(where: { $0.settings.name == name })
-            if let bottleToRemove = bottleToRemove {
-                bottlesList.paths.removeAll(where: { $0 == bottleToRemove.url })
-                print("Removed \"\(name)\".")
-            } else {
-                throw ValidationError("No bottle called \"\(name)\" found.")
+                let bottleToRemove = bottles.first(where: { $0.settings.name == name })
+                if let bottleToRemove = bottleToRemove {
+                    bottlesList.paths.removeAll(where: { $0 == bottleToRemove.url })
+                    print("Removed \"\(name)\".")
+                } else {
+                    throw ValidationError("No bottle called \"\(name)\" found.")
+                }
             }
         }
     }
@@ -166,16 +177,19 @@ extension MacBottle {
         @Argument var args: [String] = []
 
         mutating func run() throws {
-            var bottlesList = BottleData()
-            let bottles = bottlesList.loadBottles()
-
-            guard let bottle = bottles.first(where: { $0.settings.name == bottleName }) else {
-                throw ValidationError("A bottle with that name doesn't exist.")
-            }
-
+            let bottleName = bottleName
             let url = URL(fileURLWithPath: path)
-            let program = Program(url: url, bottle: bottle)
-            program.runInTerminal()
+            try MainActor.assumeIsolated {
+                var bottlesList = BottleData()
+                let bottles = bottlesList.loadBottles()
+
+                guard let bottle = bottles.first(where: { $0.settings.name == bottleName }) else {
+                    throw ValidationError("A bottle with that name doesn't exist.")
+                }
+
+                let program = Program(url: url, bottle: bottle)
+                program.runInTerminal()
+            }
         }
     }
 
@@ -185,16 +199,18 @@ extension MacBottle {
         @Argument var bottleName: String
 
         mutating func run() throws {
-            var bottlesList = BottleData()
-            let bottles = bottlesList.loadBottles()
+            let bottleName = bottleName
+            try MainActor.assumeIsolated {
+                var bottlesList = BottleData()
+                let bottles = bottlesList.loadBottles()
 
-            guard let bottle = bottles.first(where: { $0.settings.name == bottleName }) else {
-                throw ValidationError("A bottle with that name doesn't exist.")
+                guard let bottle = bottles.first(where: { $0.settings.name == bottleName }) else {
+                    throw ValidationError("A bottle with that name doesn't exist.")
+                }
+
+                let envCmd = Wine.generateTerminalEnvironmentCommand(bottle: bottle)
+                print(envCmd)
             }
-
-            let envCmd = Wine.generateTerminalEnvironmentCommand(bottle: bottle)
-            print(envCmd)
-
         }
     }
 

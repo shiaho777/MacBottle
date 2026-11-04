@@ -23,7 +23,12 @@ import MacBottleKit
 import os.log
 
 class ProgramShortcut {
-    public static func createShortcut(_ program: Program, app: URL, name: String) async {
+    public static func createShortcut(
+        _ program: Program,
+        app: URL,
+        name: String,
+        terminalCommand: String
+    ) async {
         let contents = app.appending(path: "Contents")
         let macos = contents.appending(path: "MacOS")
         do {
@@ -32,7 +37,7 @@ class ProgramShortcut {
             // First create shell script
             let script = """
             #!/bin/bash
-            \(program.generateTerminalCommand())
+            \(terminalCommand)
             """
             let scriptUrl = macos.appending(path: "launch")
             try script.write(to: scriptUrl,

@@ -99,7 +99,7 @@ struct BottleListEntry: View {
                     panel.begin { result in
                         if result == .OK {
                             if let url = panel.url {
-                                Task.detached(priority: .background) {
+                                Task { @MainActor in
                                     bottle.exportAsArchive(destination: url)
                                 }
                             }

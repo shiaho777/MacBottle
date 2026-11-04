@@ -210,7 +210,7 @@ public final class ProgramRunLogStore {
             programName: programURL.lastPathComponent,
             programPath: programURL.standardizedFileURL.path(percentEncoded: false),
             bottleKey: bottleKey,
-            bottleName: bottle.settings.name,
+            bottleName: bottle.settingsSnapshot.name,
             bottlePath: bottle.url.standardizedFileURL.path(percentEncoded: false),
             startedAt: Date(),
             endedAt: nil,

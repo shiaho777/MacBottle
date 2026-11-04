@@ -65,7 +65,8 @@ final class ZeroPathTests: XCTestCase {
         return observed
     }
 
-    func testFirstLaunchTakesConfirmingDoubleLaunch() {
+    @MainActor
+    func testFirstLaunchTakesConfirmingDoubleLaunch() async throws {
         let prefix = makeFakePrefix()
         let bottle = Bottle(bottleUrl: prefix, inFlight: true)
         let plan = DoubleLaunchExecutor.plan(
@@ -77,7 +78,8 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertTrue(plan.doubleLaunch)
     }
 
-    func testMatchingFingerprintProvesReadiness() {
+    @MainActor
+    func testMatchingFingerprintProvesReadiness() async throws {
         let prefix = makeFakePrefix()
         let observed = fingerprint(of: prefix)
         PrefixReadinessOracle.saveBaseline(
@@ -96,7 +98,8 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertFalse(plan.doubleLaunch)
     }
 
-    func testBaselinesAreIndependentPerBottle() {
+    @MainActor
+    func testBaselinesAreIndependentPerBottle() async throws {
         let prefixA = makeFakePrefix(name: "prefix-a")
         let prefixB = makeFakePrefix(name: "prefix-b")
         PrefixReadinessOracle.saveBaseline(
@@ -124,7 +127,9 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertTrue(planB.readinessSkipped, "one bottle's baseline must not evict another's")
     }
 
-    func testPrefixEvolutionInvalidatesReadiness() {        let prefix = makeFakePrefix()
+    @MainActor
+    func testPrefixEvolutionInvalidatesReadiness() async throws {
+        let prefix = makeFakePrefix()
         let observed = fingerprint(of: prefix)
         PrefixReadinessOracle.saveBaseline(
             bottleKey: "k",
@@ -133,7 +138,7 @@ final class ZeroPathTests: XCTestCase {
         )
         // Wine upgraded the prefix: the timestamp file changed.
         let timestamp = prefix.appending(path: ".update-timestamp")
-        Thread.sleep(forTimeInterval: 0.02)
+        try await Task.sleep(for: .milliseconds(20))
         try? Data("upgraded".utf8).write(to: timestamp)
         let baseline = PrefixReadinessOracle.loadBaseline(bottleKey: "k")
         let bottle = Bottle(bottleUrl: prefix, inFlight: true)
@@ -146,7 +151,8 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertFalse(plan.doubleLaunch, "drifted baseline must not re-trigger a double launch")
     }
 
-    func testEngineUpgradeInvalidatesReadiness() {
+    @MainActor
+    func testEngineUpgradeInvalidatesReadiness() async throws {
         let prefix = makeFakePrefix()
         PrefixReadinessOracle.saveBaseline(
             bottleKey: "k",
@@ -164,7 +170,8 @@ final class ZeroPathTests: XCTestCase {
         XCTAssertFalse(plan.doubleLaunch)
     }
 
-    func testBaselineSurvivesRegistryMutation() {
+    @MainActor
+    func testBaselineSurvivesRegistryMutation() async throws {
         // Game runs mutate user.reg; readiness must not be affected
         // because the fingerprint excludes registry files.
         let prefix = makeFakePrefix()
@@ -174,7 +181,7 @@ final class ZeroPathTests: XCTestCase {
             engineBuildID: "crossover-3.0.0",
             fingerprint: observed
         )
-        Thread.sleep(forTimeInterval: 0.02)
+        try await Task.sleep(for: .milliseconds(20))
         try? Data("mutated\n".utf8).write(to: prefix.appending(path: "system.reg"))
         let baseline = PrefixReadinessOracle.loadBaseline(bottleKey: "k")
         let bottle = Bottle(bottleUrl: prefix, inFlight: true)

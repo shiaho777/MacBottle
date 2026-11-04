@@ -18,7 +18,7 @@
 
 import Foundation
 
-public enum Locales: String, Codable, CaseIterable {
+public enum Locales: String, Codable, CaseIterable, Sendable {
     case auto = ""
     case german = "de_DE.UTF-8"
     case english = "en_US"
@@ -70,7 +70,7 @@ public enum LaunchMode: String, Codable, Sendable {
     case command
 }
 
-public struct ProgramSettings: Codable {
+public struct ProgramSettings: Codable, Sendable {
     public var locale: Locales = .auto
     public var environment: [String: String] = [:]
     public var arguments: String = ""

@@ -21,13 +21,12 @@ import Observation
 import SwiftUI
 import os.log
 
-// swiftlint:disable:next todo
-// TODO: Should not be unchecked!
+@MainActor
 @Observable
-public final class Program: Equatable, Hashable, Identifiable, @unchecked Sendable {
+public final class Program: Equatable, Hashable, Identifiable {
     public let bottle: Bottle
-    public let url: URL
-    public let settingsURL: URL
+    nonisolated public let url: URL
+    nonisolated public let settingsURL: URL
 
     public var name: String {
         url.lastPathComponent
@@ -132,19 +131,19 @@ public final class Program: Equatable, Hashable, Identifiable, @unchecked Sendab
 
     // MARK: - Equatable
 
-    public static func == (lhs: Program, rhs: Program) -> Bool {
+    nonisolated public static func == (lhs: Program, rhs: Program) -> Bool {
         return lhs.url == rhs.url
     }
 
     // MARK: - Hashable
 
-    public func hash(into hasher: inout Hasher) {
+    nonisolated public func hash(into hasher: inout Hasher) {
         return hasher.combine(url)
     }
 
     // MARK: - Identifiable
 
-    public var id: URL {
+    nonisolated public var id: URL {
         self.url
     }
 }
