@@ -92,3 +92,5 @@ fastlane/test_output
 iOSInjectionProject/
 
 engine-signing-key*
+
+.zcode/
