@@ -70,19 +70,17 @@ extension Wine {
         }
 
         do {
-            let process = Process()
-            process.executableURL = engine.wineserverBinary
-            process.arguments = ["-p"]
-            process.environment = constructWineServerEnvironment(for: bottle, engine: engine)
-            process.standardOutput = FileHandle.nullDevice
-            process.standardError = FileHandle.nullDevice
             // wineserver is the IPC hub every wine call round-trips —
             // per-frame present() and every input event included. A
             // .utility band here demotes the entire bottle's response
             // chain; the scheduler keeps it in the interactive band
             // with the game instead.
-            process.qualityOfService = .userInteractive
-            try process.run()
+            let process = try ProcessRunner.launch(
+                executable: engine.wineserverBinary,
+                arguments: ["-p"],
+                environment: constructWineServerEnvironment(for: bottle, engine: engine),
+                qualityOfService: .userInteractive
+            )
             BottleProcessRegistry.shared.register(process, bottle: bottle)
 
             try await Task.sleep(for: .milliseconds(150))

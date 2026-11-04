@@ -187,26 +187,16 @@ public class Tar {
     }
 
     private static func run(_ arguments: [String]) throws -> ToolResult {
-        let process = Process()
-        process.executableURL = tarBinary
-        process.arguments = arguments
-
-        let stdout = Pipe()
-        let stderr = Pipe()
-        process.standardOutput = stdout
-        process.standardError = stderr
-
-        try process.run()
-        // Read to EOF before waiting: this drains the pipes as the child
-        // writes instead of deadlocking on a full pipe buffer.
-        let outData = (try? stdout.fileHandleForReading.readToEnd()) ?? Data()
-        let errData = (try? stderr.fileHandleForReading.readToEnd()) ?? Data()
-        process.waitUntilExit()
+        let result = try ProcessRunner.runSync(
+            executable: tarBinary,
+            arguments: arguments,
+            timeout: .seconds(600)
+        )
 
         return ToolResult(
-            status: process.terminationStatus,
-            output: String(data: outData, encoding: .utf8) ?? "",
-            error: String(data: errData, encoding: .utf8) ?? ""
+            status: result.exitCode,
+            output: result.standardOutputString,
+            error: result.standardErrorString
         )
     }
 }

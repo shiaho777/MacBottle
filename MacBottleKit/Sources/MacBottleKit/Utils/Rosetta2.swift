@@ -27,32 +27,23 @@ public class Rosetta2 {
     }()
 
     public static func installRosetta() async throws -> Bool {
-        let process = Process()
         let fileHandle = try Wine.makeFileHandle()
-
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/softwareupdate")
-        process.arguments = ["--install-rosetta", "--agree-to-license"]
-        process.standardOutput = fileHandle
-        process.standardError = fileHandle
         fileHandle.writeApplicationInfo()
-        fileHandle.writeInfo(for: process)
+        fileHandle.write(line: "Arguments: --install-rosetta --agree-to-license\n\n")
 
-        return try await withCheckedThrowingContinuation { continuation in
-            process.terminationHandler = { (process: Process) in
-                do {
-                    try fileHandle.close()
-                    continuation.resume(returning: process.terminationStatus == 0)
-                } catch {
-                    Logger.wineKit.error("Error while closing file handle: \(error)")
-                    continuation.resume(throwing: error)
-                }
-            }
-
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: error)
-            }
+        do {
+            let result = try await ProcessRunner.run(
+                executable: URL(fileURLWithPath: "/usr/sbin/softwareupdate"),
+                arguments: ["--install-rosetta", "--agree-to-license"],
+                timeout: .seconds(600)
+            )
+            fileHandle.write(line: result.standardOutputString)
+            fileHandle.write(line: result.standardErrorString)
+            try fileHandle.close()
+            return result.isSuccess
+        } catch {
+            try? fileHandle.close()
+            throw error
         }
     }
 }

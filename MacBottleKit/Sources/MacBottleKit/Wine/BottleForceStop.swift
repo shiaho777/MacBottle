@@ -106,27 +106,17 @@ public enum BottleForceStop {
         let wineserver = EngineInstaller.binFolder.appending(path: "wineserver")
         guard FileManager.default.fileExists(atPath: wineserver.path) else { return }
 
-        let process = Process()
-        process.executableURL = wineserver
-        process.arguments = ["-k"]
-        process.environment = [
-            "WINEPREFIX": prefix,
-            "WINEDEBUG": "-all",
-            "PATH": EngineInstaller.binFolder.path
-        ]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
         do {
-            try process.run()
-            let group = DispatchGroup()
-            group.enter()
-            DispatchQueue.global().async {
-                process.waitUntilExit()
-                group.leave()
-            }
-            if group.wait(timeout: .now() + 1.5) == .timedOut {
-                hardKill(process: process)
-            }
+            _ = try ProcessRunner.runSync(
+                executable: wineserver,
+                arguments: ["-k"],
+                environment: [
+                    "WINEPREFIX": prefix,
+                    "WINEDEBUG": "-all",
+                    "PATH": EngineInstaller.binFolder.path
+                ],
+                timeout: .milliseconds(1500)
+            )
         } catch {
             Logger.wineKit.error(
                 "BottleForceStop wineserver -k failed: \(error.localizedDescription, privacy: .public)"
