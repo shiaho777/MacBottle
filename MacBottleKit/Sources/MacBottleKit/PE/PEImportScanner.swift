@@ -88,9 +88,12 @@ public enum PEImportScanner {
 
     private static let importDirectoryIndex: UInt32 = 1
     private static let delayImportDirectoryIndex: UInt32 = 13
-    private static let cacheLock = NSLock()
-    nonisolated(unsafe) private static var profileCache: [String: CachedProfile] = [:]
-    nonisolated(unsafe) private static var cacheInsertionOrder: [String] = []
+    private struct CacheState {
+        var profiles: [String: CachedProfile] = [:]
+        var insertionOrder: [String] = []
+    }
+
+    private static let cache = LockedBox(CacheState())
 
     /// Scans are tiny (a page or two each); the cap exists so a session
     /// that touches hundreds of installers cannot grow the dictionary
@@ -111,16 +114,18 @@ public enum PEImportScanner {
         fileSize: UInt64,
         profile: PEImportProfile
     ) {
-        profileCache[path] = CachedProfile(
-            modificationDate: modificationDate,
-            fileSize: fileSize,
-            profile: profile
-        )
-        cacheInsertionOrder.append(path)
-        while cacheInsertionOrder.count > profileCacheLimit {
-            let oldest = cacheInsertionOrder.removeFirst()
-            if oldest != path {
-                profileCache.removeValue(forKey: oldest)
+        cache.withLock { state in
+            state.profiles[path] = CachedProfile(
+                modificationDate: modificationDate,
+                fileSize: fileSize,
+                profile: profile
+            )
+            state.insertionOrder.append(path)
+            while state.insertionOrder.count > profileCacheLimit {
+                let oldest = state.insertionOrder.removeFirst()
+                if oldest != path {
+                    state.profiles.removeValue(forKey: oldest)
+                }
             }
         }
     }
@@ -132,40 +137,37 @@ public enum PEImportScanner {
         let fileSize = attrs?[.size] as? UInt64
 
         if let modificationDate, let fileSize {
-            cacheLock.lock()
-            if let cached = profileCache[path],
+            let cached = cache.withLock { state in
+                state.profiles[path]
+            }
+            if let cached,
                cached.modificationDate == modificationDate,
                cached.fileSize == fileSize {
-                let profile = cached.profile
-                cacheLock.unlock()
-                return profile
+                return cached.profile
             }
-            cacheLock.unlock()
         }
 
         guard let profile = scanUncached(url: url) else { return nil }
 
         if let modificationDate, let fileSize {
-            cacheLock.lock()
             insertIntoCache(
                 path: path,
                 modificationDate: modificationDate,
                 fileSize: fileSize,
                 profile: profile
             )
-            cacheLock.unlock()
         }
         return profile
     }
 
     public static func invalidateCache(for url: URL? = nil) {
-        cacheLock.lock()
-        defer { cacheLock.unlock() }
-        if let url {
-            profileCache.removeValue(forKey: url.path(percentEncoded: false))
-        } else {
-            profileCache.removeAll(keepingCapacity: false)
-            cacheInsertionOrder.removeAll(keepingCapacity: false)
+        cache.withLock { state in
+            if let url {
+                state.profiles.removeValue(forKey: url.path(percentEncoded: false))
+            } else {
+                state.profiles.removeAll(keepingCapacity: false)
+                state.insertionOrder.removeAll(keepingCapacity: false)
+            }
         }
     }
 

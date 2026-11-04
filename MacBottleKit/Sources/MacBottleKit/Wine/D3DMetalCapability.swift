@@ -38,20 +38,14 @@ public struct D3DMetalStatus: Sendable, Equatable {
 }
 
 public enum D3DMetalCapability {
-    private static let probeLock = NSLock()
-    nonisolated(unsafe) private static var cachedProbeStatuses: [URL: D3DMetalStatus] = [:]
+    private static let cachedProbeStatuses = LockedBox<[URL: D3DMetalStatus]>([:])
 
     public static func probe(libraryRoot: URL = CrossOverEngine.default.libraryRoot) -> D3DMetalStatus {
-        probeLock.lock()
-        if let cached = cachedProbeStatuses[libraryRoot] {
-            probeLock.unlock()
+        if let cached = cachedProbeStatuses.withLock({ $0[libraryRoot] }) {
             return cached
         }
-        probeLock.unlock()
         let status = probeUncached(libraryRoot: libraryRoot)
-        probeLock.lock()
-        cachedProbeStatuses[libraryRoot] = status
-        probeLock.unlock()
+        cachedProbeStatuses.withLock { $0[libraryRoot] = status }
         return status
     }
 
@@ -114,9 +108,7 @@ public enum D3DMetalCapability {
             try FileManager.default.copyItem(at: from, to: destinationItem)
             Logger.wineKit.info("D3DMetalCapability restored \(item) from \(source.path)")
         }
-        probeLock.lock()
-        cachedProbeStatuses.removeAll()
-        probeLock.unlock()
+        cachedProbeStatuses.withLock { $0.removeAll() }
         return probe(libraryRoot: libraryRoot)
     }
 

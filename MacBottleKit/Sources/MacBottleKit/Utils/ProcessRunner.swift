@@ -81,7 +81,7 @@ public enum ProcessRunner {
             let outReader = PipeDrain(handle: stdout.fileHandleForReading)
             let errReader = PipeDrain(handle: stderr.fileHandleForReading)
             let gate = ResumeGate()
-            let timeoutTask = Locked<Task<Void, Never>?>(nil)
+            let timeoutTask = LockedBox<Task<Void, Never>?>(nil)
 
             process.terminationHandler = { finished in
                 let outData = outReader.finish()
@@ -150,17 +150,17 @@ public enum ProcessRunner {
         // Drain both pipes on background queues while waiting: a child
         // that fills the kernel pipe buffer would otherwise block
         // forever.
-        let outBox = DataBox()
-        let errBox = DataBox()
+        let outBox = LockedBox(Data())
+        let errBox = LockedBox(Data())
         let drainGroup = DispatchGroup()
         drainGroup.enter()
         DispatchQueue.global(qos: .utility).async {
-            outBox.value = (try? stdout.fileHandleForReading.readToEnd()) ?? Data()
+            outBox.withLock { $0 = (try? stdout.fileHandleForReading.readToEnd()) ?? Data() }
             drainGroup.leave()
         }
         drainGroup.enter()
         DispatchQueue.global(qos: .utility).async {
-            errBox.value = (try? stderr.fileHandleForReading.readToEnd()) ?? Data()
+            errBox.withLock { $0 = (try? stderr.fileHandleForReading.readToEnd()) ?? Data() }
             drainGroup.leave()
         }
 
@@ -182,8 +182,8 @@ public enum ProcessRunner {
 
         return ProcessRunResult(
             exitCode: process.terminationStatus,
-            standardOutput: outBox.value,
-            standardError: errBox.value
+            standardOutput: outBox.withLock { $0 },
+            standardError: errBox.withLock { $0 }
         )
     }
 
@@ -276,40 +276,6 @@ extension Duration {
     var seconds: Double {
         let parts = components
         return Double(parts.seconds) + Double(parts.attoseconds) / 1_000_000_000_000_000_000
-    }
-}
-
-/// Minimal mutex-protected box for state shared with a timeout task.
-private final class Locked<Value>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage: Value
-
-    init(_ value: Value) {
-        self.storage = value
-    }
-
-    func withLock<T>(_ body: (inout Value) -> T) -> T {
-        lock.lock()
-        defer { lock.unlock() }
-        return body(&storage)
-    }
-}
-
-private final class DataBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage = Data()
-
-    var value: Data {
-        get {
-            lock.lock()
-            defer { lock.unlock() }
-            return storage
-        }
-        set {
-            lock.lock()
-            defer { lock.unlock() }
-            storage = newValue
-        }
     }
 }
 
