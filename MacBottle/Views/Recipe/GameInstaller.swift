@@ -172,7 +172,7 @@ final class GameInstaller {
 
     func registerMainExecutable(_ exeURL: URL, bottle: Bottle) {
         do {
-            let winPath = wineStylePath(for: exeURL, inBottle: bottle)
+            let winPath = WinePath.windowsPath(for: exeURL, inBottle: bottle.url)
             let game = InstalledGame(
                 recipeID: recipe.id,
                 bottleURL: bottle.url,
@@ -187,13 +187,6 @@ final class GameInstaller {
             fail(String(format: String(localized: "game.install.error.saveRecord %@"), error.localizedDescription))
         }
     }
-
-    private static let steamSetupURL: URL = {
-        guard let url = URL(string: "https://cdn.akamai.steamstatic.com/client/installer/SteamSetup.exe") else {
-            preconditionFailure("static Steam setup URL")
-        }
-        return url
-    }()
 
     private func runSteamInstaller(bottle: Bottle) async {
         phase = .configuringBottle
@@ -388,9 +381,10 @@ final class GameInstaller {
     }
 
     private func downloadSteamSetup() async throws -> URL {
-        let downloader = SteamSetupDownloader()
-        downloader.onProgress = { [weak self] written, expected in
-            Task { @MainActor in
+        let url = try await SteamSetupDownloadService().download(
+            from: SteamSetupDownloadService.defaultURL
+        ) { written, expected in
+            Task { @MainActor [weak self] in
                 guard let self else { return }
                 if expected > 0 {
                     self.progress = min(1, Double(written) / Double(expected))
@@ -408,7 +402,6 @@ final class GameInstaller {
                 }
             }
         }
-        let url = try await downloader.download(from: Self.steamSetupURL)
         progress = 1
         statusDetail = String(localized: "game.install.downloadComplete")
         return url
@@ -434,7 +427,7 @@ final class GameInstaller {
         let installerURL = picked
         let stagedInstaller: URL
         do {
-            stagedInstaller = try stageInstaller(installerURL, bottle: bottle)
+            stagedInstaller = try InstallerStaging.stage(installerURL, inBottle: bottle.url)
         } catch {
             fail(error.localizedDescription)
             return
@@ -450,28 +443,6 @@ final class GameInstaller {
         }
 
         statusDetail = String(localized: "game.install.installerLaunched")
-    }
-
-    private func stageInstaller(_ url: URL, bottle: Bottle) throws -> URL {
-        if url.path.hasPrefix(bottle.url.path) {
-            return url
-        }
-        let imports = bottle.url
-            .appending(path: "drive_c")
-            .appending(path: "MacBottleImports")
-        try FileManager.default.createDirectory(at: imports, withIntermediateDirectories: true)
-        var name = url.lastPathComponent
-        if name.unicodeScalars.contains(where: { !$0.isASCII }) {
-            let ext = url.pathExtension
-            name = "installer_\(Int(Date().timeIntervalSince1970))"
-            if !ext.isEmpty { name += ".\(ext)" }
-        }
-        let destination = imports.appending(path: name)
-        if FileManager.default.fileExists(atPath: destination.path) {
-            try FileManager.default.removeItem(at: destination)
-        }
-        try FileManager.default.copyItem(at: url, to: destination)
-        return destination
     }
 
     @MainActor
@@ -614,17 +585,6 @@ final class GameInstaller {
         return false
     }
 
-    private func wineStylePath(for fileURL: URL, inBottle bottle: Bottle) -> String {
-        let driveC = bottle.url.appending(path: "drive_c").path
-        let full = fileURL.path
-        if full.hasPrefix(driveC) {
-            let relative = String(full.dropFirst(driveC.count))
-                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-            return "C:\\" + relative.replacingOccurrences(of: "/", with: "\\")
-        }
-        return full.replacingOccurrences(of: "/", with: "\\")
-    }
-
     private func fail(_ message: String) {
         phase = .failed(message: message)
         statusDetail = message
@@ -636,110 +596,6 @@ final class GameInstaller {
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: value)
-    }
-}
-
-private enum SteamSetupDownloadError: Error, LocalizedError {
-    case invalidResponse(Int)
-    case notAnExecutable
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidResponse(let code):
-            return "SteamSetup download failed with HTTP \(code)."
-        case .notAnExecutable:
-            return "The downloaded SteamSetup is not a Windows executable."
-        }
-    }
-}
-
-private final class SteamSetupDownloader: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    var onProgress: ((Int64, Int64) -> Void)?
-    private var continuation: CheckedContinuation<URL, Error>?
-    private var session: URLSession?
-    private var destinationURL: URL?
-
-    func download(from url: URL) async throws -> URL {
-        try await withCheckedThrowingContinuation { cont in
-            self.continuation = cont
-            let config = URLSessionConfiguration.ephemeral
-            config.timeoutIntervalForRequest = 60
-            config.timeoutIntervalForResource = 600
-            let session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
-            self.session = session
-            session.downloadTask(with: url).resume()
-        }
-    }
-
-    func urlSession(
-        _ session: URLSession,
-        downloadTask: URLSessionDownloadTask,
-        didWriteData bytesWritten: Int64,
-        totalBytesWritten: Int64,
-        totalBytesExpectedToWrite: Int64
-    ) {
-        onProgress?(totalBytesWritten, totalBytesExpectedToWrite)
-    }
-
-    func urlSession(
-        _ session: URLSession,
-        downloadTask: URLSessionDownloadTask,
-        didFinishDownloadingTo location: URL
-    ) {
-        if let http = downloadTask.response as? HTTPURLResponse,
-           !(200..<300).contains(http.statusCode) {
-            continuation?.resume(throwing: SteamSetupDownloadError.invalidResponse(http.statusCode))
-            continuation = nil
-            return
-        }
-
-        let attributes = try? FileManager.default.attributesOfItem(atPath: location.path)
-        let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
-        guard size > 512 * 1024 else {
-            continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
-            continuation = nil
-            return
-        }
-        if let handle = try? FileHandle(forReadingFrom: location) {
-            let magic = try? handle.read(upToCount: 2)
-            try? handle.close()
-            guard magic == Data([0x4D, 0x5A]) else {
-                continuation?.resume(throwing: SteamSetupDownloadError.notAnExecutable)
-                continuation = nil
-                return
-            }
-        }
-
-        let dest = FileManager.default.temporaryDirectory
-            .appending(path: "SteamSetup-\(UUID().uuidString).exe")
-        do {
-            if FileManager.default.fileExists(atPath: dest.path) {
-                try FileManager.default.removeItem(at: dest)
-            }
-            try FileManager.default.copyItem(at: location, to: dest)
-            destinationURL = dest
-        } catch {
-            continuation?.resume(throwing: error)
-            continuation = nil
-        }
-    }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        defer {
-            session.finishTasksAndInvalidate()
-            self.session = nil
-        }
-        if let error {
-            continuation?.resume(throwing: error)
-            continuation = nil
-            return
-        }
-        if let destinationURL {
-            continuation?.resume(returning: destinationURL)
-        } else {
-            continuation?.resume(throwing: URLError(.cannotCreateFile))
-        }
-        continuation = nil
     }
 }
 
