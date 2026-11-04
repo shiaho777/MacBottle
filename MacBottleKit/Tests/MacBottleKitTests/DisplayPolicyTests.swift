@@ -19,6 +19,7 @@
 import XCTest
 @testable import MacBottleKit
 
+@MainActor
 final class DisplayPolicyTests: XCTestCase {
     func testRegistryUpsertStringAndDword() throws {
         let temp = FileManager.default.temporaryDirectory

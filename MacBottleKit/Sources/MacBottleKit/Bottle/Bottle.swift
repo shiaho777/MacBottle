@@ -19,16 +19,23 @@
 import Foundation
 import Observation
 import SwiftUI
-import os.log
+import os
 
-// swiftlint:disable:next todo
-// TODO: Should not be unchecked!
+@MainActor
 @Observable
-public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unchecked Sendable {
-    public let url: URL
+public final class Bottle: Equatable, Hashable, Identifiable {
+    nonisolated public let url: URL
     private let metadataURL: URL
+    nonisolated private let settingsStore: OSAllocatedUnfairLock<BottleSettings>
     public var settings: BottleSettings {
-        didSet { saveSettings() }
+        didSet {
+            settingsStore.withLock { [settings] in $0 = settings }
+            saveSettings()
+        }
+    }
+
+    nonisolated public var settingsSnapshot: BottleSettings {
+        settingsStore.withLock { $0 }
     }
     public var programs: [Program] = []
     public var inFlight: Bool = false
@@ -98,21 +105,22 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
         self.isAvailable = isAvailable
         self.metadataURL = metadataURL
 
+        var loaded: BottleSettings
         var settingsLoaded = false
         do {
-            self.settings = try BottleSettings.decode(from: metadataURL)
+            loaded = try BottleSettings.decode(from: metadataURL)
             settingsLoaded = true
         } catch {
             Logger.wineKit.error(
               "Failed to load settings for bottle `\(metadataURL.path(percentEncoded: false))`: \(error)"
             )
-            self.settings = BottleSettings()
+            loaded = BottleSettings()
         }
 
         // Get rid of duplicates and pins that reference removed files
         var found: Set<URL> = []
-        let originalPinCount = self.settings.pins.count
-        self.settings.pins = self.settings.pins.filter { pin in
+        let originalPinCount = loaded.pins.count
+        loaded.pins = loaded.pins.filter { pin in
             guard let url = pin.url else { return false }
             guard !found.contains(url) else { return false }
             found.insert(url)
@@ -126,6 +134,8 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
             let legallyRemoved = pin.removable && volume == nil
             return FileManager.default.fileExists(atPath: urlPath) || legallyRemoved
         }
+        self.settingsStore = OSAllocatedUnfairLock(initialState: loaded)
+        self.settings = loaded
         // Persist the cleanup, but only when the original settings decoded
         // successfully. A corrupt metadata file was quarantined by
         // `BottleSettings.decode`; overwriting it with defaults here would
@@ -148,29 +158,28 @@ public final class Bottle: Equatable, Hashable, Identifiable, Comparable, @unche
 
     // MARK: - Equatable
 
-    public static func == (lhs: Bottle, rhs: Bottle) -> Bool {
+    nonisolated public static func == (lhs: Bottle, rhs: Bottle) -> Bool {
         return lhs.url == rhs.url
     }
 
     // MARK: - Hashable
 
-    public func hash(into hasher: inout Hasher) {
+    nonisolated public func hash(into hasher: inout Hasher) {
         return hasher.combine(url)
     }
 
     // MARK: - Identifiable
 
-    public var id: URL {
+    nonisolated public var id: URL {
         self.url
     }
 
-    // MARK: - Comparable
-
-    public static func < (lhs: Bottle, rhs: Bottle) -> Bool {
+    public static func nameOrder(_ lhs: Bottle, _ rhs: Bottle) -> Bool {
         lhs.settings.name.lowercased() < rhs.settings.name.lowercased()
     }
 }
 
+@MainActor
 public extension Sequence where Iterator.Element == Program {
     /// Filter all pinned programs
     var pinned: [Program] {

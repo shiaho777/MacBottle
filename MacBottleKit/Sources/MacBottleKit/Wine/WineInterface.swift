@@ -269,11 +269,11 @@ extension Wine {
         result["WINEDEBUG"] = "-all"
         result["GST_DEBUG"] = "0"
         let dxvkAvailable = engine?.supportsDXVK ?? true
-        bottle.settings.environmentVariables(wineEnv: &result, dxvkAvailable: dxvkAvailable)
+        bottle.settingsSnapshot.environmentVariables(wineEnv: &result, dxvkAvailable: dxvkAvailable)
         let profile = RuntimeLaunchOptimizer.profile(forExecutableAt: executableURL)
         result = RuntimeLaunchOptimizer.environment(
             profile: profile,
-            bottleDXVKEnabled: bottle.settings.dxvk && dxvkAvailable,
+            bottleDXVKEnabled: bottle.settingsSnapshot.dxvk && dxvkAvailable,
             base: result
         )
         guard !environment.isEmpty else { return result }
@@ -355,7 +355,7 @@ extension Wine {
 
         cd "\(driveC)"
         clear
-        echo "MacBottle bottle: \(bottle.settings.name)"
+        echo "MacBottle bottle: \(bottle.settingsSnapshot.name)"
         echo "Wine: $($WINE --version 2>/dev/null)"
         echo "WINEPREFIX: $WINEPREFIX"
         echo "Commands: wine, winecfg, wineboot, regedit"

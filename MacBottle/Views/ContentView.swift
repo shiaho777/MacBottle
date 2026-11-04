@@ -325,11 +325,11 @@ struct ContentView: View {
 
     var filteredBottles: [Bottle] {
         if bottleFilter.isEmpty {
-            return bottleVM.bottles.sorted()
+            return bottleVM.bottles.sorted(by: Bottle.nameOrder)
         }
         return bottleVM.bottles
             .filter { $0.settings.name.localizedCaseInsensitiveContains(bottleFilter) }
-            .sorted()
+            .sorted(by: Bottle.nameOrder)
     }
 
     private var selectionIsBottle: Bool {

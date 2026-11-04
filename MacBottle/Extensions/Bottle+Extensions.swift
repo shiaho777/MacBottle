@@ -143,15 +143,19 @@ extension Bottle {
     /// visible immediately afterwards (e.g. Start Menu pin matching).
     @MainActor
     func refreshInstalledPrograms() async {
-        let scanned = await Task.detached(priority: .userInitiated) {
-            Self.scannedInstalledPrograms(for: self)
+        let bottleURL = url
+        let settings = settings
+        let scannedURLs = await Task.detached(priority: .userInitiated) {
+            Self.scannedProgramURLs(bottleURL: bottleURL, settings: settings)
         }.value
-        self.programs = scanned
+        self.programs = scannedURLs
+            .map { Program(url: $0, bottle: self) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    private static func scannedInstalledPrograms(for bottle: Bottle) -> [Program] {
-        let driveC = bottle.url.appending(path: "drive_c")
-        var programs: [Program] = []
+    nonisolated private static func scannedProgramURLs(bottleURL: URL, settings: BottleSettings) -> [URL] {
+        let driveC = bottleURL.appending(path: "drive_c")
+        var programURLs: [URL] = []
         var foundURLs: Set<URL> = []
         let fileManager = FileManager.default
 
@@ -186,24 +190,22 @@ extension Bottle {
                 let path = fileURL.path(percentEncoded: false).lowercased()
                 if path.contains("/windows/") { continue }
                 if path.contains("/internet explorer/") { continue }
-                guard !bottle.settings.blocklist.contains(fileURL) else { continue }
+                guard !settings.blocklist.contains(fileURL) else { continue }
                 guard !foundURLs.contains(fileURL) else { continue }
                 foundURLs.insert(fileURL)
-                programs.append(Program(url: fileURL, bottle: bottle))
+                programURLs.append(fileURL)
             }
         }
 
-        for pin in bottle.settings.pins {
+        for pin in settings.pins {
             guard let pinURL = pin.url else { continue }
             guard !foundURLs.contains(pinURL) else { continue }
             guard fileManager.fileExists(atPath: pinURL.path(percentEncoded: false)) else { continue }
             foundURLs.insert(pinURL)
-            programs.append(Program(url: pinURL, bottle: bottle))
+            programURLs.append(pinURL)
         }
 
-        return programs.sorted {
-            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-        }
+        return programURLs
     }
 
     @MainActor

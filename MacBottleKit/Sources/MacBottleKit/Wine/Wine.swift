@@ -185,8 +185,8 @@ public class Wine {
             engineDecision = LaunchEnginePolicy.applyForLaunch(
                 executable: url,
                 recipe: recipe,
-                bottleDXVKEnabled: bottle.settings.dxvk,
-                bottleEngineID: bottle.settings.engineID
+                bottleDXVKEnabled: bottle.settingsSnapshot.dxvk,
+                bottleEngineID: bottle.settingsSnapshot.engineID
             )
         } else {
             engineDecision = nil
@@ -260,7 +260,7 @@ public class Wine {
             && launchEngine.supportsDXVK
             && RuntimeLaunchOptimizer.effectiveDXVKEnabled(
                 profile: profile,
-                bottleDXVKEnabled: bottle.settings.dxvk
+                bottleDXVKEnabled: bottle.settingsSnapshot.dxvk
             )
         let dxmtActive = recipe?.renderer == .dxmt && launchEngine.supportsDXMT
         let vkd3dActive = recipe?.renderer == .vkd3d && launchEngine.supportsVKD3D

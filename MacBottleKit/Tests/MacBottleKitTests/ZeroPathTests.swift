@@ -19,11 +19,12 @@
 import XCTest
 @testable import MacBottleKit
 
+@MainActor
 final class ZeroPathTests: XCTestCase {
     private var workDir: URL!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         workDir = FileManager.default.temporaryDirectory
             .appending(component: "zeropath-tests-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -31,11 +32,11 @@ final class ZeroPathTests: XCTestCase {
         LaunchLatencyTelemetry.resetForTests()
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         try? FileManager.default.removeItem(at: workDir)
         PrefixReadinessOracle.resetForTests()
         LaunchLatencyTelemetry.resetForTests()
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func makeFakePrefix(name: String = "prefix") -> URL {

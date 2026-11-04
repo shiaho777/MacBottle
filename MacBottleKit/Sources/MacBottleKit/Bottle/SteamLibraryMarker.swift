@@ -34,6 +34,7 @@ public enum SteamLibraryMarker {
         try Data().write(to: url(for: bottle), options: .atomic)
     }
 
+    @MainActor
     public static func find(in bottles: [Bottle]) -> Bottle? {
         bottles
             .filter(\.isAvailable)

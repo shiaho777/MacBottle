@@ -86,23 +86,24 @@ extension FileHandle {
     }
 
     func writeInfo(for bottle: Bottle) {
+        let settings = bottle.settingsSnapshot
         var header = String()
-        header += "Bottle Name: \(bottle.settings.name)\n"
+        header += "Bottle Name: \(settings.name)\n"
         header += "Bottle URL: \(bottle.url.path)\n\n"
 
         if let version = EngineInstaller.engineVersion() {
             header += "Engine Version: \(version.major).\(version.minor).\(version.patch)\n"
         }
-        header += "Windows Version: \(bottle.settings.windowsVersion)\n"
-        header += "Enhanced Sync: \(bottle.settings.enhancedSync)\n\n"
+        header += "Windows Version: \(settings.windowsVersion)\n"
+        header += "Enhanced Sync: \(settings.enhancedSync)\n\n"
 
-        header += "Metal HUD: \(bottle.settings.metalHud)\n"
-        header += "Metal Trace: \(bottle.settings.metalTrace)\n\n"
+        header += "Metal HUD: \(settings.metalHud)\n"
+        header += "Metal Trace: \(settings.metalTrace)\n\n"
 
-        if bottle.settings.dxvk {
-            header += "DXVK: \(bottle.settings.dxvk)\n"
-            header += "DXVK Async: \(bottle.settings.dxvkAsync)\n"
-            header += "DXVK HUD: \(bottle.settings.dxvkHud)\n\n"
+        if settings.dxvk {
+            header += "DXVK: \(settings.dxvk)\n"
+            header += "DXVK Async: \(settings.dxvkAsync)\n"
+            header += "DXVK HUD: \(settings.dxvkHud)\n\n"
         }
 
         write(line: header)

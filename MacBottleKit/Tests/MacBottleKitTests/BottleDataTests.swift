@@ -69,6 +69,21 @@ final class BottleDataTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: backups[0]), garbage)
     }
 
+    @MainActor
+    func testSettingsSnapshotFollowsSettings() {
+        let url = workDir.appending(path: "bottle-snapshot")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+
+        let bottle = Bottle(bottleUrl: url, inFlight: true)
+        XCTAssertEqual(bottle.settingsSnapshot.name, bottle.settings.name)
+
+        bottle.settings.name = "Renamed"
+        XCTAssertEqual(bottle.settingsSnapshot.name, "Renamed")
+
+        bottle.settings.pins.append(PinnedProgram(name: "Pin", url: url))
+        XCTAssertEqual(bottle.settingsSnapshot.pins.count, bottle.settings.pins.count)
+    }
+
     func testRecoveredStoreIsUsableAndPersistsNewPaths() {
         try? Data("broken".utf8).write(to: storeURL)
         var data = BottleData(storeURL: storeURL)

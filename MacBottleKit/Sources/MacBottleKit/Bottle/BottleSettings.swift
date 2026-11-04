@@ -20,7 +20,7 @@ import Foundation
 import SemanticVersion
 import os.log
 
-public struct PinnedProgram: Codable, Hashable, Equatable {
+public struct PinnedProgram: Codable, Hashable, Equatable, Sendable {
     public var name: String
     public var url: URL?
     public var removable: Bool
@@ -44,7 +44,7 @@ public struct PinnedProgram: Codable, Hashable, Equatable {
     }
 }
 
-public struct BottleInfo: Codable, Equatable {
+public struct BottleInfo: Codable, Equatable, Sendable {
     var name: String = "Bottle"
     var pins: [PinnedProgram] = []
     var blocklist: [URL] = []
@@ -85,11 +85,11 @@ public enum WinVersion: String, CaseIterable, Codable, Sendable {
     }
 }
 
-public enum EnhancedSync: Codable, Equatable {
+public enum EnhancedSync: Codable, Equatable, Sendable {
     case none, esync, msync
 }
 
-public struct BottleWineConfig: Codable, Equatable {
+public struct BottleWineConfig: Codable, Equatable, Sendable {
     static let defaultWineVersion = SemanticVersion(7, 7, 0)
     var wineVersion: SemanticVersion = Self.defaultWineVersion
     var windowsVersion: WinVersion = .win10
@@ -111,7 +111,7 @@ public struct BottleWineConfig: Codable, Equatable {
     // swiftlint:enable line_length
 }
 
-public struct BottleMetalConfig: Codable, Equatable {
+public struct BottleMetalConfig: Codable, Equatable, Sendable {
     var metalHud: Bool = false
     var metalTrace: Bool = false
     var dxrEnabled: Bool = false
@@ -126,11 +126,11 @@ public struct BottleMetalConfig: Codable, Equatable {
     }
 }
 
-public enum DXVKHUD: Codable, Equatable {
+public enum DXVKHUD: Codable, Equatable, Sendable {
     case full, partial, fps, off
 }
 
-public struct BottleDXVKConfig: Codable, Equatable {
+public struct BottleDXVKConfig: Codable, Equatable, Sendable {
     var dxvk: Bool = false
     var dxvkAsync: Bool = true
     var dxvkHud: DXVKHUD = .off
@@ -145,7 +145,7 @@ public struct BottleDXVKConfig: Codable, Equatable {
     }
 }
 
-public struct BottleSettings: Codable, Equatable {    static let defaultFileVersion = SemanticVersion(1, 0, 0)
+public struct BottleSettings: Codable, Equatable, Sendable {    static let defaultFileVersion = SemanticVersion(1, 0, 0)
 
     var fileVersion: SemanticVersion = Self.defaultFileVersion
     private var info: BottleInfo

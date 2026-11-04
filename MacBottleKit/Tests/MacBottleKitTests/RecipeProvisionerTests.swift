@@ -19,13 +19,14 @@
 import XCTest
 @testable import MacBottleKit
 
+@MainActor
 final class RecipeProvisionerTests: XCTestCase {
     private var workDir: URL!
     private var store: RecipeProvisioningStore!
     private var bottle: Bottle!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         workDir = FileManager.default.temporaryDirectory
             .appending(component: "provisioner-tests-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
@@ -35,9 +36,9 @@ final class RecipeProvisionerTests: XCTestCase {
         bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         try? FileManager.default.removeItem(at: workDir)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func makeRecipe(

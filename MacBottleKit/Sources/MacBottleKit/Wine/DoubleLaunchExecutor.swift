@@ -118,7 +118,7 @@ public enum DoubleLaunchExecutor {
             engineBuildID: engineBuildID,
             fingerprint: fingerprint
         )
-        let name = bottle.settings.name
+        let name = bottle.settingsSnapshot.name
         Logger.wineKit.info("ZeroPath: readiness baseline armed for \(name)")
     }
 

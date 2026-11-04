@@ -53,7 +53,7 @@ public enum DisplayPolicy {
                 changed = true
             }
             if changed {
-                let bottleName = bottle.settings.name
+                let bottleName = bottle.settingsSnapshot.name
                 Logger.wineKit.info(
                     "DisplayPolicy: classic32 applied RetinaMode=n LogPixels<=96 for \(bottleName)"
                 )
