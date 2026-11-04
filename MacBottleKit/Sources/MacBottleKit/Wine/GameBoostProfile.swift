@@ -104,30 +104,28 @@ public enum GameBoostRegistry {
             .appending(path: "game-boost.json")
     }
 
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var cached: Store?
+    private static let cached = LockedBox<Store?>(nil)
 
     public static func profile(for programKey: String) -> GameBoostProfile? {
-        lock.lock()
-        defer { lock.unlock() }
-        if let cached {
-            return cached.profiles[programKey]
+        cached.withLock { store in
+            if store == nil {
+                store = loadStore()
+            }
+            return store?.profiles[programKey]
         }
-        let store = loadStore()
-        cached = store
-        return store.profiles[programKey]
     }
 
     public static func setProfile(_ profile: GameBoostProfile?, for programKey: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        var store = cached ?? loadStore()
-        if let profile {
-            store.profiles[programKey] = profile
-        } else {
-            store.profiles.removeValue(forKey: programKey)
+        let store = cached.withLock { cachedStore -> Store in
+            var store = cachedStore ?? loadStore()
+            if let profile {
+                store.profiles[programKey] = profile
+            } else {
+                store.profiles.removeValue(forKey: programKey)
+            }
+            cachedStore = store
+            return store
         }
-        cached = store
         if let data = try? JSONEncoder().encode(store) {
             try? FileManager.default.createDirectory(
                 at: storeURL.deletingLastPathComponent(),
@@ -146,9 +144,7 @@ public enum GameBoostRegistry {
     }
 
     public static func resetForTests() {
-        lock.lock()
-        defer { lock.unlock() }
-        cached = nil
+        cached.withLock { $0 = nil }
         try? FileManager.default.removeItem(at: storeURL)
     }
 }

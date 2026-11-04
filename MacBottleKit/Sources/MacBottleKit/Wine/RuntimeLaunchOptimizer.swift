@@ -32,9 +32,12 @@ private struct RuntimeProfileCacheEntry {
 }
 
 public enum RuntimeLaunchOptimizer {
-    private static let profileCacheLock = NSLock()
-    nonisolated(unsafe) private static var profileCache: [String: RuntimeProfileCacheEntry] = [:]
-    nonisolated(unsafe) private static var profileCacheOrder: [String] = []
+    private struct CacheState {
+        var entries: [String: RuntimeProfileCacheEntry] = [:]
+        var order: [String] = []
+    }
+
+    private static let cache = LockedBox(CacheState())
 
     /// Same rationale as the PE scanner's cache cap: bounded memory
     /// regardless of how many executables a session touches.
@@ -44,12 +47,14 @@ public enum RuntimeLaunchOptimizer {
         path: String,
         entry: RuntimeProfileCacheEntry
     ) {
-        profileCache[path] = entry
-        profileCacheOrder.append(path)
-        while profileCacheOrder.count > profileCacheLimit {
-            let oldest = profileCacheOrder.removeFirst()
-            if oldest != path {
-                profileCache.removeValue(forKey: oldest)
+        cache.withLock { state in
+            state.entries[path] = entry
+            state.order.append(path)
+            while state.order.count > profileCacheLimit {
+                let oldest = state.order.removeFirst()
+                if oldest != path {
+                    state.entries.removeValue(forKey: oldest)
+                }
             }
         }
     }
@@ -81,13 +86,12 @@ public enum RuntimeLaunchOptimizer {
         let mod = attrs?[.modificationDate] as? Date ?? .distantPast
         let size = (attrs?[.size] as? NSNumber)?.uint64Value ?? 0
 
-        profileCacheLock.lock()
-        if let cached = profileCache[path], cached.modificationDate == mod, cached.size == size {
-            let value = cached.profile
-            profileCacheLock.unlock()
-            return value
+        let cached = cache.withLock { state in
+            state.entries[path]
         }
-        profileCacheLock.unlock()
+        if let cached, cached.modificationDate == mod, cached.size == size {
+            return cached.profile
+        }
 
         let resolved: RuntimeProfile
         do {
@@ -97,12 +101,10 @@ public enum RuntimeLaunchOptimizer {
             resolved = .generic
         }
 
-        profileCacheLock.lock()
         insertIntoProfileCache(
             path: path,
             entry: RuntimeProfileCacheEntry(modificationDate: mod, size: size, profile: resolved)
         )
-        profileCacheLock.unlock()
         return resolved
     }
 

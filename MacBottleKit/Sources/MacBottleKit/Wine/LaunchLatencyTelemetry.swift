@@ -54,8 +54,7 @@ public struct LaunchLatencyEvent: Codable, Sendable, Equatable {
 public enum LaunchLatencyTelemetry {
     static let maxEvents = 200
 
-    nonisolated(unsafe) private static var events: [LaunchLatencyEvent] = []
-    private static let lock = NSLock()
+    private static let events = LockedBox<[LaunchLatencyEvent]>([])
 
     nonisolated static var ledgerURL: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -64,14 +63,14 @@ public enum LaunchLatencyTelemetry {
     }
 
     public static func record(_ event: LaunchLatencyEvent) {
-        lock.lock()
-        events.append(event)
-        if events.count > maxEvents {
-            events.removeFirst(events.count - maxEvents)
+        let snapshot = events.withLock { stored -> [LaunchLatencyEvent] in
+            stored.append(event)
+            if stored.count > maxEvents {
+                stored.removeFirst(stored.count - maxEvents)
+            }
+            return stored
         }
-        let snapshot = events
         let url = ledgerURL
-        lock.unlock()
 
         let data = try? JSONEncoder().encode(snapshot)
         if let data {
@@ -84,9 +83,7 @@ public enum LaunchLatencyTelemetry {
     }
 
     public static func recentEvents() -> [LaunchLatencyEvent] {
-        lock.lock()
-        defer { lock.unlock() }
-        return events
+        events.withLock { $0 }
     }
 
     public static func loadPersisted() {
@@ -94,15 +91,13 @@ public enum LaunchLatencyTelemetry {
               let decoded = try? JSONDecoder().decode([LaunchLatencyEvent].self, from: data) else {
             return
         }
-        lock.lock()
-        events = Array(decoded.suffix(maxEvents))
-        lock.unlock()
+        events.withLock { stored in
+            stored = Array(decoded.suffix(maxEvents))
+        }
     }
 
     public static func resetForTests() {
-        lock.lock()
-        events.removeAll()
-        lock.unlock()
+        events.withLock { $0.removeAll() }
         try? FileManager.default.removeItem(at: ledgerURL)
     }
 

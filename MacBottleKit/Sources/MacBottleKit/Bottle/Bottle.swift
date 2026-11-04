@@ -19,14 +19,14 @@
 import Foundation
 import Observation
 import SwiftUI
-import os
+import os.log
 
 @MainActor
 @Observable
 public final class Bottle: Equatable, Hashable, Identifiable {
     nonisolated public let url: URL
     private let metadataURL: URL
-    nonisolated private let settingsStore: OSAllocatedUnfairLock<BottleSettings>
+    nonisolated private let settingsStore: LockedBox<BottleSettings>
     public var settings: BottleSettings {
         didSet {
             settingsStore.withLock { [settings] in $0 = settings }
@@ -134,7 +134,7 @@ public final class Bottle: Equatable, Hashable, Identifiable {
             let legallyRemoved = pin.removable && volume == nil
             return FileManager.default.fileExists(atPath: urlPath) || legallyRemoved
         }
-        self.settingsStore = OSAllocatedUnfairLock(initialState: loaded)
+        self.settingsStore = LockedBox(loaded)
         self.settings = loaded
         // Persist the cleanup, but only when the original settings decoded
         // successfully. A corrupt metadata file was quarantined by
