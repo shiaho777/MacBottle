@@ -70,7 +70,7 @@ final class BottleDataTests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsSnapshotFollowsSettings() {
+    func testSettingsSnapshotFollowsSettings() async throws {
         let url = workDir.appending(path: "bottle-snapshot")
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
 

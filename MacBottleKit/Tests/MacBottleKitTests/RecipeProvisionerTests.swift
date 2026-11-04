@@ -19,26 +19,31 @@
 import XCTest
 @testable import MacBottleKit
 
-@MainActor
 final class RecipeProvisionerTests: XCTestCase {
     private var workDir: URL!
     private var store: RecipeProvisioningStore!
     private var bottle: Bottle!
 
-    override func setUp() async throws {
-        try await super.setUp()
+    override func setUp() {
+        super.setUp()
         workDir = FileManager.default.temporaryDirectory
             .appending(component: "provisioner-tests-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
         store = RecipeProvisioningStore(root: workDir.appending(path: "state"))
-        let bottleURL = workDir.appending(path: "bottle")
-        try? FileManager.default.createDirectory(at: bottleURL, withIntermediateDirectories: true)
-        bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
     }
 
-    override func tearDown() async throws {
+    @MainActor
+    private func prepareBottle() -> Bottle {
+        let bottleURL = workDir.appending(path: "bottle")
+        try? FileManager.default.createDirectory(at: bottleURL, withIntermediateDirectories: true)
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        self.bottle = bottle
+        return bottle
+    }
+
+    override func tearDown() {
         try? FileManager.default.removeItem(at: workDir)
-        try await super.tearDown()
+        super.tearDown()
     }
 
     private func makeRecipe(
@@ -65,7 +70,9 @@ final class RecipeProvisionerTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testProvisioningRunsEveryStepOnce() async throws {
+        _ = prepareBottle()
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
             store: store,
@@ -85,7 +92,9 @@ final class RecipeProvisionerTests: XCTestCase {
         XCTAssertEqual(secondCalls, firstCalls)
     }
 
+    @MainActor
     func testFailedVerbResumesFromLastCompletedStep() async throws {
+        _ = prepareBottle()
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
             store: store,
@@ -122,7 +131,9 @@ final class RecipeProvisionerTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testFingerprintChangeReRunsTheWholePlan() async throws {
+        _ = prepareBottle()
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
             store: store,
@@ -146,7 +157,9 @@ final class RecipeProvisionerTests: XCTestCase {
         )
     }
 
+    @MainActor
     func testTwoRecipesInSameBottleKeepIndependentReceipts() async throws {
+        _ = prepareBottle()
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
             store: store,
@@ -167,7 +180,9 @@ final class RecipeProvisionerTests: XCTestCase {
         XCTAssertEqual(secondPass, firstPass, "one recipe's receipt must not erase another's")
     }
 
+    @MainActor
     func testEmptyPlanDoesNothing() async throws {
+        _ = prepareBottle()
         let calls = CallLog()
         let provisioner = RecipeProvisioner(
             store: store,

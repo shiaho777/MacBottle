@@ -19,22 +19,22 @@
 import XCTest
 @testable import MacBottleKit
 
-@MainActor
 final class SteamLibraryMarkerTests: XCTestCase {
     private var workDir: URL!
 
-    override func setUp() async throws {
-        try await super.setUp()
+    override func setUp() {
+        super.setUp()
         workDir = FileManager.default.temporaryDirectory
             .appending(path: "steam-marker-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
     }
 
-    override func tearDown() async throws {
+    override func tearDown() {
         try? FileManager.default.removeItem(at: workDir)
-        try await super.tearDown()
+        super.tearDown()
     }
 
+    @MainActor
     private func makeBottle(_ name: String) throws -> Bottle {
         let url = workDir.appending(path: name)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -43,7 +43,8 @@ final class SteamLibraryMarkerTests: XCTestCase {
         return bottle
     }
 
-    func testMarkAndFind() throws {
+    @MainActor
+    func testMarkAndFind() async throws {
         let plain = try makeBottle("plain")
         let shared = try makeBottle("shared")
         XCTAssertFalse(SteamLibraryMarker.isMarked(shared))
@@ -52,7 +53,8 @@ final class SteamLibraryMarkerTests: XCTestCase {
         XCTAssertEqual(SteamLibraryMarker.find(in: [plain, shared]), shared)
     }
 
-    func testFindIgnoresUnavailableBottles() throws {
+    @MainActor
+    func testFindIgnoresUnavailableBottles() async throws {
         let shared = try makeBottle("shared")
         try SteamLibraryMarker.mark(shared)
         shared.isAvailable = false
