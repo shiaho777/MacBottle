@@ -144,10 +144,16 @@ public struct ProgramRunCapture: @unchecked Sendable {
 public final class ProgramRunLogStore {
     public static let shared = ProgramRunLogStore()
     nonisolated public static let verboseWineDebugDefaultsKey = "macbottle.verboseWineDebug"
+    /// Diagnostic channels, opt-in only. `fixme-all` and the trace
+    /// channels make Wine format a line for nearly every unimplemented
+    /// call or server round-trip, which can cost measurable CPU and
+    /// produce megabytes of log per second.
     nonisolated public static let verboseWineDebugChannels =
         "+timestamp,+tid,+err,+seh,+loaddll,+module,+process,+thread,+pid,fixme-all"
+    /// Default channels. Errors and SEH warnings only: enough to diagnose
+    /// a failed launch without paying for the per-call `fixme` stream.
     nonisolated public static let performanceWineDebugChannels =
-        "fixme-all,err+all,warn+seh"
+        "err+all,warn+seh"
 
     nonisolated public static var verboseWineDebugEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: verboseWineDebugDefaultsKey) }
@@ -335,7 +341,23 @@ public final class ProgramRunLogStore {
             }
         }
 
+        pruneFinishedSessions()
         bump()
+    }
+
+    /// Finished sessions keep up to 400 KB of tail text for the log
+    /// window. Without a cap, a long session with many launches pins one
+    /// of those per run; the full logs are on disk anyway.
+    nonisolated static let finishedSessionLimit = 6
+
+    private func pruneFinishedSessions(limit: Int = ProgramRunLogStore.finishedSessionLimit) {
+        let finished = sessions.values
+            .filter { !$0.isLive }
+            .sorted { $0.record.startedAt < $1.record.startedAt }
+        guard finished.count > limit else { return }
+        for session in finished.prefix(finished.count - limit) {
+            sessions[session.id] = nil
+        }
     }
 
     public func liveSession(for id: UUID?) -> ProgramRunLogSession? {

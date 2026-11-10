@@ -87,6 +87,34 @@ final class ProgramRunLogStoreTests: XCTestCase {
         XCTAssertTrue(finishedRuns.allSatisfy { $0.status == .finished })
     }
 
+    func testFinishedSessionsArePrunedToTheLimit() throws {
+        let bottleURL = FileManager.default.temporaryDirectory
+            .appending(path: "macbottle-runlog-prune-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: bottleURL, withIntermediateDirectories: true)
+        defer {
+            ProgramRunLogStore.shared.clearBottle(Bottle(bottleUrl: bottleURL))
+            try? FileManager.default.removeItem(at: bottleURL)
+        }
+
+        let bottle = Bottle(bottleUrl: bottleURL, inFlight: true)
+        let programURL = bottleURL.appending(path: "drive_c/game.exe")
+        let limit = ProgramRunLogStore.finishedSessionLimit
+        let runCount = limit + 3
+
+        var runIDs: [UUID] = []
+        for _ in 0..<runCount {
+            let capture = try ProgramRunLogStore.shared.beginRun(programURL: programURL, bottle: bottle)
+            ProgramRunLogStore.shared.finishRun(runID: capture.record.id, exitCode: 0)
+            runIDs.append(capture.record.id)
+            Thread.sleep(forTimeInterval: 0.002)
+        }
+
+        let kept = runIDs.compactMap { ProgramRunLogStore.shared.liveSession(for: $0) }
+        XCTAssertEqual(kept.count, limit, "finished run sessions must stay bounded")
+        XCTAssertNil(ProgramRunLogStore.shared.liveSession(for: runIDs[0]))
+        XCTAssertNotNil(ProgramRunLogStore.shared.liveSession(for: runIDs.last))
+    }
+
     private struct BareIndex: Codable {
         var runs: [ProgramRunRecord]
     }

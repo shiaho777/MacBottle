@@ -3,282 +3,882 @@
   "strings": {
     "update.app.available.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "A new version of MacBottle is available" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 有新版本可用" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 有新版本可用" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A new version of MacBottle is available"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 有新版本可用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 有新版本可用"
+          }
+        }
       }
     },
     "update.app.available.message %@ %@": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ is available. You are running %2$@." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ 已发布，你当前使用的是 %2$@。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle %1$@ 已發佈，你目前使用的是 %2$@。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle %1$@ is available. You are running %2$@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle %1$@ 已发布，你当前使用的是 %2$@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle %1$@ 已發佈，你目前使用的是 %2$@。"
+          }
+        }
       }
     },
     "update.app.download": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open Release Page" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开发布页面" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "打開發佈頁面" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Release Page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开发布页面"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開發佈頁面"
+          }
+        }
       }
     },
     "update.app.upToDate.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "MacBottle is up to date" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 已是最新版本" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 已是最新版本" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle is up to date"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 已是最新版本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 已是最新版本"
+          }
+        }
       }
     },
     "update.app.upToDate.message %@": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "You are running the latest version (%@)." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "你使用的已是最新版本(%@)。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "你使用的已是最新版本(%@)。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are running the latest version (%@)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你使用的已是最新版本(%@)。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你使用的已是最新版本(%@)。"
+          }
+        }
       }
     },
     "update.app.noRelease.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No release published yet" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "尚未发布任何版本" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "尚未發佈任何版本" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No release published yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未发布任何版本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未發佈任何版本"
+          }
+        }
       }
     },
     "update.app.noRelease.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "MacBottle has no published release yet. Check the GitHub Releases page later." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle 还没有发布正式版本，请稍后到 GitHub Releases 页面查看。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle 還沒有發佈正式版本，請稍後到 GitHub Releases 頁面查看。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle has no published release yet. Check the GitHub Releases page later."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 还没有发布正式版本，请稍后到 GitHub Releases 页面查看。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle 還沒有發佈正式版本，請稍後到 GitHub Releases 頁面查看。"
+          }
+        }
       }
     },
     "update.app.failed.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Could not check for updates" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法检查更新" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "無法檢查更新" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not check for updates"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法检查更新"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法檢查更新"
+          }
+        }
       }
     },
     "sidebar.activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活動"
+          }
+        }
       }
     },
     "activity.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活動"
+          }
+        }
       }
     },
     "activity.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Downloads, installs, and running games in one place." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下载、安装与运行中的游戏集中在这里。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "下載、安裝與執行中的遊戲集中在這裡。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloads, installs, and running games in one place."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载、安装与运行中的游戏集中在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載、安裝與執行中的遊戲集中在這裡。"
+          }
+        }
       }
     },
     "activity.idle.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Nothing running" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前没有运行中的任务" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "目前沒有執行中的工作" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing running"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前没有运行中的任务"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前沒有執行中的工作"
+          }
+        }
       }
     },
     "activity.idle.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Launch a game or install one from the Library." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从游戏库启动或安装游戏。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從遊戲庫啟動或安裝遊戲。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch a game or install one from the Library."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从游戏库启动或安装游戏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從遊戲庫啟動或安裝遊戲。"
+          }
+        }
       }
     },
     "activity.failed.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Last launch failed" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "上次启动失败" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "上次啟動失敗" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last launch failed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次启动失败"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次啟動失敗"
+          }
+        }
       }
     },
     "activity.running": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Running now" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在运行" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在執行" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running now"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在运行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在執行"
+          }
+        }
       }
     },
     "activity.running.empty": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No bottles have running processes." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有正在运行的瓶子。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有正在執行的瓶子。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No bottles have running processes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有正在运行的瓶子。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有正在執行的瓶子。"
+          }
+        }
       }
     },
     "activity.running.count %lld": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "%lld processes" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "%lld 个进程" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "%lld 個程序" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld processes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个进程"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個程序"
+          }
+        }
       }
     },
     "activity.openBottle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open bottle" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开瓶子" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開啟瓶子" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open bottle"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开瓶子"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟瓶子"
+          }
+        }
       }
     },
     "bottle.tabs": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Switch section" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换分区" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換分區" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch section"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换分区"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換分區"
+          }
+        }
       }
     },
     "bottle.tab.overview": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Overview" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "概览" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "概覽" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overview"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "概览"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "概覽"
+          }
+        }
       }
     },
     "bottle.tab.games": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Games" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Games"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遊戲"
+          }
+        }
       }
     },
     "bottle.tab.settings": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Settings" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "设置" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "設定" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
       }
     },
     "bottle.tab.activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活動"
+          }
+        }
       }
     },
     "bottle.continue.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Continue playing" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "繼續遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue playing"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繼續遊戲"
+          }
+        }
       }
     },
     "bottle.continue.play": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Play" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "开始游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開始遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始遊戲"
+          }
+        }
       }
     },
     "bottle.continue.playSelected %@": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Play %@" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启动 %@" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟動 %@" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟動 %@"
+          }
+        }
       }
     },
     "bottle.section.allGames": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "All games" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全部游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全部遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All games"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部遊戲"
+          }
+        }
       }
     },
     "bottle.empty.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No games yet" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "还没有游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "還沒有遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No games yet"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還沒有遊戲"
+          }
+        }
       }
     },
     "bottle.empty.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Install a .exe or add a game from the Library." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装 .exe，或从游戏库添加游戏。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝 .exe，或從遊戲庫新增遊戲。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install a .exe or add a game from the Library."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装 .exe，或从游戏库添加游戏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝 .exe，或從遊戲庫新增遊戲。"
+          }
+        }
       }
     },
     "bottle.empty.action": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Install a game" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install a game"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝遊戲"
+          }
+        }
       }
     },
     "bottle.more": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "More" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "更多" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "更多" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
+          }
+        }
       }
     },
     "bottle.forceStop.confirm.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Force stop this bottle?" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "强制停止这个瓶子？" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "強制停止這個瓶子？" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Force stop this bottle?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强制停止这个瓶子？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強制停止這個瓶子？"
+          }
+        }
       }
     },
     "bottle.forceStop.confirm.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Running games will be terminated immediately." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在运行的游戏会立即终止。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在執行的遊戲會立即終止。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running games will be terminated immediately."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在运行的游戏会立即终止。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在執行的遊戲會立即終止。"
+          }
+        }
       }
     },
     "bottle.forceStop.confirm.action": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Force stop" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "强制停止" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "強制停止" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Force stop"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "强制停止"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強制停止"
+          }
+        }
       }
     },
     "bottle.activity.processes": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Processes" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "进程" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "程序" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "进程"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序"
+          }
+        }
       }
     },
     "bottle.activity.logs": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Logs" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日志" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日誌" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Logs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日誌"
+          }
+        }
       }
     },
     "bottle.activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Activity" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "活动" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "活動" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活動"
+          }
+        }
       }
     },
     "library.installExe": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Install a .exe…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "安装 .exe…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "安裝 .exe…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install a .exe…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装 .exe…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝 .exe…"
+          }
+        }
       }
     },
     "library.installExe.panel": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Choose a Windows installer or executable." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择 Windows 安装程序或可执行文件。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇 Windows 安裝程式或執行檔。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Windows installer or executable."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 Windows 安装程序或可执行文件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇 Windows 安裝程式或執行檔。"
+          }
+        }
       }
     },
     "library.installExe.prompt": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Choose" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇"
+          }
+        }
       }
     },
     "alert.cli.installed.message %@": {
@@ -8058,30 +8658,90 @@
     },
     "config.title.app": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "MacBottle" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "MacBottle" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "MacBottle" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MacBottle"
+          }
+        }
       }
     },
     "config.appSettings": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Global settings" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全局设置" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "全域設定" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Global settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全局设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全域設定"
+          }
+        }
       }
     },
     "settings.open": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open Settings" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "打开设置" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開啟設定" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟設定"
+          }
+        }
       }
     },
     "config.title.tools": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Windows tools" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "Windows 工具" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "Windows 工具" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows tools"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows 工具"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Windows 工具"
+          }
+        }
       }
     },
     "config.title.wine": {
@@ -9174,37 +9834,112 @@
     },
     "compatibility.bronze": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Bronze" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "青铜" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "青銅" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bronze"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青铜"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "青銅"
+          }
+        }
       }
     },
     "compatibility.broken": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Broken" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不可用" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "不可用" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Broken"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不可用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不可用"
+          }
+        }
       }
     },
     "compatibility.gold": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Gold" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "黄金" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "黃金" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gold"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黄金"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黃金"
+          }
+        }
       }
     },
     "compatibility.platinum": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Platinum" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白金" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白金" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Platinum"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白金"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白金"
+          }
+        }
       }
     },
     "compatibility.silver": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Silver" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "白银" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "白銀" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Silver"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白银"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "白銀"
+          }
+        }
       }
     },
     "create.cancel": {
@@ -11657,9 +12392,24 @@
     },
     "game.install.reusingSteam": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Reusing the shared Steam library…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在复用共享 Steam 库…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在重複使用共用 Steam 庫…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reusing the shared Steam library…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在复用共享 Steam 库…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在重複使用共用 Steam 庫…"
+          }
+        }
       }
     },
     "game.install.creatingBottle": {
@@ -13070,9 +13820,24 @@
     },
     "launch.exitCode %lld": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "The program exited with code %lld." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "程序退出，代码 %lld。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "程式結束，代碼 %lld。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The program exited with code %lld."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序退出，代码 %lld。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程式結束，代碼 %lld。"
+          }
+        }
       }
     },
     "launch.alreadyLaunching %@": {
@@ -13093,16 +13858,46 @@
     },
     "library.welcome.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Play Windows games on your Mac" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "在 Mac 上运行 Windows 游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "在 Mac 上執行 Windows 遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play Windows games on your Mac"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Mac 上运行 Windows 游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Mac 上執行 Windows 遊戲"
+          }
+        }
       }
     },
     "library.welcome.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Pick a recipe below, or install a .exe you already own. Each game gets a bottle: a self-contained Windows environment." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "从下方选择配方，或安装你已有的 .exe。每个游戏都会获得一个独立的 Windows 环境（瓶子）。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "從下方選擇配方，或安裝你已有的 .exe。每個遊戲都會獲得一個獨立的 Windows 環境（瓶子）。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pick a recipe below, or install a .exe you already own. Each game gets a bottle: a self-contained Windows environment."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从下方选择配方，或安装你已有的 .exe。每个游戏都会获得一个独立的 Windows 环境（瓶子）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從下方選擇配方，或安裝你已有的 .exe。每個遊戲都會獲得一個獨立的 Windows 環境（瓶子）。"
+          }
+        }
       }
     },
     "library.empty.message": {
@@ -20095,23 +20890,68 @@
     },
     "settings.engine.switch.confirm.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Switch Wine engine?" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换 Wine 引擎？" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換 Wine 引擎？" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch Wine engine?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换 Wine 引擎？"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換 Wine 引擎？"
+          }
+        }
       }
     },
     "settings.engine.switch.confirm.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "All running games will be closed before the switch." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换前会关闭所有正在运行的游戏。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換前會關閉所有正在執行的遊戲。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All running games will be closed before the switch."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换前会关闭所有正在运行的游戏。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換前會關閉所有正在執行的遊戲。"
+          }
+        }
       }
     },
     "settings.engine.switch.confirm.action": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Switch and close games" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "切换并关闭游戏" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "切換並關閉遊戲" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Switch and close games"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换并关闭游戏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換並關閉遊戲"
+          }
+        }
       }
     },
     "settings.engine.switched %@": {
@@ -20132,9 +20972,24 @@
     },
     "settings.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Defaults for new bottles, the active Wine engine, and updates." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "新瓶子的默认值、当前 Wine 引擎与更新设置。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "新瓶子的預設值、目前 Wine 引擎與更新設定。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defaults for new bottles, the active Wine engine, and updates."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新瓶子的默认值、当前 Wine 引擎与更新设置。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新瓶子的預設值、目前 Wine 引擎與更新設定。"
+          }
+        }
       }
     },
     "settings.general": {
@@ -21787,65 +22642,200 @@
     },
     "setup.engine.fallback.note": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open-source Wine 11.21, x86_64 (runs under Rosetta). No D3DMetal or DXVK; use it as a baseline, or import a CrossOver/GPTK build for D3D acceleration." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "开源 Wine 11.21，x86_64（经 Rosetta 运行）。不含 D3DMetal 或 DXVK；可作为基础引擎，或导入 CrossOver/GPTK 构建以获得 D3D 加速。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "開源 Wine 11.21，x86_64（經 Rosetta 執行）。不含 D3DMetal 或 DXVK；可作為基礎引擎，或匯入 CrossOver/GPTK 建置以獲得 D3D 加速。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open-source Wine 11.21, x86_64 (runs under Rosetta). No D3DMetal or DXVK; use it as a baseline, or import a CrossOver/GPTK build for D3D acceleration."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开源 Wine 11.21，x86_64（经 Rosetta 运行）。不含 D3DMetal 或 DXVK；可作为基础引擎，或导入 CrossOver/GPTK 构建以获得 D3D 加速。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開源 Wine 11.21，x86_64（經 Rosetta 執行）。不含 D3DMetal 或 DXVK；可作為基礎引擎，或匯入 CrossOver/GPTK 建置以獲得 D3D 加速。"
+          }
+        }
       }
     },
     "setup.engine.fallback": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Download open-source Wine 11.21 (225 MB)" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "下载开源 Wine 11.21（225 MB）" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "下載開源 Wine 11.21（225 MB）" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download open-source Wine 11.21 (225 MB)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载开源 Wine 11.21（225 MB）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載開源 Wine 11.21（225 MB）"
+          }
+        }
       }
     },
     "setup.engine.fallback.downloading": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Downloading open-source Wine…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在下载开源 Wine…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在下載開源 Wine…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading open-source Wine…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下载开源 Wine…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在下載開源 Wine…"
+          }
+        }
       }
     },
     "setup.engine.import": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Import Wine engine…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "导入 Wine 引擎…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "匯入 Wine 引擎…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Wine engine…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 Wine 引擎…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入 Wine 引擎…"
+          }
+        }
       }
     },
     "setup.engine.import.panel": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Choose a Wine build folder or a .tar.gz archive." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择 Wine 构建目录或 .tar.gz 压缩包。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "選擇 Wine 建置目錄或 .tar.gz 壓縮檔。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a Wine build folder or a .tar.gz archive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 Wine 构建目录或 .tar.gz 压缩包。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇 Wine 建置目錄或 .tar.gz 壓縮檔。"
+          }
+        }
       }
     },
     "setup.engine.import.prompt": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Import" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "导入" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "匯入" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入"
+          }
+        }
       }
     },
     "setup.engine.importing": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Importing engine…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在导入引擎…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在匯入引擎…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing engine…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入引擎…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入引擎…"
+          }
+        }
       }
     },
     "setup.engine.offline.hint": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "The archived Whisky engine feed is offline. Import a Wine build here, or build a native ARM64 engine with scripts/build-wine-arm64.sh." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "上游 Whisky 引擎下载源已离线。请在此导入 Wine 构建，或使用 scripts/build-wine-arm64.sh 构建原生 ARM64 引擎。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "上游 Whisky 引擎下載來源已離線。請在此匯入 Wine 建置，或使用 scripts/build-wine-arm64.sh 建置原生 ARM64 引擎。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The archived Whisky engine feed is offline. Import a Wine build here, or build a native ARM64 engine with scripts/build-wine-arm64.sh."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游 Whisky 引擎下载源已离线。请在此导入 Wine 构建，或使用 scripts/build-wine-arm64.sh 构建原生 ARM64 引擎。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上游 Whisky 引擎下載來源已離線。請在此匯入 Wine 建置，或使用 scripts/build-wine-arm64.sh 建置原生 ARM64 引擎。"
+          }
+        }
       }
     },
     "setup.engine.reuseLegacy": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Use existing Whisky engine" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用已有的 Whisky 引擎" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "使用既有的 Whisky 引擎" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use existing Whisky engine"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用已有的 Whisky 引擎"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用既有的 Whisky 引擎"
+          }
+        }
       }
     },
     "setup.engine.trust.accept": {
@@ -26929,37 +27919,112 @@
     },
     "winetricks.loading": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Loading Winetricks catalog…" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在加载 Winetricks 目录…" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "正在載入 Winetricks 目錄…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading Winetricks catalog…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加载 Winetricks 目录…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在載入 Winetricks 目錄…"
+          }
+        }
       }
     },
     "winetricks.category": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Category" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "分类" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "分類" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分类"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分類"
+          }
+        }
       }
     },
     "winetricks.search": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Search verbs" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "搜索组件" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "搜尋元件" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search verbs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索组件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋元件"
+          }
+        }
       }
     },
     "winetricks.empty.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No matching verbs" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有匹配的组件" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有符合的元件" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No matching verbs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的组件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有符合的元件"
+          }
+        }
       }
     },
     "winetricks.empty.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Try another category or search term." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "试试其他分类或关键词。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "試試其他分類或關鍵字。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try another category or search term."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "试试其他分类或关键词。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試試其他分類或關鍵字。"
+          }
+        }
       }
     },
     "winetricks.title": {
@@ -27340,100 +28405,332 @@
     },
     "settings.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Settings" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "设置" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "設定" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        }
       }
     },
     "programs.view": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "View" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "视图" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檢視" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视图"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檢視"
+          }
+        }
       }
     },
     "programs.view.help": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Change layout, sorting, and visibility" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "更改布局、排序与显示" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "變更佈局、排序與顯示" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change layout, sorting, and visibility"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改布局、排序与显示"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "變更佈局、排序與顯示"
+          }
+        }
       }
     },
     "programs.layout.section": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Layout" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "布局" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "佈局" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "布局"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "佈局"
+          }
+        }
       }
     },
     "programs.sort.section": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Sort" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "排序" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "排序" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序"
+          }
+        }
       }
     },
     "logs.actions": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Log actions" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "日志操作" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "日誌操作" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log actions"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日誌操作"
+          }
+        }
       }
     },
     "process.table.empty.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No running processes" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有正在运行的进程" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "沒有正在執行的程序" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No running processes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有正在运行的进程"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有正在執行的程序"
+          }
+        }
       }
     },
     "process.table.empty.message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Launch a game and its Windows processes will appear here." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "启动游戏后，它的 Windows 进程会显示在这里。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "啟動遊戲後，它的 Windows 程序會顯示在這裡。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch a game and its Windows processes will appear here."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启动游戏后，它的 Windows 进程会显示在这里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "啟動遊戲後，它的 Windows 程序會顯示在這裡。"
+          }
+        }
       }
     },
     "settings.appearance.section": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Appearance" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "外观" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "外觀" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀"
+          }
+        }
       }
     },
     "settings.appearance": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Appearance mode" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "外观模式" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "外觀模式" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance mode"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观模式"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀模式"
+          }
+        }
       }
     },
     "settings.appearance.system": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "System" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "跟随系统" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "跟隨系統" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随系统"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟隨系統"
+          }
+        }
       }
     },
     "settings.appearance.light": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Light" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "浅色" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "淺色" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "淺色"
+          }
+        }
       }
     },
     "settings.appearance.dark": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Dark" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "深色" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "深色" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "深色"
+          }
+        }
       }
     },
     "settings.appearance.help": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "System follows the macOS appearance. Light and Dark only affect MacBottle." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "跟随系统会随 macOS 外观自动切换；浅色和深色只影响 MacBottle。" } },
-        "zh-Hant": { "stringUnit": { "state": "translated", "value": "跟隨系統會隨 macOS 外觀自動切換；淺色和深色只影響 MacBottle。" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System follows the macOS appearance. Light and Dark only affect MacBottle."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟随系统会随 macOS 外观自动切换；浅色和深色只影响 MacBottle。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟隨系統會隨 macOS 外觀自動切換；淺色和深色只影響 MacBottle。"
+          }
+        }
+      }
+    },
+    "logs.verbose.cost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbose logging adds fixme and Wine trace channels. It can slow a game down and fills run logs within seconds."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "详细日志会开启 fixme 与 Wine 跟踪通道，可能拖慢游戏，并在几秒内写满运行日志。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細日誌會開啟 fixme 與 Wine 追蹤通道，可能拖慢遊戲，並在幾秒內寫滿執行日誌。"
+          }
+        }
       }
     }
   },

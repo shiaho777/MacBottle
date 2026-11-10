@@ -188,6 +188,7 @@ struct ProgramLogsView: View {
                 Divider()
 
                 Toggle("logs.verbose", isOn: $verboseWineDebug)
+                    .help("logs.verbose.cost")
                     .onChange(of: verboseWineDebug) { _, newValue in
                         ProgramRunLogStore.verboseWineDebugEnabled = newValue
                     }

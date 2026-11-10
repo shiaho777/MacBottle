@@ -143,4 +143,19 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
         merged.merge(["WINEDEBUG": "err+all"], uniquingKeysWith: { $1 })
         XCTAssertEqual(merged["WINEDEBUG"], "err+all")
     }
+
+    func testPerformanceChannelsSkipTheExpensiveDiagnosticStreams() {
+        let channels = ProgramRunLogStore.performanceWineDebugChannels
+        for expensive in ["fixme", "+server", "+sync", "+relay", "+loaddll", "+module"] {
+            XCTAssertFalse(
+                channels.contains(expensive),
+                "default channels must not enable \(expensive); it costs CPU per call"
+            )
+        }
+        XCTAssertTrue(channels.contains("err"))
+    }
+
+    func testVerboseChannelsRemainAvailableAsOptIn() {
+        XCTAssertTrue(ProgramRunLogStore.verboseWineDebugChannels.contains("fixme-all"))
+    }
 }
