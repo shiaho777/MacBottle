@@ -151,6 +151,7 @@ extension Bottle {
         self.programs = scannedURLs
             .map { Program(url: $0, bottle: self) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        noteProgramsScanned()
     }
 
     nonisolated private static func scannedProgramURLs(bottleURL: URL, settings: BottleSettings) -> [URL] {

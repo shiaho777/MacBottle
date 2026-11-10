@@ -63,8 +63,24 @@ public class EngineInstaller {
         }
     }
 
-    public static func shouldUpdateEngine() async -> (Bool, SemanticVersion) {
+    static let lastUpdateCheckKey = "macbottle.lastEngineUpdateCheck"
+
+    /// Checks at most once per `minimumInterval`. The manifest fetch is a
+    /// network round-trip, and the launch-time caller does not need a
+    /// fresh answer on every app start.
+    public static func shouldUpdateEngine(
+        now: Date = Date(),
+        minimumInterval: TimeInterval = UpdateCheckThrottle.engineInterval,
+        defaults: UserDefaults = .standard
+    ) async -> (Bool, SemanticVersion) {
+        let local = engineVersion() ?? SemanticVersion(0, 0, 0)
+        guard engine.isInstalled() else { return (false, local) }
+        let last = defaults.object(forKey: lastUpdateCheckKey) as? Date
+        guard UpdateCheckThrottle.shouldCheck(last: last, now: now, interval: minimumInterval) else {
+            return (false, local)
+        }
         let result = await engine.checkForUpdate()
+        defaults.set(now, forKey: lastUpdateCheckKey)
         return (result.hasUpdate, result.remoteVersion)
     }
 

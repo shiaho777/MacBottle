@@ -158,4 +158,19 @@ final class RuntimeLaunchOptimizerTests: XCTestCase {
     func testVerboseChannelsRemainAvailableAsOptIn() {
         XCTAssertTrue(ProgramRunLogStore.verboseWineDebugChannels.contains("fixme-all"))
     }
+
+    func testUpdateCheckThrottle() {
+        let now = Date()
+        XCTAssertTrue(UpdateCheckThrottle.shouldCheck(last: nil, now: now))
+        XCTAssertFalse(
+            UpdateCheckThrottle.shouldCheck(last: now.addingTimeInterval(-60), now: now)
+        )
+        XCTAssertTrue(
+            UpdateCheckThrottle.shouldCheck(last: now.addingTimeInterval(-(25 * 60 * 60)), now: now)
+        )
+        XCTAssertTrue(
+            UpdateCheckThrottle.shouldCheck(last: now.addingTimeInterval(3600), now: now),
+            "a backwards clock must not lock the check out forever"
+        )
+    }
 }

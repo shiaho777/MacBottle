@@ -134,7 +134,7 @@ struct BottleView: View {
                 ProgramView(program: program)
             }
             .onAppear {
-                Task { await refreshPrograms() }
+                Task { await refreshProgramsIfNeeded() }
                 if selectedProgramURL == nil {
                     selectedProgramURL = bottle.pinnedPrograms.first?.program.url
                 }
@@ -328,6 +328,14 @@ struct BottleView: View {
     }
 
     private func refreshPrograms() async {
+        await bottle.refreshInstalledPrograms()
+    }
+
+    /// A full prefix walk is expensive on large bottles (Steam libraries
+    /// can hold thousands of files). Only rescan when the cached result
+    /// is stale; the Programs tab's Refresh button still forces one.
+    private func refreshProgramsIfNeeded() async {
+        guard bottle.needsProgramScan() else { return }
         await bottle.refreshInstalledPrograms()
     }
 
