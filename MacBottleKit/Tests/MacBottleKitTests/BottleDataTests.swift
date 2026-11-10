@@ -84,6 +84,31 @@ final class BottleDataTests: XCTestCase {
         XCTAssertEqual(bottle.settingsSnapshot.pins.count, bottle.settings.pins.count)
     }
 
+    @MainActor
+    func testPinnedProgramsMatchScannedPrograms() throws {
+        let url = workDir.appending(path: "bottle-pins")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        let exe = url.appending(path: "drive_c/Game/game.exe")
+        try FileManager.default.createDirectory(
+            at: exe.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        try Data("MZ".utf8).write(to: exe)
+
+        let bottle = Bottle(bottleUrl: url, inFlight: true)
+        bottle.settings.pins = [
+            PinnedProgram(name: "Game", url: exe),
+            PinnedProgram(name: "Gone", url: url.appending(path: "drive_c/missing.exe"))
+        ]
+        bottle.programs = [Program(url: exe, bottle: bottle)]
+
+        let pins = bottle.pinnedPrograms
+        XCTAssertEqual(pins.count, 1, "pins without a scanned program must be dropped")
+        XCTAssertEqual(pins.first?.pin.name, "Game")
+        XCTAssertEqual(pins.first?.program.url, exe)
+        XCTAssertEqual(pins.first?.id, "Game//\(exe)")
+    }
+
     func testRecoveredStoreIsUsableAndPersistsNewPaths() {
         try? Data("broken".utf8).write(to: storeURL)
         var data = BottleData(storeURL: storeURL)

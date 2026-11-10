@@ -41,12 +41,18 @@ public final class Bottle: Equatable, Hashable, Identifiable {
     public var inFlight: Bool = false
     public var isAvailable: Bool = false
 
-    /// All pins with their associated programs
+    /// All pins with their associated programs. The program list already
+    /// only contains files that exist, so this does no filesystem work:
+    /// SwiftUI reads it several times per render and each read used to
+    /// stat every pin.
     public var pinnedPrograms: [(pin: PinnedProgram, program: Program,
                                  id: String)] {
+        let programsByURL = Dictionary(
+            programs.map { ($0.url, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
         return settings.pins.compactMap { pin in
-            let exists = FileManager.default.fileExists(atPath: pin.url?.path(percentEncoded: false) ?? "")
-            guard let program = programs.first(where: { $0.url == pin.url && exists }) else { return nil }
+            guard let pinURL = pin.url, let program = programsByURL[pinURL] else { return nil }
             return (pin, program, "\(pin.name)//\(program.url)")
         }
     }
