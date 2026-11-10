@@ -500,7 +500,7 @@ struct GameDetailSheet: View {
 
             if let appID = SteamAppID.parse(fromRecipeID: recipe.id) {
                 Text(verbatim: String(
-                    format: String(localized: "game.detail.steam.appid %@"), appID
+                    format: String(localized: "game.detail.steam.appid %lld"), Int64(appID)
                 ))
                 .font(.caption.monospaced())
                 .foregroundStyle(.secondary)
