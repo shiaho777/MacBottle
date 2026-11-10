@@ -69,7 +69,15 @@ public final class BottleProcessRegistry: @unchecked Sendable {
 }
 
 public enum BottleForceStop {
-    public static func forceStop(bottle: Bottle, reason: String = "force-stop") {
+    /// `waitForWineserver` blocks until `wineserver -k` exits (or the
+    /// 1.5 s cap). UI callers leave it `false` so the main thread never
+    /// stalls; termination paths pass `true` because the process is
+    /// about to exit and the detached task would never finish.
+    public static func forceStop(
+        bottle: Bottle,
+        reason: String = "force-stop",
+        waitForWineserver: Bool = false
+    ) {
         let prefix = bottle.url.standardizedFileURL.path
         Logger.wineKit.warning("BottleForceStop \(reason) for \(prefix, privacy: .public)")
 
@@ -77,7 +85,7 @@ public enum BottleForceStop {
             hardKill(process: process)
         }
 
-        requestWineserverKill(prefix: prefix)
+        requestWineserverKill(prefix: prefix, wait: waitForWineserver)
         let hostPIDs = hostPIDs(matchingPrefix: prefix)
         for pid in hostPIDs {
             hardKill(pid: pid)
@@ -90,9 +98,16 @@ public enum BottleForceStop {
         }
     }
 
-    public static func forceStopAllBottles(bottles: [Bottle]) {
+    public static func forceStopAllBottles(
+        bottles: [Bottle],
+        waitForWineserver: Bool = false
+    ) {
         for bottle in bottles {
-            forceStop(bottle: bottle, reason: "app-terminate")
+            forceStop(
+                bottle: bottle,
+                reason: "app-terminate",
+                waitForWineserver: waitForWineserver
+            )
         }
         for process in BottleProcessRegistry.shared.allRegisteredProcesses() {
             hardKill(process: process)
@@ -102,25 +117,36 @@ public enum BottleForceStop {
         }
     }
 
-    private static func requestWineserverKill(prefix: String) {
+    private static func requestWineserverKill(prefix: String, wait: Bool) {
         let wineserver = EngineInstaller.binFolder.appending(path: "wineserver")
-        guard FileManager.default.fileExists(atPath: wineserver.path) else { return }
+        guard FileManager.default.fileExists(atPath: wineserver.path(percentEncoded: false)) else { return }
 
-        do {
-            _ = try ProcessRunner.runSync(
-                executable: wineserver,
-                arguments: ["-k"],
-                environment: [
-                    "WINEPREFIX": prefix,
-                    "WINEDEBUG": "-all",
-                    "PATH": EngineInstaller.binFolder.path
-                ],
-                timeout: .milliseconds(1500)
-            )
-        } catch {
-            Logger.wineKit.error(
-                "BottleForceStop wineserver -k failed: \(error.localizedDescription, privacy: .public)"
-            )
+        let environment = [
+            "WINEPREFIX": prefix,
+            "WINEDEBUG": "-all",
+            "PATH": EngineInstaller.binFolder.path
+        ]
+        let killWineserver: @Sendable () -> Void = {
+            do {
+                _ = try ProcessRunner.runSync(
+                    executable: wineserver,
+                    arguments: ["-k"],
+                    environment: environment,
+                    timeout: .milliseconds(1500)
+                )
+            } catch {
+                Logger.wineKit.error(
+                    "BottleForceStop wineserver -k failed: \(error.localizedDescription, privacy: .public)"
+                )
+            }
+        }
+
+        if wait {
+            killWineserver()
+        } else {
+            Task.detached(priority: .userInitiated) {
+                killWineserver()
+            }
         }
     }
 

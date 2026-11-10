@@ -87,7 +87,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             killOnTerminate = defaults.bool(forKey: "killOnTerminate")
         }
         if killOnTerminate {
-            MacBottleApp.killBottles(force: true)
+            MacBottleApp.killBottles(force: true, waitForWineserver: true)
         }
     }
 
@@ -100,7 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             killOnTerminate = defaults.bool(forKey: "killOnTerminate")
         }
         guard killOnTerminate else { return .terminateNow }
-        MacBottleApp.killBottles(force: true)
+        MacBottleApp.killBottles(force: true, waitForWineserver: true)
         return .terminateNow
     }
 

@@ -102,7 +102,9 @@ struct MacBottleApp: App {
                 .keyboardShortcut("K", modifiers: [.command, .shift])
                 Button("wine.clearShaderCaches") {
                     MacBottleApp.killBottles() // Better not make things more complicated for ourselves
-                    MacBottleApp.wipeShaderCaches()
+                    Task.detached(priority: .utility) {
+                        await MacBottleApp.wipeShaderCaches()
+                    }
                 }
             }
             CommandGroup(replacing: .help) {
@@ -123,10 +125,13 @@ struct MacBottleApp: App {
         }
     }
 
-    static func killBottles(force: Bool = true) {
+    static func killBottles(force: Bool = true, waitForWineserver: Bool = false) {
         let bottles = BottleVM.shared.bottles
         if force {
-            BottleForceStop.forceStopAllBottles(bottles: bottles)
+            BottleForceStop.forceStopAllBottles(
+                bottles: bottles,
+                waitForWineserver: waitForWineserver
+            )
             return
         }
         Task {
@@ -218,16 +223,19 @@ struct MacBottleApp: App {
         }
     }
 
-    static func wipeShaderCaches() {
-        guard let result = try? ProcessRunner.runSync(
-            executable: URL(fileURLWithPath: "/usr/bin/getconf"),
-            arguments: ["DARWIN_USER_CACHE_DIR"],
-            timeout: .seconds(10)
-        ) else {
-            return
-        }
-        let directory = result.standardOutputString.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !directory.isEmpty else { return }
+    static func wipeShaderCaches() async {
+        let directory = await Task.detached(priority: .utility) { () -> String? in
+            guard let result = try? ProcessRunner.runSync(
+                executable: URL(fileURLWithPath: "/usr/bin/getconf"),
+                arguments: ["DARWIN_USER_CACHE_DIR"],
+                timeout: .seconds(10)
+            ) else {
+                return nil
+            }
+            let path = result.standardOutputString.trimmingCharacters(in: .whitespacesAndNewlines)
+            return path.isEmpty ? nil : path
+        }.value
+        guard let directory else { return }
         let d3dmPath = URL(fileURLWithPath: directory).appending(path: "d3dm")
         try? FileManager.default.removeItem(at: d3dmPath)
     }
