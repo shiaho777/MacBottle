@@ -183,7 +183,7 @@ struct MacBottleApp: App {
             alert.messageText = String(localized: "update.app.failed.title")
             alert.informativeText = error.localizedDescription
         }
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: String(localized: "button.ok"))
         alert.runModal()
     }
 
