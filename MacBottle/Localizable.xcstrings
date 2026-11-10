@@ -28732,6 +28732,116 @@
           }
         }
       }
+    },
+    "nativeJava.section": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run natively (macOS Java)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 macOS Java 原生运行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 macOS Java 原生執行"
+          }
+        }
+      }
+    },
+    "nativeJava.description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This launcher embeds a Java archive. Running it with the Mac's own JDK skips Rosetta translation, so the game executes as native arm64 code. Game files stay in this bottle."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这个启动器内嵌了 Java 归档。用 Mac 自带/已安装的 JDK 运行可以跳过 Rosetta 转译，游戏会以原生 arm64 代码执行。游戏文件仍保留在这个容器里。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這個啟動器內嵌了 Java 封存檔。用 Mac 已安裝的 JDK 執行可以跳過 Rosetta 轉譯，遊戲會以原生 arm64 程式碼執行。遊戲檔案仍保留在這個容器裡。"
+          }
+        }
+      }
+    },
+    "nativeJava.run": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run with macOS Java"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 macOS Java 运行"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 macOS Java 執行"
+          }
+        }
+      }
+    },
+    "nativeJava.runtime %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Java %@"
+          }
+        }
+      }
+    },
+    "nativeJava.noRuntime": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No macOS JDK found. Install Temurin 17 or 21, then reopen this page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有找到 macOS JDK。请安装 Temurin 17 或 21，然后重新打开此页面。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有找到 macOS JDK。請安裝 Temurin 17 或 21，然後重新開啟此頁面。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

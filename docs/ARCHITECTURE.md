@@ -277,6 +277,29 @@ must also have ARM64 Windows builds). Launcher memory settings
 (HMCL's own heap field) override `_JAVA_OPTIONS`, because command-line
 flags beat environment options.
 
+### Native Java launch (embedded-JAR path)
+
+launch4j wrappers (HMCL and most Minecraft launchers) append a complete
+JAR to the EXE. The ZIP end-of-central-directory record is still at the
+end of the file, so `EmbeddedJarExtractor` can derive the exact start
+offset and extract the JAR without parsing PE resources.
+
+`ProgramView` detects such executables and offers **Run with macOS
+Java**:
+
+- `MacJavaRuntimeLocator` finds the newest usable JDK under
+  `JAVA_HOME` and `/Library/Java/JavaVirtualMachines`.
+- `NativeJavaLauncher` extracts the JAR to
+  `Application Support/<bundle>/NativeJava/` and starts it with that
+  JDK, logging to `~/Library/Logs/<bundle>/NativeJava/`. The process is
+  registered with `BottleProcessRegistry`, so force-stop still works.
+- The JVM then produces native arm64 JIT code: no Rosetta. In a local
+  proof of concept, HMCL 3.16.3 started from its embedded JAR on the
+  system Corretto 21, with no translation layer.
+- This is opt-in and separate from the Wine launch path. The launcher's
+  own game-directory setting decides which files it manages; the files
+  stay inside the bottle.
+
 ## Launch experience layer
 
 The `MacBottleKit/Wine/` folder hosts the pieces that make launches reliable

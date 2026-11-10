@@ -195,7 +195,8 @@ public enum ProcessRunner {
         arguments: [String] = [],
         currentDirectory: URL? = nil,
         environment: [String: String]? = nil,
-        qualityOfService: QualityOfService = .default
+        qualityOfService: QualityOfService = .default,
+        outputFile: URL? = nil
     ) throws -> Process {
         let process = Process()
         process.executableURL = executable
@@ -205,7 +206,30 @@ public enum ProcessRunner {
             process.environment = environment
         }
         process.qualityOfService = qualityOfService
-        try process.run()
+
+        var outputHandle: FileHandle?
+        if let outputFile {
+            try FileManager.default.createDirectory(
+                at: outputFile.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            FileManager.default.createFile(atPath: outputFile.path(percentEncoded: false), contents: nil)
+            let handle = try FileHandle(forWritingTo: outputFile)
+            _ = try? handle.seekToEnd()
+            process.standardOutput = handle
+            process.standardError = handle
+            outputHandle = handle
+        }
+
+        do {
+            try process.run()
+        } catch {
+            try? outputHandle?.close()
+            throw error
+        }
+        // The child holds a duplicated descriptor; the parent's copy can
+        // close immediately.
+        try? outputHandle?.close()
         return process
     }
 
@@ -230,14 +254,16 @@ public enum ProcessRunner {
         arguments: [String] = [],
         currentDirectory: URL? = nil,
         environment: [String: String]? = nil,
-        qualityOfService: QualityOfService = .default
+        qualityOfService: QualityOfService = .default,
+        outputFile: URL? = nil
     ) throws -> Process {
         try launch(
             executable: URL(fileURLWithPath: path),
             arguments: arguments,
             currentDirectory: currentDirectory,
             environment: environment,
-            qualityOfService: qualityOfService
+            qualityOfService: qualityOfService,
+            outputFile: outputFile
         )
     }
 
