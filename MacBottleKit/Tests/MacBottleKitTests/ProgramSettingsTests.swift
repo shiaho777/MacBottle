@@ -40,6 +40,28 @@ final class ProgramSettingsTests: XCTestCase {
         XCTAssertEqual(decoded.launchCommand, "winecfg")
     }
 
+    func testNativeJavaHomeRoundTrip() throws {
+        var settings = ProgramSettings()
+        settings.nativeJavaHome = "/Library/Java/JavaVirtualMachines/corretto-21.jdk/Contents/Home"
+
+        let data = try PropertyListEncoder().encode(settings)
+        let decoded = try PropertyListDecoder().decode(ProgramSettings.self, from: data)
+
+        XCTAssertEqual(
+            decoded.nativeJavaHome,
+            "/Library/Java/JavaVirtualMachines/corretto-21.jdk/Contents/Home"
+        )
+    }
+
+    func testLegacyPlistWithoutNativeJavaHomeDecodesAsNil() throws {
+        let legacy: [String: Any] = ["arguments": "-window"]
+        let data = try PropertyListSerialization.data(
+            fromPropertyList: legacy, format: .xml, options: 0
+        )
+        let decoded = try PropertyListDecoder().decode(ProgramSettings.self, from: data)
+        XCTAssertNil(decoded.nativeJavaHome)
+    }
+
     func testLegacyPlistWithoutLaunchModeDefaultsToFile() throws {
         let legacy: [String: Any] = [
             "locale": "",

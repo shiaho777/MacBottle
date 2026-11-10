@@ -16,6 +16,7 @@
 //  If not, see https://www.gnu.org/licenses/.
 //
 
+import AppKit
 import SwiftUI
 import MacBottleKit
 import UniformTypeIdentifiers
@@ -27,6 +28,7 @@ struct ProgramView: View {
     @State private var hasEmbeddedJar = false
     @State private var nativeJavaExpanded = true
     @State private var nativeJavaError: String?
+    @State private var javaRuntimes: [MacJavaRuntime] = []
     @State private var showProgramLogs = false
     @AppStorage("configSectionExapnded") private var configSectionExpanded = true
     @AppStorage("envArgsSectionExpanded") private var envArgsSectionExpanded = true
@@ -64,23 +66,33 @@ struct ProgramView: View {
                             Text("nativeJava.description")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            if let runtime = MacJavaRuntimeLocator.preferred() {
-                                HStack {
-                                    Button("nativeJava.run") {
-                                        runWithNativeJava(runtime)
-                                    }
-                                    Spacer()
-                                    Text(String(
-                                        format: String(localized: "nativeJava.runtime %@"),
-                                        runtime.version
-                                    ))
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                                }
-                            } else {
+                            if javaRuntimes.isEmpty {
                                 Text("nativeJava.noRuntime")
                                     .font(.caption)
                                     .foregroundStyle(.orange)
+                            } else {
+                                Picker("nativeJava.jdk", selection: nativeJavaSelection) {
+                                    Text("nativeJava.auto").tag("")
+                                    ForEach(javaRuntimes) { runtime in
+                                        Text(String(
+                                            format: String(localized: "nativeJava.runtime %@"),
+                                            runtime.version
+                                        ))
+                                        .tag(runtime.id)
+                                    }
+                                }
+                                HStack {
+                                    Button("nativeJava.run") {
+                                        if let runtime = selectedRuntime {
+                                            runWithNativeJava(runtime)
+                                        }
+                                    }
+                                    .disabled(selectedRuntime == nil)
+                                    Spacer()
+                                    Button("nativeJava.openLogs") {
+                                        openNativeJavaLogs()
+                                    }
+                                }
                             }
                             if let nativeJavaError {
                                 Text(verbatim: nativeJavaError)
@@ -149,10 +161,33 @@ struct ProgramView: View {
         }
         .task(id: program.url) {
             let url = program.url
-            hasEmbeddedJar = await Task.detached(priority: .utility) {
-                EmbeddedJarExtractor.hasEmbeddedJar(at: url)
+            let discovered = await Task.detached(priority: .utility) {
+                (EmbeddedJarExtractor.hasEmbeddedJar(at: url), MacJavaRuntimeLocator.runtimes())
             }.value
+            hasEmbeddedJar = discovered.0
+            javaRuntimes = discovered.1
         }
+    }
+
+    private var selectedRuntime: MacJavaRuntime? {
+        if let home = program.settings.nativeJavaHome,
+           let match = javaRuntimes.first(where: { $0.id == home }) {
+            return match
+        }
+        return javaRuntimes.first
+    }
+
+    private var nativeJavaSelection: Binding<String> {
+        Binding(
+            get: { program.settings.nativeJavaHome ?? "" },
+            set: { program.settings.nativeJavaHome = $0.isEmpty ? nil : $0 }
+        )
+    }
+
+    private func openNativeJavaLogs() {
+        let directory = NativeJavaLauncher.logDirectory()
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        NSWorkspace.shared.open(directory)
     }
 
     private func runWithNativeJava(_ runtime: MacJavaRuntime) {
