@@ -47,6 +47,13 @@ public enum JavaGameTuner {
         "java.exe", "javaw.exe", "java", "javaw"
     ]
 
+    /// launch4j wrappers load `jvm.dll` with `LoadLibrary`, so the PE
+    /// import table never names it and the executable is not `java.exe`.
+    /// HMCL and the common Minecraft launchers all fall in that hole.
+    static let launcherNameHints: [String] = [
+        "hmcl", "prismlauncher", "multimc", "pcl2", "modrinth"
+    ]
+
     static let jvmArgMarkers: Set<String> = [
         "-jar", "-xmx", "-xms", "-xss", "-xx", "nogui"
     ]
@@ -64,7 +71,9 @@ public enum JavaGameTuner {
         importProfile: PEImportProfile?,
         args: [String]
     ) -> Detection {
-        if jvmExecutableNames.contains(executable.lastPathComponent.lowercased()) {
+        let name = executable.lastPathComponent.lowercased()
+        if jvmExecutableNames.contains(name)
+            || launcherNameHints.contains(where: name.contains) {
             return .executableName
         }
         let lowered = args.map { $0.lowercased() }
@@ -108,9 +117,14 @@ public enum JavaGameTuner {
     /// Every flag here is a supported (non-experimental) option on
     /// Java 8+ — an experimental-gated flag without its unlock makes
     /// HotSpot refuse to start, which is a JVM-fatal failure class.
-    /// `G1PeriodicGC*` reclaims committed heap while the game sits in
-    /// menus/lobbies; `UseStringDeduplication` trims duplicate block
-    /// strings (the single largest heap population in modded Minecraft).
+    ///
+    /// The posture is applied to every launch (child JVMs spawned by a
+    /// launcher inherit it), so it must also parse on Java 8: the
+    /// `G1PeriodicGC*` flags only exist since JDK 12 and would abort
+    /// older runtimes. `-Xms` at 1/8 of the ceiling already keeps the
+    /// committed heap small while idle; `UseStringDeduplication` trims
+    /// duplicate block strings, the largest heap population in modded
+    /// Minecraft.
     public static func recommendedJVMTarget(heapMegabytes: Int) -> String {
         let initialHeap = max(heapMegabytes / 8, 128)
         return [
@@ -122,9 +136,7 @@ public enum JavaGameTuner {
             "-XX:ReservedCodeCacheSize=128m",
             "-XX:MaxDirectMemorySize=256M",
             "-Xss1m",
-            "-XX:+UseStringDeduplication",
-            "-XX:G1PeriodicGCInterval=15000",
-            "-XX:+G1PeriodicGCInvokesConcurrent"
+            "-XX:+UseStringDeduplication"
         ].joined(separator: " ")
     }
 

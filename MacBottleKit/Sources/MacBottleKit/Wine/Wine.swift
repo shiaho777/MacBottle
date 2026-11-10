@@ -382,24 +382,26 @@ public class Wine {
         // ---- end Game Boost ----
 
         // ---- JVM game posture: Java进程资源占用 ----
-        var jvmDetected = false
-        if JavaGameTuner.detect(
+        let javaDetection = JavaGameTuner.detect(
             executable: url,
             importProfile: engineDecision?.decision.importProfile,
             args: args
-        ) != .none {
-            jvmDetected = true
-            let heap = JavaGameTuner.recommendedHeapMegabytes(
-                physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory
+        )
+        let jvmDetected = javaDetection != .none
+        let javaHeap = JavaGameTuner.recommendedHeapMegabytes(
+            physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory
+        )
+        // Applied to every launch, not only detected JVMs: launch4j
+        // wrappers (HMCL and friends) spawn the JVM as a child, and the
+        // child inherits this variable. Non-Java programs ignore it.
+        if environment["_JAVA_OPTIONS"] == nil {
+            environment["_JAVA_OPTIONS"] = JavaGameTuner.recommendedJVMTarget(
+                heapMegabytes: javaHeap
             )
-            for (key, value) in JavaGameTuner.environmentPosture(
-                existingJavaOptions: environment["_JAVA_OPTIONS"],
-                heapMegabytes: heap
-            ) {
-                environment[key] = value
-            }
+        }
+        if jvmDetected {
             Logger.wineKit.info(
-                "JavaTuner: JVM launch detected, heap target \(heap)M"
+                "JavaTuner: JVM launch detected (\(String(describing: javaDetection))), heap target \(javaHeap)M"
             )
         }
         // ---- end JVM posture ----

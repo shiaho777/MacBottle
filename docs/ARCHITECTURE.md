@@ -242,6 +242,41 @@ The real residuals are the user-space heap implementation (heap-touch
 3.1×, wine-upstream territory since JVM TLABs bypass it) and the 4K-
 aligned-image W^X flip-storm (issue #100).
 
+### Java games and translation cost
+
+Java titles are the worst case for the x86_64 engine, and the cost is
+not in MacBottle's launch path:
+
+- The benchmark suite measured a JVM-startup-shaped workload at
+  **0.06 s native ARM64 vs 2.17 s for an x86_64 JVM under Rosetta** —
+  roughly 36×. JIT compilation, class loading, and reflection are
+  exactly the code shapes Rosetta translates most expensively.
+- Steady-state execution of ARM64 PEs under the ARM64 engine shows
+  zero measurable overhead; the residual is the x86 translation, not
+  the wrapper.
+
+`JavaGameTuner` reduces what the wrapper *can* control:
+
+- `_JAVA_OPTIONS` is applied to **every** launch and inherited by child
+  JVMs. This matters because HMCL and other Minecraft launchers are
+  launch4j wrappers: their PE import table never names `jvm.dll`, so
+  name/import detection alone misses them and the game JVM used to run
+  with the ergonomic heap (6.4 GB on a 24 GB Mac).
+- The posture caps the heap at 2–4 GB, metaspace at 256 MB, code cache
+  at 128 MB, and direct memory at 256 MB, and starts `-Xms` at 1/8 of
+  the ceiling. Every flag parses on Java 8; `G1PeriodicGC*` is
+  deliberately absent because it only exists since JDK 12 and would
+  abort older runtimes.
+- A user-provided `_JAVA_OPTIONS` is preserved verbatim.
+
+What the wrapper cannot fix: a Windows **x86_64** JVM still runs under
+Rosetta. Users who need the last order of magnitude should either run
+the game with a native macOS launcher/JVM, or run an **aarch64 Windows
+JDK** inside the ARM64 engine (the game's native libraries, e.g. LWJGL,
+must also have ARM64 Windows builds). Launcher memory settings
+(HMCL's own heap field) override `_JAVA_OPTIONS`, because command-line
+flags beat environment options.
+
 ## Launch experience layer
 
 The `MacBottleKit/Wine/` folder hosts the pieces that make launches reliable
