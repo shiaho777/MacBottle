@@ -20,94 +20,6 @@ import SwiftUI
 import AppKit
 import MacBottleKit
 
-private enum ProgramsPane: String, CaseIterable, Identifiable {
-    case library
-    case recent
-    case blocklist
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .library: return "programs.pane.library"
-        case .recent: return "programs.pane.recent"
-        case .blocklist: return "programs.pane.blocklist"
-        }
-    }
-}
-
-private enum ProgramFilter: String, CaseIterable, Identifiable {
-    case all
-    case pinned
-    case unpinned
-    case x64
-    case x86
-    case games
-    case tools
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .all: return "programs.filter.all"
-        case .pinned: return "programs.filter.pinned"
-        case .unpinned: return "programs.filter.unpinned"
-        case .x64: return "programs.filter.x64"
-        case .x86: return "programs.filter.x86"
-        case .games: return "programs.filter.games"
-        case .tools: return "programs.filter.tools"
-        }
-    }
-}
-
-private enum ProgramSort: String, CaseIterable, Identifiable {
-    case pinnedFirst
-    case recent
-    case name
-    case folder
-    case architecture
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .pinnedFirst: return "programs.sort.pinnedFirst"
-        case .recent: return "programs.sort.recent"
-        case .name: return "programs.sort.name"
-        case .folder: return "programs.sort.folder"
-        case .architecture: return "programs.sort.architecture"
-        }
-    }
-}
-
-private enum ProgramLayout: String, CaseIterable, Identifiable {
-    case flat
-    case folders
-
-    var id: String { rawValue }
-
-    var title: LocalizedStringKey {
-        switch self {
-        case .flat: return "programs.layout.flat"
-        case .folders: return "programs.layout.folders"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .flat: return "list.bullet"
-        case .folders: return "folder"
-        }
-    }
-}
-
-private struct ProgramFolderGroup: Identifiable {
-    let id: String
-    let title: String
-    let subtitle: String
-    let programs: [Program]
-}
-
 struct ProgramsView: View {
     @Bindable var bottle: Bottle
     @Binding var path: NavigationPath
@@ -126,66 +38,25 @@ struct ProgramsView: View {
     @State private var hideSystemNoise = true
     @State private var expandedFolders: Set<String> = []
 
+    private var query: ProgramListQuery {
+        ProgramListQuery(
+            filter: filter,
+            sort: sort,
+            searchText: searchText,
+            hideSystemNoise: hideSystemNoise
+        )
+    }
+
     private var filteredPrograms: [Program] {
-        var items = programs
-
-        if hideSystemNoise {
-            items = items.filter { !Self.isSystemNoise($0) }
-        }
-
-        if !searchText.isEmpty {
-            items = items.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText)
-                    || $0.url.path(percentEncoded: false).localizedCaseInsensitiveContains(searchText)
-            }
-        }
-
-        switch filter {
-        case .all: break
-        case .pinned: items = items.filter(\.pinned)
-        case .unpinned: items = items.filter { !$0.pinned }
-        case .x64: items = items.filter { $0.peFile?.architecture == .x64 }
-        case .x86: items = items.filter { $0.peFile?.architecture == .x32 }
-        case .games: items = items.filter { !Self.isInstallerOrTool($0) }
-        case .tools: items = items.filter { Self.isInstallerOrTool($0) }
-        }
-
-        return sortPrograms(items)
+        query.filtered(from: programs)
     }
 
     private var recentPrograms: [Program] {
-        var items = programs.filter { $0.settings.lastLaunchedAt != nil }
-        if hideSystemNoise {
-            items = items.filter { !Self.isSystemNoise($0) }
-        }
-        if !searchText.isEmpty {
-            items = items.filter {
-                $0.name.localizedCaseInsensitiveContains(searchText)
-                    || $0.url.path(percentEncoded: false).localizedCaseInsensitiveContains(searchText)
-            }
-        }
-        return items.sorted {
-            ($0.settings.lastLaunchedAt ?? .distantPast) > ($1.settings.lastLaunchedAt ?? .distantPast)
-        }
+        query.recent(from: programs)
     }
 
     private var folderGroups: [ProgramFolderGroup] {
-        let grouped = Dictionary(grouping: filteredPrograms) { program in
-            program.url.deletingLastPathComponent()
-        }
-        return grouped.keys.sorted {
-            $0.path(percentEncoded: false).localizedCaseInsensitiveCompare($1.path(percentEncoded: false))
-                == .orderedAscending
-        }.compactMap { folderURL in
-            guard let items = grouped[folderURL] else { return nil }
-            let sortedItems = sortPrograms(items)
-            return ProgramFolderGroup(
-                id: folderURL.path(percentEncoded: false),
-                title: folderURL.lastPathComponent,
-                subtitle: folderURL.prettyPath(bottle),
-                programs: sortedItems
-            )
-        }
+        query.folderGroups(from: filteredPrograms, bottle: bottle)
     }
 
     private var selectedProgramObjects: [Program] {
@@ -232,6 +103,9 @@ struct ProgramsView: View {
             }
         }
         .onChange(of: bottle.settings.pins) { _, _ in
+            reload(rescan: false)
+        }
+        .onChange(of: bottle.programs.map(\.id)) { _, _ in
             reload(rescan: false)
         }
         .onChange(of: bottle.settings.blocklist) { _, _ in
@@ -625,46 +499,8 @@ struct ProgramsView: View {
         }
     }
 
-    private func sortPrograms(_ items: [Program]) -> [Program] {
-        var items = items
-        switch sort {
-        case .pinnedFirst:
-            items.sort {
-                if $0.pinned != $1.pinned { return $0.pinned && !$1.pinned }
-                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-        case .recent:
-            items.sort {
-                ($0.settings.lastLaunchedAt ?? .distantPast) > ($1.settings.lastLaunchedAt ?? .distantPast)
-            }
-        case .name:
-            items.sort {
-                $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-        case .folder:
-            items.sort {
-                let left = $0.url.deletingLastPathComponent().path(percentEncoded: false)
-                let right = $1.url.deletingLastPathComponent().path(percentEncoded: false)
-                if left != right {
-                    return left.localizedCaseInsensitiveCompare(right) == .orderedAscending
-                }
-                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-        case .architecture:
-            items.sort {
-                let left = $0.peFile?.architecture.toString() ?? "zzz"
-                let right = $1.peFile?.architecture.toString() ?? "zzz"
-                if left != right { return left < right }
-                return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-            }
-        }
-        return items
-    }
-
-    private func reload(rescan: Bool) {
-        if rescan {
-            bottle.updateInstalledPrograms()
-        }
+    /// Copy the scanned list into view state.
+    private func applySnapshot() {
         programs = bottle.programs.filter {
             FileManager.default.fileExists(atPath: $0.url.path(percentEncoded: false))
         }
@@ -674,11 +510,25 @@ struct ProgramsView: View {
         selectedPrograms = selectedPrograms.intersection(Set(programs.map(\.id)))
     }
 
+    /// `rescan` awaits the prefix scan before refreshing; the previous
+    /// fire-and-forget version copied the old list and never updated
+    /// again, so "Refresh" looked like a no-op.
+    private func reload(rescan: Bool) {
+        if rescan {
+            Task { @MainActor in
+                await bottle.refreshInstalledPrograms()
+                applySnapshot()
+            }
+        } else {
+            applySnapshot()
+        }
+    }
+
     private func refreshPrograms() {
         isRefreshing = true
         Task { @MainActor in
-            bottle.updateInstalledPrograms()
-            reload(rescan: false)
+            await bottle.refreshInstalledPrograms()
+            applySnapshot()
             isRefreshing = false
         }
     }
@@ -734,29 +584,6 @@ struct ProgramsView: View {
         reload(rescan: true)
     }
 
-    private static func isInstallerOrTool(_ program: Program) -> Bool {
-        let name = program.name.lowercased()
-        let markers = [
-            "setup", "install", "uninstall", "unins", "update", "patch",
-            "redist", "vcredist", "directx", "dotnet", "launcher_uninstall",
-            "crash", "report", "helper", "service"
-        ]
-        return markers.contains { name.contains($0) }
-    }
-
-    private static func isSystemNoise(_ program: Program) -> Bool {
-        let path = program.url.path(percentEncoded: false).lowercased()
-        let name = program.name.lowercased()
-        if path.contains("/windows/") { return true }
-        if path.contains("/common files/") && (name.contains("update") || name.contains("install")) {
-            return true
-        }
-        let noiseNames = [
-            "unins000.exe", "uninstall.exe", "unitycrashhandler", "crashpad",
-            "vc_redist", "vcredist", "dxsetup.exe", "dotnetfx", "installagent"
-        ]
-        return noiseNames.contains { name.contains($0) || path.contains($0) }
-    }
 }
 
 private struct FilterChip: View {

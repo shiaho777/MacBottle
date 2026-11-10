@@ -12,6 +12,7 @@
 		ECE00000000000000000032B /* ActivityCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000032A /* ActivityCenterView.swift */; };
 		ECE00000000000000000010A /* MacBottleTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000010B /* MacBottleTheme.swift */; };
 		ECE00000000000000000011A /* ProgramLogsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000011B /* ProgramLogsView.swift */; };
+		ECE00000000000000000051A /* ProgramListQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000051B /* ProgramListQuery.swift */; };
 		ECE00000000000000000021A /* LogTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000021B /* LogTextView.swift */; };
 		6330DD962B1B0EA4007A625A /* RenameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6330DD952B1B0EA4007A625A /* RenameView.swift */; };
 		6365C4C12B1AA69D00AAE1FD /* Animation+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */; };
@@ -125,6 +126,7 @@
 /* Begin PBXFileReference section */
 		ECE00000000000000000010B /* MacBottleTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacBottleTheme.swift; sourceTree = "<group>"; };
 		ECE00000000000000000011B /* ProgramLogsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramLogsView.swift; sourceTree = "<group>"; };
+		ECE00000000000000000051B /* ProgramListQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListQuery.swift; sourceTree = "<group>"; };
 		ECE00000000000000000021B /* LogTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogTextView.swift; sourceTree = "<group>"; };
 		6330DD952B1B0EA4007A625A /* RenameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenameView.swift; sourceTree = "<group>"; };
 		6365C4C02B1AA69D00AAE1FD /* Animation+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Animation+Extensions.swift"; sourceTree = "<group>"; };
@@ -261,6 +263,7 @@
 			isa = PBXGroup;
 			children = (
 				6E355E5929D782B2002D83BE /* ProgramsView.swift */,
+				ECE00000000000000000051B /* ProgramListQuery.swift */,
 				6E355E5D29D7D85D002D83BE /* ProgramView.swift */,
 				ECE00000000000000000000B /* RecipeSection.swift */,
 				6E17B6482AF4118F00831173 /* EnvironmentArgView.swift */,
@@ -649,6 +652,7 @@
 				67D278512BC5907E006F9A1E /* ActionView.swift in Sources */,
 				6EF557982A410599001A4F09 /* SetupView.swift in Sources */,
 				6E355E5A29D782B2002D83BE /* ProgramsView.swift in Sources */,
+				ECE00000000000000000051A /* ProgramListQuery.swift in Sources */,
 				ECE00000000000000000031B /* SidebarSelection.swift in Sources */,
 				ECE00000000000000000032B /* ActivityCenterView.swift in Sources */,
 				DB696FC82AFAE5DA0037EB2F /* PinCreationView.swift in Sources */,
