@@ -24,6 +24,9 @@ struct ProgramView: View {
     @Bindable var program: Program
     @State private var launchCoordinator = ProgramLaunchCoordinator.shared
     @State private var cachedIconImage: Image?
+    @State private var hasEmbeddedJar = false
+    @State private var nativeJavaExpanded = true
+    @State private var nativeJavaError: String?
     @State private var showProgramLogs = false
     @AppStorage("configSectionExapnded") private var configSectionExpanded = true
     @AppStorage("envArgsSectionExpanded") private var envArgsSectionExpanded = true
@@ -54,6 +57,36 @@ struct ProgramView: View {
                                 .textFieldStyle(.roundedBorder)
                                 .font(.system(.body, design: .monospaced))
                                 .labelsHidden()
+                        }
+                    }
+                    if hasEmbeddedJar {
+                        Section("nativeJava.section", isExpanded: $nativeJavaExpanded) {
+                            Text("nativeJava.description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if let runtime = MacJavaRuntimeLocator.preferred() {
+                                HStack {
+                                    Button("nativeJava.run") {
+                                        runWithNativeJava(runtime)
+                                    }
+                                    Spacer()
+                                    Text(String(
+                                        format: String(localized: "nativeJava.runtime %@"),
+                                        runtime.version
+                                    ))
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text("nativeJava.noRuntime")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                            }
+                            if let nativeJavaError {
+                                Text(verbatim: nativeJavaError)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
                         }
                     }
                     RecipeSection(program: program, isExpanded: $recipeSectionExpanded)
@@ -113,6 +146,27 @@ struct ProgramView: View {
             if let fetchedImage = program.peFile?.bestIcon() {
                 cachedIconImage = Image(nsImage: fetchedImage)
             }
+        }
+        .task(id: program.url) {
+            let url = program.url
+            hasEmbeddedJar = await Task.detached(priority: .utility) {
+                EmbeddedJarExtractor.hasEmbeddedJar(at: url)
+            }.value
+        }
+    }
+
+    private func runWithNativeJava(_ runtime: MacJavaRuntime) {
+        do {
+            let jar = try NativeJavaLauncher.prepareJar(from: program.url)
+            let launch = try NativeJavaLauncher.launch(
+                jar: jar,
+                runtime: runtime,
+                workingDirectory: program.url.deletingLastPathComponent()
+            )
+            BottleProcessRegistry.shared.register(launch.process, bottle: program.bottle)
+            nativeJavaError = nil
+        } catch {
+            nativeJavaError = error.localizedDescription
         }
     }
 
