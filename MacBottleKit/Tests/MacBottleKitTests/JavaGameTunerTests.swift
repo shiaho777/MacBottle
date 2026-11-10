@@ -85,12 +85,26 @@ final class JavaGameTunerTests: XCTestCase {
         XCTAssertTrue(target.contains("-XX:ReservedCodeCacheSize=128m"))
         XCTAssertTrue(target.contains("-XX:MaxMetaspaceSize=256m"))
         XCTAssertTrue(target.contains("-XX:MaxDirectMemorySize=256M"))
-        // Idle reclamation shrinks committed heap back down.
-        XCTAssertTrue(target.contains("-XX:G1PeriodicGCInterval=15000"))
+        // The posture is inherited by child JVMs, so it must parse on
+        // Java 8 too. G1PeriodicGC* only exists since JDK 12 and would
+        // abort an older runtime with an unrecognized-option error.
+        XCTAssertFalse(target.contains("G1PeriodicGC"))
         // Boolean flags must use the +/- form or the JVM refuses to start.
-        XCTAssertTrue(target.contains("-XX:+G1PeriodicGCInvokesConcurrent"))
-        // Boolean flags must use the +/- form or the JVM refuses to start.
-        XCTAssertTrue(target.contains("-XX:+G1PeriodicGCInvokesConcurrent"))
+        XCTAssertTrue(target.contains("-XX:+UseG1GC"))
+        XCTAssertTrue(target.contains("-XX:+UseStringDeduplication"))
+    }
+
+    func testDetectsLaunch4jLauncherWrappers() {
+        let url = URL(fileURLWithPath: "/bottle/drive_c/minecraft/HMCL-3.16.3.exe")
+        XCTAssertEqual(
+            JavaGameTuner.detect(executable: url, importProfile: nil, args: []),
+            .executableName
+        )
+        let prism = URL(fileURLWithPath: "/bottle/drive_c/PrismLauncher.exe")
+        XCTAssertEqual(
+            JavaGameTuner.detect(executable: prism, importProfile: nil, args: []),
+            .executableName
+        )
     }
 
     func testUserJavaOptionsArePreservedVerbatim() {
