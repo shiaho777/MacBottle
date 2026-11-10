@@ -79,11 +79,15 @@ public struct ProgramSettings: Codable, Sendable {
     public var launchMode: LaunchMode = .file
     public var launchCommand: String = ""
 
+    /// Absolute `JAVA_HOME` chosen for the native Java launch path. Empty
+    /// means "use the newest installed JDK".
+    public var nativeJavaHome: String?
+
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case locale, environment, arguments, recipeID, lastLaunchedAt
-        case launchMode, launchCommand
+        case launchMode, launchCommand, nativeJavaHome
     }
 
     public init(from decoder: Decoder) throws {
@@ -95,6 +99,7 @@ public struct ProgramSettings: Codable, Sendable {
         self.lastLaunchedAt = try container.decodeIfPresent(Date.self, forKey: .lastLaunchedAt)
         self.launchMode = try container.decodeIfPresent(LaunchMode.self, forKey: .launchMode) ?? .file
         self.launchCommand = try container.decodeIfPresent(String.self, forKey: .launchCommand) ?? ""
+        self.nativeJavaHome = try container.decodeIfPresent(String.self, forKey: .nativeJavaHome)
     }
 
     static func decode(from settingsURL: URL) throws -> ProgramSettings {
