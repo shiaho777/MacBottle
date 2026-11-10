@@ -41,6 +41,20 @@ public final class Bottle: Equatable, Hashable, Identifiable {
     public var inFlight: Bool = false
     public var isAvailable: Bool = false
 
+    /// When the installed-program scan last completed. Navigating back
+    /// into a bottle reuses the scan instead of walking the whole prefix
+    /// again; the Refresh button still forces a new one.
+    public private(set) var programsScannedAt: Date?
+
+    public func noteProgramsScanned(at date: Date = Date()) {
+        programsScannedAt = date
+    }
+
+    public func needsProgramScan(maxAge: TimeInterval = 300) -> Bool {
+        guard let programsScannedAt else { return true }
+        return Date().timeIntervalSince(programsScannedAt) > maxAge
+    }
+
     /// All pins with their associated programs. The program list already
     /// only contains files that exist, so this does no filesystem work:
     /// SwiftUI reads it several times per render and each read used to

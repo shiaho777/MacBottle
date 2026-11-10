@@ -109,6 +109,21 @@ final class BottleDataTests: XCTestCase {
         XCTAssertEqual(pins.first?.id, "Game//\(exe)")
     }
 
+    @MainActor
+    func testProgramScanCacheExpires() {
+        let url = workDir.appending(path: "bottle-scan")
+        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        let bottle = Bottle(bottleUrl: url, inFlight: true)
+
+        XCTAssertTrue(bottle.needsProgramScan(), "a bottle that was never scanned needs one")
+
+        bottle.noteProgramsScanned(at: Date().addingTimeInterval(-30))
+        XCTAssertFalse(bottle.needsProgramScan())
+
+        bottle.noteProgramsScanned(at: Date().addingTimeInterval(-600))
+        XCTAssertTrue(bottle.needsProgramScan())
+    }
+
     func testRecoveredStoreIsUsableAndPersistsNewPaths() {
         try? Data("broken".utf8).write(to: storeURL)
         var data = BottleData(storeURL: storeURL)
