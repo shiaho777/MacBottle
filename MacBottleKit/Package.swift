@@ -1,7 +1,7 @@
 // swift-tools-version: 5.9
 //
-//  PortableExecutable.swift
-//  WhiskyKit
+//  Package.swift
+//  MacBottleKit
 //
 //  This file is part of Whisky.
 //

@@ -1,6 +1,6 @@
 //
 //  EngineDownloadView.swift
-//  Whisky
+//  MacBottle
 //
 //  This file is part of Whisky.
 //
@@ -93,6 +93,32 @@ struct EngineDownloadView: View {
         importError = nil
 
         Task {
+            if let package = await EnginePackageCatalog.package(
+                engineID: WineEngineCatalog.gcenxIdentifier
+            ) {
+                do {
+                    let engine = try await EnginePackageInstaller.install(package) { progress in
+                        Task { @MainActor in
+                            fallbackProgress = progress.fraction
+                        }
+                    }
+                    _ = try WineEngineRegistry.shared.select(
+                        identifier: engine.identifier,
+                        installIfNeeded: false
+                    )
+                    await MainActor.run {
+                        ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
+                        showSetup = false
+                    }
+                } catch {
+                    await MainActor.run {
+                        importError = error.localizedDescription
+                        downloadingFallback = false
+                    }
+                }
+                return
+            }
+
             let release = await EngineFallbackCatalog.preferredFallback()
             let destination = FileManager.default.temporaryDirectory
                 .appending(path: "MacBottle-\(release.engineID)-\(UUID().uuidString).tar.xz")

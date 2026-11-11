@@ -45,9 +45,10 @@ numeric parts (`v1.2.3`, `1.2`). Anything after `-` or `+` is ignored
 for comparison; only GitHub's prerelease flag excludes a release. Keep
 `MARKETING_VERSION` in the Xcode project in step with the tag, otherwise
 the comparison is meaningless. An update is reported only when the
-release is strictly newer; `MARKETING_VERSION` is still Whisky's `2.3.5`,
-so the first tag must be higher than that (or lower `MARKETING_VERSION`
-first).
+release is strictly newer. `MARKETING_VERSION` was lowered from the
+inherited Whisky `2.3.5` to `0.7.0` before the first public release, so
+`v0.7.0` is both the project version and the first tag; no earlier
+release exists that could compare against the old number.
 
 ## Versioning
 

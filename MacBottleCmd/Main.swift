@@ -1,6 +1,6 @@
 //
 //  Main.swift
-//  WhiskyCmd
+//  MacBottleCmd
 //
 //  This file is part of Whisky.
 //

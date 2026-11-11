@@ -156,16 +156,32 @@ saved selection restored afterwards.
 `WineEngineRegistry.shared.current`, so every existing call site keeps
 working. New code should call the registry directly.
 
+`EnginePackageCatalog` is the manifest-driven layer above the protocol.
+It reads signed `engine-manifest.json` entries, picks the newest
+compatible release per engine (native arm64 wins ties, x86_64 stays
+visible through Rosetta), and materializes each as a `LocalPathEngine`
+in `Engines/<engine_id>/`. `EnginePackageInstaller` downloads and
+verifies the archive, then dispatches on the manifest's
+`install_layout`. The catalog is metadata-first: adding an engine is a
+signed manifest entry plus an archive, not a new Swift subclass.
+
 ### Renderer routing
 
-`RecipeRenderer` has four values and they map to four different stacks:
+`RecipeRenderer` has six values and they map to six different stacks:
 
 | Recipe value | Path |
 | --- | --- |
 | `d3dmetal` | D3D11/12 → Apple D3DMetal → Metal (closed source, local GPTK) |
 | `dxvk` | D3D9/10/11 → DXVK → Vulkan → MoltenVK → Metal |
+| `dxmt` | D3D11 → DXMT → Metal directly (optional `DXMT/` payload) |
+| `vkd3d` | D3D12 → vkd3d-proton → Vulkan → MoltenVK → Metal (optional `VKD3D/` payload) |
 | `moltenvk` | the game's own Vulkan renderer → `winevulkan` → MoltenVK → Metal |
 | `wined3d` | D3D → OpenGL → Metal via Wine's built-in translator |
+
+`dxmt` and `vkd3d` are opt-in payloads: the engine must contain
+`DXMT/x64/d3d11.dll` or `VKD3D/x64/d3d12.dll` before the launch pipeline
+activates them. When the payload is absent the launch falls back to the
+engine's default renderer instead of installing a broken override.
 
 macOS has no Apple-supplied Vulkan driver, so "native Vulkan" means
 MoltenVK, not a vendor ICD. `RendererEnvironment` applies conservative

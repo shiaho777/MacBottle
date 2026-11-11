@@ -1,6 +1,6 @@
 //
 //  RecipeTests.swift
-//  WhiskyKitTests
+//  MacBottleKitTests
 //
 //  This file is part of Whisky.
 //

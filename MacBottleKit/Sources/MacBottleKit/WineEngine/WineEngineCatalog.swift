@@ -1,6 +1,6 @@
 //
 //  WineEngineCatalog.swift
-//  WhiskyKit
+//  MacBottleKit
 //
 //  This file is part of Whisky.
 //
@@ -74,6 +74,26 @@ public enum WineEngineCatalog {
             displayName: "Wine 11.21 (Gcenx, x86_64)",
             libraryRoot: gcenxLibraryRoot,
             manifestEngineID: gcenxIdentifier
+        )
+    }
+
+    /// Instantiate the on-disk slot a signed manifest entry installs
+    /// into. The identifier doubles as the `Engines/<id>` folder name, so
+    /// a manifest package and a discovered engine always agree on where
+    /// the build lives. `crossover` is the one legacy exception: its
+    /// built-in engine still owns `Libraries/`, while every newer slot
+    /// lives under `Engines/`.
+    public static func engine(
+        for release: EngineReleaseManifest.EngineRelease
+    ) -> LocalPathEngine {
+        let root = release.engineID == modernIdentifier
+            ? CrossOverEngine.default.libraryRoot
+            : enginesRoot.appending(path: release.engineID)
+        return LocalPathEngine(
+            identifier: release.engineID,
+            displayName: release.resolvedDisplayName,
+            libraryRoot: root,
+            manifestEngineID: release.engineID
         )
     }
 

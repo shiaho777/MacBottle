@@ -48,8 +48,9 @@
 - 🚧 **引擎分发自主权(v1.0 硬前置)**:已归档上游的服务器(`data.getwhisky.app`)自 2026-11 起返回 404。
   - ✅ 自有清单:`engine-manifest.json` 由 Ed25519 签名,公钥内置于 `Info.plist`(`MBEngineManifestPublicKey`),CI 每周重签,详见 [`docs/ENGINE_DISTRIBUTION.md`](docs/ENGINE_DISTRIBUTION.md)。
   - ✅ 不再向已归档上游发起引擎更新检查;安装向导提供本地导入、旧 Whisky 引擎复用、经签名清单校验的开源 Wine 回退包与 ARM64 自建脚本。
-  - 🔜 剩余:自有的 CrossOver 兼容引擎包(含 D3DMetal/DXVK 支持)经同一清单分发,并接回引擎更新检查。仍是 v0.7 的发布硬阻塞。
-- 🔜 **引擎目录清单驱动**:把硬编码的 `WineEngineCatalog` 枚举改为 manifest 描述的可插拔引擎包(manifest 描述 + 按需下载安装)。这比手写第二个引擎子类更能兑现抽象层的承诺。
+  - 🔜 剩余:自有的 CrossOver 兼容引擎包(含 D3DMetal/DXVK 支持)作为一条签名清单条目发布。客户端目录、安装器与打包工具均已就绪;剩余部分是构建/授权资产,不再阻塞 v0.7。
+- ✅ **引擎目录清单驱动**:`engine-manifest.json` 升级到 schema 2,描述引擎包的展示名、类型、能力、归档格式与安装布局;`EnginePackageCatalog` 按清单选择最新兼容版本(同版本优先 arm64,x86_64 经 Rosetta 保留),`EnginePackageInstaller` 按 `install_layout` 下载、校验并安装。新增引擎只需一条签名清单条目,不再新增 Swift 子类。
+- ✅ **引擎打包/发布工具**:`scripts/package-engine.sh` 产出归档,`scripts/add-engine-release.py` 写入清单并重签,流程见 [`docs/ENGINE_DISTRIBUTION.md`](docs/ENGINE_DISTRIBUTION.md)。
 - 🔜 第二个引擎实现(纯上游 Wine):依赖自建 Wine 构建流水线,成本高,单列评估、可推迟;GPTK2 因 Apple 授权不可再分发,维持"运行时本地检测"模式不变。
 
 ### Track B · 配方生态
@@ -62,13 +63,14 @@
 
 ### Track C · 发布工程
 
-- 🚧 **真实更新渠道**:已移除 Sparkle,改为 `AppUpdateChecker` 读取 GitHub latest-release API(跳过草稿与预发布),发现新版本时引导用户到 Release 页面下载。剩余:发布第一个 `v*` Release;`MARKETING_VERSION` 仍是继承自 Whisky 的 `2.3.5`,已安装应用只会在 Release 版本严格高于自身版本时提示更新,因此首个 tag 必须高于 `2.3.5`(或先下调 `MARKETING_VERSION`)(见 [`docs/RELEASE.md`](docs/RELEASE.md))。
+- ✅ **真实更新渠道**:已移除 Sparkle,改为 `AppUpdateChecker` 读取 GitHub latest-release API(跳过草稿与预发布),发现新版本时引导用户到 Release 页面下载。`MARKETING_VERSION` 已在首个公开 Release 前从继承的 `2.3.5` 下调为 `0.7.0`,因此 `v0.7.0` 同时是项目版本和首个 tag(见 [`docs/RELEASE.md`](docs/RELEASE.md))。
 - 🚧 **Release 工作流**:`.github/workflows/Release.yml` 已就绪,`v*` tag 触发 Release 构建,密钥存在时签名 + 公证 + staple,并上传 `MacBottle.zip` 与 SHA-256 到 GitHub Release。剩余:配置 Apple Developer 密钥并在干净的 Mac 上验证首个公证包。
 - 🔜 **v1.0 完成定义**:经过公证的正式包、可用的自动更新渠道、各兼容性档位均有已验证配方、双语文档齐备。满足后才算"正式发布"。
 
 ### Track D · 平台与品牌
 
-- 🔜 内部大改名(target 名、`WhiskyKit` → `MacBottleKit`):MIGRATION.md 计划"v0.1 末期"执行但至今未动。必须二选一:分配真实版本执行,或明确宣布永不改、并入"永不改动"清单。悬而不决只会抬高将来的改名成本。
+- ✅ 内部大改名已完成:target 名、`WhiskyKit` → `MacBottleKit`、CLI、扩展 bundle、全部 Swift 源文件头。`scripts/check-branding.sh` 已接入 SwiftLint CI,防止回归。
+- ✅ 兼容面已冻结并写入 [MIGRATION.md](MIGRATION.md):GPL 许可正文、`WhiskyWineVersion.plist`、`com.isaacmarovitz.Whisky` 恢复路径、`checkWhiskyWineUpdates` 键、上游署名。这些不再视为"未完成改名"。
 - 🔜 macOS 15+ 新 API 适配(持续)
 - 🔜 中英双语 UI 文案与文档补齐(持续)
 
@@ -78,8 +80,8 @@
 | -- | -- | -- |
 | v0.1 – v0.4 | ✅ 已完成 | 品牌切换 + 可编译 .app;Recipe 系统;CI schema-lint + 文档 + Recipe UI;引擎抽象层 |
 | v0.5 | ✅ 已完成 | 远程配方同步(三个子阶段:数据层 → 同步引擎 → diff UI) |
-| v0.6 | 🚧 收尾 | 用户可切换引擎已完成;第二引擎移入 Track A 单列评估,不再阻塞本检查点 |
-| v0.7 | 计划 | 引擎分发自主权(Track A)+ 发布工程启动:真实更新源、Release 工作流(Track C) |
+| v0.6 | ✅ 已完成 | 用户可切换引擎;第二引擎移入 Track A 单列评估,不再阻塞本检查点 |
+| v0.7 | ✅ 已发布 | 签名清单驱动的引擎分发(schema 2 + 目录 + 通用安装器 + 打包工具);内部改名收尾并加回归防护;首个 `v0.7.0` GitHub Release |
 | v1.0 | 目标 | 正式发布,以 Track C 的完成定义为验收标准 |
 
 v1.0 之后:**只合 PR,只做引擎层维护。** 配方由社区贡献者自行添加。

@@ -38,7 +38,7 @@
 - **不需要命令行。** 不用手搓 wine prefix,不用背 `WINEPREFIX`。MacBottle 用原生 macOS 窗口完成每一个瓶子的创建、配置与启动。
 - **免费,且开源。** MacBottle 所做的一切都是 GPL-3.0、公开构建——没有授权费,没有订阅,没有锁起来的功能。
 - **每款游戏都有自己的配方。** 一份配方就是一个 JSON 文件,记录单款游戏所需的一切:环境变量、winetricks 动词、注册表调整、合适的渲染器。配方经社区验证,从共享目录同步,启动时自动应用。普通封装工具让你自己猜答案,配方直接把答案交给 MacBottle。
-- **自动选择正确的引擎。** 每次启动都会检查可执行文件(PE 导入和运行时画像),结合挂载的配方,自动选用 **D3DMetal**、**DXVK** 或 **WineD3D**,并运行对应的 Wine 引擎——全程不用你操心。
+- **自动选择正确的引擎。** 每次启动都会检查可执行文件(PE 导入和运行时画像),结合挂载的配方,自动选用 **D3DMetal**、**DXVK**、**DXMT**、**vkd3d-proton**、**MoltenVK**(游戏自带的 Vulkan 渲染器)或 **WineD3D**,并运行对应的 Wine 引擎——全程不用你操心。
 - **中英文,从一开始就一起写。** 界面、配方、文档从第一行起就用两种语言编写,而不是事后补的翻译。
 
 ---
@@ -51,7 +51,7 @@
 | --- | --- |
 | **瓶子管理** | 创建、配置、重命名、删除;Pin 快捷方式;每个瓶子独立绑定引擎 |
 | **游戏配方** | 社区 JSON 配方(Steam / GOG / 通用),内置目录 + ETag 缓存远程同步,diff UI 逐条勾选 |
-| **渲染方案** | 自动选择 **D3DMetal**(Apple GPTK)、**DXVK**(异步 + HUD)或 **WineD3D**;Metal HUD/Trace;DXR 开关 |
+| **渲染方案** | 自动选择 **D3DMetal**(Apple GPTK)、**DXVK**(异步 + HUD)、**DXMT**(D3D11 → Metal)、**vkd3d-proton**(D3D12 → Vulkan)、**MoltenVK** 或 **WineD3D**;Metal HUD/Trace;DXR 开关 |
 | **Wine 引擎层** | 目前为 CrossOver 系引擎;可插拔的 `WineEngine` 协议,为将来接入纯上游 Wine 留好位置 |
 | **启动体验** | wineserver 预热、启动状态反馈、每个程序的运行日志、冻结运行时强制停止、陈旧状态对账 |
 | **瓶子内部** | Winetricks 分类动词表、环境变量、Windows 版本与增强同步(msync/esync)、AVX 开关 |
@@ -103,6 +103,8 @@ MacBottle 的开关比表面看起来多得多。下面按使用场景分组,全
 
 - **`WineEngine` 协议** —— 「这个安装用哪个 Wine」的全部逻辑收敛到一个接口后面;将来换引擎是一行注册表改动,而不是全仓库查找替换。
 - **`CrossOverEngine`** —— 第一个具体实现,承接 Whisky/CrossOver 系的打包方式。
+- **签名清单目录** —— `engine-manifest.json` 由 Ed25519 签名,现在描述引擎包的展示名、能力、归档格式与安装布局。目录为每个引擎选择最新兼容版本,同版本优先原生 arm64,x86_64 经 Rosetta 保留。新增引擎只需一条签名清单条目。
+- **清单驱动安装器** —— 校验摘要后按清单的 `install_layout`(`wine-root` 或 `gcenx-app-bundle`)安装;设置页会列出所有尚未安装的签名引擎包。
 - **`LaunchEnginePolicy`** —— 每次启动的决策引擎:扫描 PE 导入 + 运行时画像,尊重瓶子固定与配方的 `renderer`,D3DMetal 未安装时优雅降级。
 - **临时切换引擎** —— 自动选择只对本次启动生效,你保存的选择事后会恢复。
 
@@ -154,9 +156,11 @@ MacBottle/                  macOS App 目标 —— SwiftUI 视图、瓶子/程�
 MacBottleKit/               核心库(SwiftPM)—— 模型、Wine 调用、配方
   ├─ Recipe/             配方类型、加载器、应用器、远程同步、diff
   ├─ Recipes/            随包发布的配方 JSON
-  ├─ WineEngine/         引擎协议、CrossOverEngine、目录、启动策略
-  ├─ MacBottle/             Bottle / Program / 设置模型
-  ├─ Wine/               启动协调器、运行日志、强制停止、优化器
+  ├─ WineEngine/         引擎协议、签名包目录、安装器、启动策略
+  ├─ Bottle/             Bottle / Program / 设置模型
+  ├─ Wine/               启动协调器、运行日志、强制停止、渲染器环境、优化器
+  ├─ NativeBridge/       原生 Steam 下载(steamcmd、depot、VDF)
+  ├─ NativeJava/         launch4j JAR 的 macOS JDK 启动器
   └─ PE/                 Windows PE 解析器(导入、架构、图形 API)
 MacBottleCmd/               CLI 伴生工具
 MacBottleThumbnail/         Finder 缩略图扩展(PE 文件)

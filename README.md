@@ -38,7 +38,7 @@ Running Windows games on Apple Silicon shouldn't require a command-line tutorial
 - **No terminal required.** There is no need to build wine prefixes by hand or memorize `WINEPREFIX`. MacBottle creates, configures, and launches every bottle from a native macOS window.
 - **Free and open source.** Everything MacBottle does is GPL-3.0 and built in public — no license fees, no subscriptions, no locked-in features.
 - **Recipes that know each game.** A recipe is one JSON file describing what a single game needs: environment variables, winetricks verbs, registry tweaks, and the right renderer. Community-verified, synced from a shared catalog, and applied automatically — environment on every launch, winetricks/registry once per bottle with a resumable receipt. Most wrappers leave you to guess; a recipe hands MacBottle the answer.
-- **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, **MoltenVK** (the game's own Vulkan renderer), or **WineD3D** — then runs the matching Wine engine without asking.
+- **The right engine, chosen automatically.** Every launch inspects the executable (PE imports and runtime profile) and, with any attached recipe, picks **D3DMetal**, **DXVK**, **DXMT**, **vkd3d-proton**, **MoltenVK** (the game's own Vulkan renderer), or **WineD3D** — then runs the matching Wine engine without asking.
 - **Chinese and English, written together.** The UI, recipes, and documentation are authored in both languages from the first line, not translated in afterward.
 
 ---
@@ -51,7 +51,7 @@ A quick scan of what's in the box.
 | --- | --- |
 | **Bottle management** | Create, configure, rename, and delete bottles; pins/shortcuts; per-bottle engine binding |
 | **Game recipes** | Community JSON recipes (Steam / GOG / generic), bundled catalog + remote sync with ETag cache, diff UI with per-row selection |
-| **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), **MoltenVK** for Vulkan titles, or **WineD3D**; Metal HUD/trace; DXR toggle; per-game DXVK config outside the game directory |
+| **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), **DXMT** (D3D11 → Metal), **vkd3d-proton** (D3D12 → Vulkan), **MoltenVK** for Vulkan titles, or **WineD3D**; Metal HUD/trace; DXR toggle; per-game DXVK config outside the game directory |
 | **Wine engine layer** | CrossOver-based engine today; pluggable `WineEngine` protocol so pure upstream Wine can slot in later |
 | **Launch experience** | Wineserver prewarm, launch-status feedback, per-program run logs, force-stop for frozen runtimes, stale-status reconciliation |
 | **Bottle internals** | Winetricks catalog with categorized verbs, environment variables, Windows version & enhanced-sync (msync/esync) selection, AVX toggle |
@@ -103,6 +103,8 @@ MacBottle has more switches than a casual glance suggests. The sections below gr
 
 - **`WineEngine` protocol** — everything about "which Wine build this install uses" lives behind one interface; a future engine swap is a one-line registry change, not a repo-wide search-and-replace.
 - **`CrossOverEngine`** — the first concrete engine, carrying the Whisky/CrossOver-derived packaging forward.
+- **Signed manifest catalog** — `engine-manifest.json` is Ed25519-signed and now describes engine packages (display name, capabilities, archive layout). The catalog picks the newest compatible release per engine, prefers native arm64 on ties, and keeps x86_64 visible through Rosetta. Adding an engine is a signed manifest entry, not a new Swift subclass.
+- **Manifest-driven installer** — digest-verified download, then the install layout named by the manifest (`wine-root` or `gcenx-app-bundle`). Settings lists every signed package that is not installed yet.
 - **`LaunchEnginePolicy`** — per-launch decision engine: scans PE imports + runtime profile, honors bottle pinning and recipe `renderer`, and falls back gracefully when D3DMetal isn't installed.
 - **Temporary engine switching** — auto-select swaps engines for the launch only; your saved selection is restored afterwards.
 
@@ -154,9 +156,11 @@ MacBottle/                  macOS app target — SwiftUI views, bottle/program U
 MacBottleKit/               Core library (SwiftPM) — models, Wine invocation, recipes
   ├─ Recipe/             Recipe types, loader, applier, remote sync, diff
   ├─ Recipes/            Shipped recipe JSON files
-  ├─ WineEngine/         Engine protocol, CrossOverEngine, catalog, launch policy
-  ├─ MacBottle/             Bottle / Program / settings models
-  ├─ Wine/               Launch coordinator, run logs, force-stop, optimizers
+  ├─ WineEngine/         Engine protocol, signed package catalog, installer, launch policy
+  ├─ Bottle/             Bottle / Program / settings models
+  ├─ Wine/               Launch coordinator, run logs, force-stop, renderers, optimizers
+  ├─ NativeBridge/       Native Steam download (steamcmd, depot, VDF)
+  ├─ NativeJava/         macOS JDK launcher for launch4j JARs
   └─ PE/                 Windows PE parser (imports, architecture, graphics API)
 MacBottleCmd/               CLI companion
 MacBottleThumbnail/         Finder thumbnail extension for PE files
@@ -175,8 +179,8 @@ The plan runs as four parallel tracks — **engine & distribution**, **recipe ec
 | Version | Status | Core deliverable |
 | -- | -- | -- |
 | v0.1 – v0.5 | ✅ Done | Brand switch, runnable app, recipe system, CI + docs + Recipe UI, engine abstraction, remote recipe sync |
-| v0.6 | 🚧 Wrapping up | User-switchable engines; a second engine implementation is evaluated separately on the engine track |
-| v0.7 | Planned | Self-owned engine distribution (off archived upstream infrastructure); release engineering: real update feed, signed & notarized builds |
+| v0.6 | ✅ Done | User-switchable engines; a second engine implementation is evaluated separately on the engine track |
+| v0.7 | ✅ Released | Signed, manifest-driven engine distribution; packaging/signing tooling; source rename finished and guarded; first published GitHub Release |
 | v1.0 | Goal | Formal release, gated by an explicit definition of done |
 
 The full plan — including the track breakdown and the explicit non-goals (no virtualization, no DRM/anti-cheat workarounds, no game content) — is in [`PROJECT_PLAN.md`](PROJECT_PLAN.md).

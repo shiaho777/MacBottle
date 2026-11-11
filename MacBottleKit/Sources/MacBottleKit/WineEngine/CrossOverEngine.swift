@@ -1,6 +1,6 @@
 //
 //  CrossOverEngine.swift
-//  WhiskyKit
+//  MacBottleKit
 //
 //  This file is part of Whisky.
 //

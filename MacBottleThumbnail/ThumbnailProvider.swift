@@ -1,6 +1,6 @@
 //
 //  ThumbnailProvider.swift
-//  WhiskyThumbnail
+//  MacBottleThumbnail
 //
 //  This file is part of Whisky.
 //

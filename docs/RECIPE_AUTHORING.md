@@ -44,7 +44,7 @@ reviewers can find a file by platform id without grep.
 | `icon_url` | string | no | HTTPS URL to a cover image (JPEG/PNG). Steam header art is `https://cdn.cloudflare.steamstatic.com/steam/apps/<AppID>/header.jpg`. ~460×215 or square, under 200 KB recommended. |
 | `dx_version` | enum | yes | `d3d9` \| `d3d10` \| `d3d11` \| `d3d12` \| `vulkan` \| `opengl`. |
 | `min_macos` | string | yes | Semantic version, e.g. `14.0`. |
-| `renderer` | enum | yes | `d3dmetal` (D3D11/12 on Apple Silicon) \| `dxvk` (D3D9/10/11 → Vulkan → MoltenVK) \| `wined3d` \| `moltenvk` (the game's own Vulkan renderer → MoltenVK; DXVK is not in the path). |
+| `renderer` | enum | yes | `d3dmetal` (D3D11/12 on Apple Silicon) \| `dxvk` (D3D9/10/11 → Vulkan → MoltenVK) \| `wined3d` \| `moltenvk` (the game's own Vulkan renderer → MoltenVK; DXVK is not in the path) \| `dxmt` (D3D11 → Metal directly, optional DXMT payload) \| `vkd3d` (D3D12 → Vulkan via vkd3d-proton, optional VKD3D payload). |
 | `installer` | enum | no | How the game's content is obtained, driving the install UI: `steam` \| `gog` \| `custom`. Omit for configuration-only recipes. |
 | `main_exe` | string | no | Relative path inside `drive_c` to the main executable after install, e.g. `Program Files/Game/game.exe`. Used as a hint in the "pick main .exe" dialog; nil means "ask the user". |
 | `winetricks` | string[] | no | Verbs to install, lowercase. Example: `["vcrun2022", "dotnet48"]`. |
@@ -78,15 +78,19 @@ CI rejects contradictory combinations:
 
 | `dx_version` | Allowed `renderer` |
 | --- | --- |
-| `d3d12` | `d3dmetal` |
-| `d3d11` | `d3dmetal`, `dxvk`, `wined3d` |
+| `d3d12` | `d3dmetal`, `vkd3d` |
+| `d3d11` | `d3dmetal`, `dxmt`, `dxvk`, `wined3d` |
 | `d3d10` | `dxvk`, `wined3d` |
 | `d3d9`, `opengl` | `dxvk`, `wined3d` |
 | `vulkan` | `moltenvk` |
 
 macOS has no Apple-supplied Vulkan driver; `moltenvk` means
 `winevulkan` → MoltenVK → Metal. DXVK is a D3D translator and is never
-inserted into a Vulkan title's path.
+inserted into a Vulkan title's path. `dxmt` and `vkd3d` are optional
+payloads dropped into the engine's `DXMT/` and `VKD3D/` folders. A recipe
+that selects them is still schema-valid, but the launch pipeline only
+activates the payload when the selected engine actually ships it;
+otherwise it falls back to the engine's default renderer.
 
 ### Compatibility tiers
 

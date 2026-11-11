@@ -1,6 +1,6 @@
 //
 //  EngineReleaseManifest.swift
-//  WhiskyKit
+//  MacBottleKit
 //
 //  This file is part of Whisky.
 //
@@ -21,7 +21,27 @@ import Foundation
 import os.log
 import SemanticVersion
 
+public enum EnginePackageKind: String, Codable, Sendable, CaseIterable {
+    /// Upstream or community Wine build.
+    case wine
+    /// CrossOver-derived Wine packaging.
+    case crossover
+    /// Apple Game Porting Toolkit runtime.
+    case gptk
+    /// Any other engine bundle.
+    case custom
+}
+
+public enum EngineInstallLayout: String, Codable, Sendable, CaseIterable {
+    /// Archive root contains `Wine/bin/wine`.
+    case wineRoot = "wine-root"
+    /// Gcenx-style app bundle: `Wine Devel.app/Contents/Resources/wine`.
+    case gcenxAppBundle = "gcenx-app-bundle"
+}
+
 public struct EngineReleaseManifest: Codable, Sendable, Equatable {
+    public static let supportedSchemas = [1, 2]
+
     public let schema: Int
     public let generatedAt: String
     public let releases: [EngineRelease]
@@ -36,6 +56,17 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
         public let minMacOS: String
         public let arch: String
 
+        // Schema 2 package metadata. Optional so schema 1 manifests keep
+        // decoding and verifying exactly as before.
+        public let displayName: String?
+        public let kind: EnginePackageKind?
+        public let capabilities: [String]
+        public let packageFormat: String?
+        public let installLayout: EngineInstallLayout?
+        public let channel: String?
+        public let license: String?
+        public let notes: String?
+
         // swiftlint:disable:next nesting
         enum CodingKeys: String, CodingKey {
             case engineID = "engine_id"
@@ -45,6 +76,33 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
             case size
             case minMacOS = "min_macos"
             case arch
+            case displayName = "display_name"
+            case kind
+            case capabilities
+            case packageFormat = "package_format"
+            case installLayout = "install_layout"
+            case channel
+            case license
+            case notes
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            engineID = try container.decode(String.self, forKey: .engineID)
+            version = try container.decode(String.self, forKey: .version)
+            url = try container.decode(URL.self, forKey: .url)
+            sha256 = try container.decode(String.self, forKey: .sha256)
+            size = try container.decode(Int64.self, forKey: .size)
+            minMacOS = try container.decode(String.self, forKey: .minMacOS)
+            arch = try container.decode(String.self, forKey: .arch)
+            displayName = try container.decodeIfPresent(String.self, forKey: .displayName)
+            kind = try container.decodeIfPresent(EnginePackageKind.self, forKey: .kind)
+            capabilities = try container.decodeIfPresent([String].self, forKey: .capabilities) ?? []
+            packageFormat = try container.decodeIfPresent(String.self, forKey: .packageFormat)
+            installLayout = try container.decodeIfPresent(EngineInstallLayout.self, forKey: .installLayout)
+            channel = try container.decodeIfPresent(String.self, forKey: .channel)
+            license = try container.decodeIfPresent(String.self, forKey: .license)
+            notes = try container.decodeIfPresent(String.self, forKey: .notes)
         }
 
         public init(
@@ -54,7 +112,15 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
             sha256: String,
             size: Int64,
             minMacOS: String,
-            arch: String
+            arch: String,
+            displayName: String? = nil,
+            kind: EnginePackageKind? = nil,
+            capabilities: [String] = [],
+            packageFormat: String? = nil,
+            installLayout: EngineInstallLayout? = nil,
+            channel: String? = nil,
+            license: String? = nil,
+            notes: String? = nil
         ) {
             self.engineID = engineID
             self.version = version
@@ -63,6 +129,14 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
             self.size = size
             self.minMacOS = minMacOS
             self.arch = arch
+            self.displayName = displayName
+            self.kind = kind
+            self.capabilities = capabilities
+            self.packageFormat = packageFormat
+            self.installLayout = installLayout
+            self.channel = channel
+            self.license = license
+            self.notes = notes
         }
 
         public var semanticVersion: SemanticVersion? {
@@ -79,6 +153,22 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
                 numbers.append(0)
             }
             return SemanticVersion(numbers[0], numbers[1], numbers[2])
+        }
+
+        public var resolvedDisplayName: String {
+            displayName ?? engineID
+        }
+
+        public var resolvedKind: EnginePackageKind {
+            kind ?? .custom
+        }
+
+        public var resolvedInstallLayout: EngineInstallLayout {
+            installLayout ?? .wineRoot
+        }
+
+        public func supports(_ capability: String) -> Bool {
+            capabilities.contains { $0.caseInsensitiveCompare(capability) == .orderedSame }
         }
     }
 
@@ -104,13 +194,17 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
     /// Deterministic bytes covered by the signature. Kept deliberately
     /// simple (one line per release, fixed field order) so the signing
     /// script and the client cannot disagree about JSON key ordering.
+    ///
+    /// Schema 1 stops after `arch`. Schema 2 appends the package metadata
+    /// that drives the install UI and the generic installer, so a manifest
+    /// cannot advertise one engine and deliver another.
     public var signingPayload: String {
         var lines = ["\(schema)", generatedAt]
         let sorted = releases.sorted {
             ($0.engineID, $0.arch) < ($1.engineID, $1.arch)
         }
         for release in sorted {
-            lines.append([
+            var fields = [
                 release.engineID,
                 release.version,
                 release.url.absoluteString,
@@ -118,13 +212,35 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
                 String(release.size),
                 release.minMacOS,
                 release.arch
-            ].joined(separator: "|"))
+            ]
+            if schema >= 2 {
+                fields.append(contentsOf: [
+                    Self.signingField(release.displayName),
+                    release.resolvedKind.rawValue,
+                    release.capabilities.sorted().joined(separator: ","),
+                    Self.signingField(release.packageFormat),
+                    release.resolvedInstallLayout.rawValue,
+                    Self.signingField(release.channel),
+                    Self.signingField(release.license),
+                    Self.signingField(release.notes)
+                ])
+            }
+            lines.append(fields.joined(separator: "|"))
         }
         return lines.joined(separator: "\n")
     }
 
+    private static func signingField(_ value: String?) -> String {
+        guard let value else { return "" }
+        return value
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "|", with: "\\|")
+            .replacingOccurrences(of: "\r", with: "\\r")
+            .replacingOccurrences(of: "\n", with: "\\n")
+    }
+
     public func verify(publicKeyBase64: String) throws {
-        guard schema == 1 else {
+        guard Self.supportedSchemas.contains(schema) else {
             throw EngineManifestError.unsupportedSchema(schema)
         }
         guard let signature,
@@ -148,6 +264,44 @@ public struct EngineReleaseManifest: Codable, Sendable, Equatable {
             .filter { $0.minMacOS.isSatisfied(by: macOS) }
             .sorted { $0.version.compare($1.version, options: .numeric) == .orderedDescending }
             .first
+    }
+
+    /// The architectures this Mac can run, native first. An Apple Silicon
+    /// Mac can still run an x86_64 Wine build through Rosetta, so the
+    /// catalog must not hide those packages; a version newer than the
+    /// native one still wins.
+    public static var compatibleArchitectures: [String] {
+        #if arch(arm64)
+        ["arm64", "x86_64"]
+        #else
+        ["x86_64"]
+        #endif
+    }
+
+    /// One newest compatible release per engine. Ties on version prefer
+    /// the earlier architecture in `compatibleArchitectures`, so a native
+    /// arm64 build beats an x86_64 build of the same version.
+    public func latestReleases(
+        compatibleArchitectures: [String] = EngineReleaseManifest.compatibleArchitectures,
+        macOS: OperatingSystemVersion = ProcessInfo.processInfo.operatingSystemVersion
+    ) -> [EngineRelease] {
+        let candidates = releases.filter {
+            compatibleArchitectures.contains($0.arch) && $0.minMacOS.isSatisfied(by: macOS)
+        }
+        return Dictionary(grouping: candidates, by: \.engineID)
+            .compactMap { _, group in
+                group.max { lhs, rhs in
+                    let left = lhs.semanticVersion ?? SemanticVersion(0, 0, 0)
+                    let right = rhs.semanticVersion ?? SemanticVersion(0, 0, 0)
+                    if left != right {
+                        return left < right
+                    }
+                    let leftIndex = compatibleArchitectures.firstIndex(of: lhs.arch) ?? Int.max
+                    let rightIndex = compatibleArchitectures.firstIndex(of: rhs.arch) ?? Int.max
+                    return leftIndex > rightIndex
+                }
+            }
+            .sorted { $0.engineID < $1.engineID }
     }
 }
 
@@ -202,7 +356,9 @@ public struct EngineManifestLoader: Sendable {
     ) {
         self.url = url
         self.fetcher = fetcher ?? { url in
-            let (data, response) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            request.timeoutInterval = 15
+            let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse,
                !(200..<300).contains(http.statusCode) {
                 throw URLError(.badServerResponse)
