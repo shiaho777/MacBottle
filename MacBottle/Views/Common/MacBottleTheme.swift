@@ -150,70 +150,97 @@ struct BottleHeroHeader: View {
         bottle.settings.engineID
     }
 
-    private var pinCount: Int {
-        bottle.settings.pins.count
-    }
-
     var body: some View {
-        SurfaceCard {
-            HStack(alignment: .center, spacing: MacBottleTheme.gridSpacing) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [.accentColor.opacity(0.85), .accentColor.opacity(0.45)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+        HStack(alignment: .center, spacing: 20) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.95), Color.accentColor.opacity(0.58)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                    Image(systemName: "shippingbox.fill")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-                .frame(width: MacBottleTheme.heroIconSize, height: MacBottleTheme.heroIconSize)
-                .accessibilityHidden(true)
-
-                VStack(alignment: .leading, spacing: MacBottleTheme.tightSpacing) {
-                    Text(bottle.settings.name)
-                        .font(.title2.weight(.bold))
-                        .lineLimit(1)
-                    Button {
-                        NSWorkspace.shared.activateFileViewerSelecting([bottle.url])
-                    } label: {
-                        Label("button.showInFinder", systemImage: "folder")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .help(bottle.url.path(percentEncoded: false))
-                    HStack(spacing: 8) {
-                        StatusPill(
-                            title: MacBottleTheme.engineLabel(for: engineID),
-                            systemImage: "cpu",
-                            color: MacBottleTheme.engineColor(for: engineID)
-                        )
-                        if pinCount > 0 {
-                            StatusPill(
-                                title: "\(pinCount) \(String(localized: "bottle.pinned"))",
-                                systemImage: "pin.fill",
-                                color: .orange
-                            )
-                        }
-                        StatusPill(
-                            title: bottle.settings.windowsVersion.pretty(),
-                            systemImage: "desktopcomputer",
-                            color: .secondary
-                        )
-                        if bottle.settings.dxvk {
-                            StatusPill(title: "DXVK", systemImage: "hare.fill", color: .green)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                }
-                Spacer(minLength: 0)
+                    )
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(.white)
             }
+            .frame(width: 76, height: 76)
+            .shadow(color: Color.accentColor.opacity(0.30), radius: 14, y: 6)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(bottle.settings.name)
+                        .font(.system(.title, design: .rounded).weight(.bold))
+                        .lineLimit(1)
+                    if !bottle.isAvailable {
+                        StatusPill(
+                            title: String(localized: "bottle.unavailable.title"),
+                            systemImage: "exclamationmark.triangle.fill",
+                            color: .orange
+                        )
+                    }
+                }
+
+                Button {
+                    NSWorkspace.shared.activateFileViewerSelecting([bottle.url])
+                } label: {
+                    Label("button.showInFinder", systemImage: "folder")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help(bottle.url.path(percentEncoded: false))
+
+                HStack(spacing: 6) {
+                    StatusPill(
+                        title: MacBottleTheme.engineLabel(for: engineID),
+                        systemImage: "cpu",
+                        color: MacBottleTheme.engineColor(for: engineID)
+                    )
+                    StatusPill(
+                        title: bottle.settings.windowsVersion.pretty(),
+                        systemImage: "desktopcomputer",
+                        color: .secondary
+                    )
+                    if bottle.settings.dxvk {
+                        StatusPill(title: "DXVK", systemImage: "hare.fill", color: .green)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+            }
+
+            Spacer(minLength: 8)
+        }
+        .padding(20)
+        .background {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.16),
+                                Color.accentColor.opacity(0.035)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 150, weight: .bold))
+                    .foregroundStyle(Color.accentColor.opacity(0.055))
+                    .offset(x: 34, y: -34)
+                    .accessibilityHidden(true)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                .strokeBorder(Color.accentColor.opacity(0.16), lineWidth: 0.5)
         }
     }
+
 }
 
 struct QuickActionTile: View {

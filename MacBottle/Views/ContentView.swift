@@ -288,7 +288,13 @@ struct ContentView: View {
     var detail: some View {
         switch selection {
         case .library?:
-            RecipeLibraryView(resetToken: libraryResetToken)
+            RecipeLibraryView(
+                resetToken: libraryResetToken,
+                openBottle: { url in
+                    selectedBottleURL = url
+                    selection = .bottle(url)
+                }
+            )
         case .activity?:
             ActivityCenterView(selection: $selection)
         case .bottle(let url)?:

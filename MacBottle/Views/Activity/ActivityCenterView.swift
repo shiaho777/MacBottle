@@ -43,10 +43,12 @@ struct ActivityCenterView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: MacBottleTheme.sectionSpacing) {
                 currentActivity
+                metrics
                 runningSection
             }
             .padding(MacBottleTheme.pagePadding)
         }
+        .background(AppBackground())
         .navigationTitle("activity.title")
         .task {
             while !Task.isCancelled {
@@ -54,6 +56,36 @@ struct ActivityCenterView: View {
                 refreshToken += 1
                 try? await Task.sleep(for: .seconds(2))
             }
+        }
+    }
+
+    private var runningProcessCount: Int {
+        runningBottles.reduce(0) { $0 + $1.count }
+    }
+
+    private var metrics: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 150, maximum: 240), spacing: 10)],
+            spacing: 10
+        ) {
+            MetricTile(
+                title: "activity.metrics.bottles",
+                value: "\(runningBottles.count)",
+                systemImage: "shippingbox.fill",
+                tint: .orange
+            )
+            MetricTile(
+                title: "activity.metrics.processes",
+                value: "\(runningProcessCount)",
+                systemImage: "gearshape.2.fill",
+                tint: .blue
+            )
+            MetricTile(
+                title: "activity.metrics.engine",
+                value: MacBottleTheme.engineLabel(for: WineEngineRegistry.shared.current.identifier),
+                systemImage: "cpu",
+                tint: .purple
+            )
         }
     }
 
@@ -129,11 +161,32 @@ struct ActivityCenterView: View {
             Text("activity.running")
                 .font(.headline)
             if runningBottles.isEmpty {
-                SurfaceCard(padding: 16) {
-                    Text("activity.running.empty")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                SurfaceCard(padding: 18) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.secondary.opacity(0.12))
+                            Image(systemName: "moon.zzz.fill")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(width: 38, height: 38)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("activity.running.empty")
+                                .font(.callout.weight(.medium))
+                            Text("activity.idle.message")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Button("activity.openLibrary") {
+                            selection = .library
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
             } else {
                 ForEach(runningBottles) { entry in
