@@ -46,6 +46,15 @@ enum BottleTab: String, CaseIterable, Identifiable {
         case .activity: return "waveform.path.ecg"
         }
     }
+
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .overview: return "1"
+        case .games: return "2"
+        case .settings: return "3"
+        case .activity: return "4"
+        }
+    }
 }
 
 struct BottleView: View {
@@ -99,21 +108,14 @@ struct BottleView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            TabView(selection: $tab) {
-                overviewTab
-                    .tabItem { Text("bottle.tab.overview") }
-                    .tag(BottleTab.overview)
-                ProgramsView(bottle: bottle, path: $path, browsePrograms: runExternalProgram)
-                    .tabItem { Text("bottle.tab.games") }
-                    .tag(BottleTab.games)
-                ConfigView(bottle: bottle)
-                    .tabItem { Text("bottle.tab.settings") }
-                    .tag(BottleTab.settings)
-                BottleActivityTab(bottle: bottle)
-                    .tabItem { Text("bottle.tab.activity") }
-                    .tag(BottleTab.activity)
+            VStack(spacing: 0) {
+                BottleTabBar(selection: $tab)
+                Divider()
+                    .opacity(0.55)
+                selectedTab
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .background(Color(nsColor: .windowBackgroundColor))
+            .background(AppBackground())
             .navigationTitle(bottle.settings.name)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showWinetricksSheet) {
@@ -150,11 +152,26 @@ struct BottleView: View {
         }
     }
 
+    @ViewBuilder
+    private var selectedTab: some View {
+        switch tab {
+        case .overview:
+            overviewTab
+        case .games:
+            ProgramsView(bottle: bottle, path: $path, browsePrograms: runExternalProgram)
+        case .settings:
+            ConfigView(bottle: bottle)
+        case .activity:
+            BottleActivityTab(bottle: bottle)
+        }
+    }
+
     private var overviewTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: MacBottleTheme.sectionSpacing) {
                 launchStatusBanner
                 BottleHeroHeader(bottle: bottle)
+                metricsGrid
                 continuePlayingCard
 
                 if !bottle.pinnedPrograms.isEmpty {
@@ -166,17 +183,45 @@ struct BottleView: View {
                 }
 
                 if bottle.pinnedPrograms.isEmpty && recentPrograms.isEmpty {
-                    EmptyStateCard(
-                        systemImage: "gamecontroller.fill",
-                        title: "bottle.empty.title",
-                        message: "bottle.empty.message",
-                        actionTitle: "bottle.empty.action"
-                    ) {
-                        tab = .games
-                    }
+                    BottleOnboardingCard(
+                        browsePrograms: runExternalProgram,
+                        openGames: { tab = .games }
+                    )
                 }
             }
             .padding(MacBottleTheme.pagePadding)
+        }
+    }
+
+    private var metricsGrid: some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 150, maximum: 240), spacing: 10)],
+            spacing: 10
+        ) {
+            MetricTile(
+                title: "bottle.metrics.programs",
+                value: "\(bottle.programs.count)",
+                systemImage: "app.fill",
+                tint: .blue
+            )
+            MetricTile(
+                title: "bottle.metrics.pins",
+                value: "\(bottle.pinnedPrograms.count)",
+                systemImage: "pin.fill",
+                tint: .orange
+            )
+            MetricTile(
+                title: "bottle.metrics.windows",
+                value: bottle.settings.windowsVersion.pretty(),
+                systemImage: "desktopcomputer",
+                tint: .teal
+            )
+            MetricTile(
+                title: "bottle.metrics.engine",
+                value: MacBottleTheme.engineLabel(for: bottle.settings.engineID),
+                systemImage: "cpu",
+                tint: .purple
+            )
         }
     }
 
@@ -281,6 +326,7 @@ struct BottleView: View {
                         Label(primaryActionTitle, systemImage: "play.fill")
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(Color.accentColor)
                     .disabled(programLoading || !bottle.isAvailable)
                     .keyboardShortcut("r", modifiers: .command)
                 }
@@ -580,6 +626,137 @@ struct BottleActivityTab: View {
             case .logs:
                 ProgramLogsView(bottle: bottle)
             }
+        }
+    }
+}
+
+private struct BottleTabBar: View {
+    @Binding var selection: BottleTab
+    @Namespace private var namespace
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(BottleTab.allCases) { tab in
+                Button {
+                    withAnimation(AppMotion.standard) {
+                        selection = tab
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(tab.title)
+                            .font(.subheadline.weight(selection == tab ? .semibold : .regular))
+                    }
+                    .foregroundStyle(selection == tab ? Color.accentColor : Color.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background {
+                        if selection == tab {
+                            Capsule()
+                                .fill(Color.accentColor.opacity(0.12))
+                                .matchedGeometryEffect(id: "bottleTab", in: namespace)
+                        }
+                    }
+                    .overlay {
+                        if selection == tab {
+                            Capsule()
+                                .strokeBorder(Color.accentColor.opacity(0.18), lineWidth: 0.5)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .contentShape(Capsule())
+                .keyboardShortcut(tab.shortcut, modifiers: .command)
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
+            }
+            Spacer()
+        }
+        .padding(.horizontal, MacBottleTheme.pagePadding)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+}
+
+private struct BottleOnboardingCard: View {
+    let browsePrograms: () -> Void
+    let openGames: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.accentColor.opacity(0.95), Color.accentColor.opacity(0.55)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 58, height: 58)
+                .shadow(color: Color.accentColor.opacity(0.24), radius: 10, y: 4)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("bottle.empty.title")
+                        .font(.title3.weight(.bold))
+                    Text("bottle.empty.message")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                step(number: "1", title: "bottle.empty.step.install", tint: .orange)
+                step(number: "2", title: "bottle.empty.step.pin", tint: .pink)
+                step(number: "3", title: "bottle.empty.step.play", tint: .green)
+            }
+
+            HStack(spacing: 10) {
+                Button("bottle.empty.action") {
+                    browsePrograms()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Color.accentColor)
+                .controlSize(.large)
+
+                Button("bottle.tab.games") {
+                    openGames()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+
+                Spacer()
+            }
+        }
+        .padding(24)
+        .background {
+            RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                .fill(.background.secondary)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: MacBottleTheme.cardRadius, style: .continuous)
+                .strokeBorder(.separator.opacity(0.4), lineWidth: 0.5)
+        }
+    }
+
+    private func step(number: String, title: LocalizedStringKey, tint: Color) -> some View {
+        HStack(spacing: 12) {
+            Text(verbatim: number)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                .background(tint, in: Circle())
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
         }
     }
 }

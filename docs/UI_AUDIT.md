@@ -179,3 +179,70 @@ Changes:
 - The new strings are translated for English, Simplified Chinese, and
   Traditional Chinese. Other locales fall back to English until they are
   translated.
+
+## 2026-11 visual polish pass
+
+The first pass fixed clipping, navigation, and accessibility. This second
+pass gives the main screens a clearer hierarchy without leaving the
+native macOS vocabulary.
+
+### Library
+
+- Added a page subtitle with the game/installed counts and a row of
+  compatibility filter chips with per-tier counts. The filtered-empty
+  state now explains the filter and offers a reset.
+- Added a Continue-playing rail for installed games that still exist in
+  the recipe catalog; each card opens its bottle.
+- Rebuilt the recipe card: 14 pt radius, hover lift and shadow, cover
+  gradient, a green installed check, and shared compatibility/renderer
+  badges with icons. Context menu adds details, open bottle, and copy ID.
+- The welcome card is now a tinted banner with the brand gradient icon,
+  so a first run has a clear primary action.
+
+### Bottle
+
+- Replaced the native `TabView` strip with a custom icon tab bar using a
+  matched-geometry selection capsule and `⌘1`–`⌘4` shortcuts.
+- The hero is a branded gradient card with a large gradient icon, status
+  pills, and the decorative shipping-box watermark. Repeated program/pin
+  numbers were removed from the hero; the metric grid below is the single
+  source for those numbers.
+- Added the metric grid: programs, pinned programs, Windows version, and
+  active engine.
+- Replaced the full-screen empty state with a three-step onboarding card
+  (install → pin → play) and both install/browse actions.
+
+### Programs
+
+- Reduced the toolbar to the primary Run action plus one Actions menu;
+  pin, config, block, reveal, history, expand/collapse, and refresh now
+  live inside it.
+- Rows use an accent-tinted icon well, a hover background, and a clearer
+  metadata line (architecture, last run, folder) instead of three pills.
+  The play button fills with the accent color on hover; pin fades in for
+  unpinned rows.
+- Disabled alternating row backgrounds so the list reads as cards rather
+  than a spreadsheet.
+
+### Sidebar and Activity
+
+- Sidebar bottles now have deterministic colored avatars, a green running
+  dot with process count, and a program count next to the engine label.
+- Activity adds a three-metric strip (active bottles, running processes,
+  current engine) and a proper empty card that links to the Library.
+
+### Verification
+
+- Debug build, `swift test` (260 tests), and `swiftlint lint --strict`
+  all pass.
+- Captured Library, Bottle overview, Games, Activity, and Settings in
+  light and dark at 1180 × 720, plus Library and Bottle at the 860 × 560
+  minimum. No clipping or duplicate headings found.
+
+### Known trade-off
+
+The custom bottle tab bar recreates the Games view when switching away
+from it, so the local program filter/search resets. Bottle data, pins,
+and launch state are unaffected. Keeping every tab alive would either
+keep hidden `searchable` fields in the toolbar or run Activity polling
+in the background, so the reset is the safer default for now.

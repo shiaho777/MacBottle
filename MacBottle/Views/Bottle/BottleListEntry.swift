@@ -27,12 +27,58 @@ struct BottleListEntry: View {
 
     @State private var showBottleRename: Bool = false
     @State private var name: String = ""
+    @State private var runningCount = 0
+
+    private var avatarTint: Color {
+        let palette: [Color] = [.orange, .pink, .purple, .blue, .teal, .green]
+        let sum = bottle.settings.name.unicodeScalars.reduce(0) { $0 + Int($1.value) }
+        return palette[sum % palette.count]
+    }
+
+    private var bottleAvatar: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [avatarTint.opacity(0.95), avatarTint.opacity(0.62)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            Image(systemName: bottle.isAvailable ? "shippingbox.fill" : "shippingbox")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(bottle.isAvailable ? 1 : 0.65))
+        }
+        .frame(width: 24, height: 24)
+        .overlay(alignment: .bottomTrailing) {
+            if runningCount > 0 {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 7, height: 7)
+                    .overlay {
+                        Circle().strokeBorder(.background, lineWidth: 1.5)
+                    }
+                    .offset(x: 2, y: 2)
+            }
+        }
+        .accessibilityHidden(true)
+    }
 
     var body: some View {
-        Label {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .lineLimit(1)
+        HStack(spacing: 8) {
+            bottleAvatar
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    Text(name)
+                        .lineLimit(1)
+                    if runningCount > 0 {
+                        Text(verbatim: "\(runningCount)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 4)
+                            .background(Color.green.opacity(0.12), in: Capsule())
+                    }
+                }
                 HStack(spacing: 4) {
                     Circle()
                         .fill(MacBottleTheme.engineColor(for: bottle.settings.engineID))
@@ -40,13 +86,24 @@ struct BottleListEntry: View {
                     Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    if !bottle.programs.isEmpty {
+                        Text(verbatim: "· \(bottle.programs.count)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
-        } icon: {
-            Image(systemName: bottle.isAvailable ? "shippingbox.fill" : "shippingbox")
-                .foregroundStyle(bottle.isAvailable ? Color.accentColor : .secondary)
+            Spacer(minLength: 0)
         }
         .opacity(bottle.isAvailable ? 1.0 : 0.5)
+        .task {
+            while !Task.isCancelled {
+                runningCount = BottleProcessRegistry.shared
+                    .registeredProcesses(for: bottle)
+                    .count
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
         .accessibilityLabel(Text(bottle.settings.name))
         .accessibilityValue(Text(MacBottleTheme.engineLabel(for: bottle.settings.engineID)))
         .onChange(of: refresh, initial: true) {

@@ -250,7 +250,7 @@ struct ProgramsView: View {
             }
         }
         .listStyle(.inset)
-        .alternatingRowBackgrounds(.enabled)
+        .alternatingRowBackgrounds(.disabled)
     }
 
     private var folderLibraryList: some View {
@@ -310,7 +310,7 @@ struct ProgramsView: View {
             }
         }
         .listStyle(.inset)
-        .alternatingRowBackgrounds(.enabled)
+        .alternatingRowBackgrounds(.disabled)
     }
 
     @ViewBuilder
@@ -353,7 +353,7 @@ struct ProgramsView: View {
                 }
             }
             .listStyle(.inset)
-            .alternatingRowBackgrounds(.enabled)
+            .alternatingRowBackgrounds(.disabled)
         }
     }
 
@@ -375,7 +375,14 @@ struct ProgramsView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItemGroup(placement: .primaryAction) {
-            if pane != .blocklist {
+            if pane == .blocklist {
+                Button {
+                    removeFromBlocklist(Array(selectedBlockitems))
+                } label: {
+                    Label("programs.blocklist.unblock", systemImage: "hand.raised.slash")
+                }
+                .disabled(selectedBlockitems.isEmpty)
+            } else {
                 Button {
                     runSelectedOrFirst()
                 } label: {
@@ -383,76 +390,64 @@ struct ProgramsView: View {
                 }
                 .disabled(selectedProgramObjects.isEmpty && currentList.isEmpty)
                 .keyboardShortcut("r", modifiers: .command)
+            }
 
-                Button {
-                    togglePinSelected()
-                } label: {
-                    Label("programs.pin", systemImage: "pin")
-                }
-                .disabled(selectedProgramObjects.isEmpty)
-
-                Button {
-                    openConfigSelected()
-                } label: {
-                    Label("programs.config", systemImage: "gearshape")
-                }
-                .disabled(selectedProgramObjects.count != 1)
-
-                Button {
-                    blockSelected()
-                } label: {
-                    Label("programs.block", systemImage: "hand.raised")
-                }
-                .disabled(selectedProgramObjects.isEmpty)
-
-                Button {
-                    revealSelected()
-                } label: {
-                    Label("programs.showInFinder", systemImage: "folder")
-                }
-                .disabled(selectedProgramObjects.isEmpty)
-
-                if pane == .recent {
-                    Button {
-                        clearRecentSelected()
-                    } label: {
-                        Label("programs.clearHistory", systemImage: "clock.badge.xmark")
+            Menu {
+                if pane != .blocklist {
+                    Button("programs.pin", systemImage: "pin") {
+                        togglePinSelected()
                     }
-                    .disabled(selectedProgramObjects.isEmpty && recentPrograms.isEmpty)
-                    .help("programs.clearHistory.help")
-                }
-            } else {
-                Button {
-                    removeFromBlocklist(Array(selectedBlockitems))
-                } label: {
-                    Label("programs.blocklist.unblock", systemImage: "hand.raised.slash")
-                }
-                .disabled(selectedBlockitems.isEmpty)
-            }
+                    .disabled(selectedProgramObjects.isEmpty)
 
-            if pane == .library, layout == .folders {
-                Button {
-                    expandedFolders = Set(folderGroups.map(\.id))
-                } label: {
-                    Label("programs.expandAll", systemImage: "rectangle.expand.vertical")
-                }
-                Button {
-                    expandedFolders.removeAll()
-                } label: {
-                    Label("programs.collapseAll", systemImage: "rectangle.compress.vertical")
-                }
-            }
+                    Button("programs.config", systemImage: "gearshape") {
+                        openConfigSelected()
+                    }
+                    .disabled(selectedProgramObjects.count != 1)
 
-            Button {
-                refreshPrograms()
+                    Button("programs.block", systemImage: "hand.raised") {
+                        blockSelected()
+                    }
+                    .disabled(selectedProgramObjects.isEmpty)
+
+                    Button("programs.showInFinder", systemImage: "folder") {
+                        revealSelected()
+                    }
+                    .disabled(selectedProgramObjects.isEmpty)
+
+                    if pane == .recent {
+                        Button("programs.clearHistory", systemImage: "clock.badge.xmark") {
+                            clearRecentSelected()
+                        }
+                        .disabled(selectedProgramObjects.isEmpty && recentPrograms.isEmpty)
+                        .help("programs.clearHistory.help")
+                    }
+
+                    if pane == .library, layout == .folders {
+                        Divider()
+                        Button("programs.expandAll", systemImage: "rectangle.expand.vertical") {
+                            expandedFolders = Set(folderGroups.map(\.id))
+                        }
+                        Button("programs.collapseAll", systemImage: "rectangle.compress.vertical") {
+                            expandedFolders.removeAll()
+                        }
+                    }
+                    Divider()
+                }
+
+                Button("programs.refresh", systemImage: "arrow.clockwise") {
+                    refreshPrograms()
+                }
+                .disabled(isRefreshing)
             } label: {
                 if isRefreshing {
                     ProgressView().controlSize(.small)
                 } else {
-                    Label("programs.refresh", systemImage: "arrow.clockwise")
+                    Label("programs.actions", systemImage: "ellipsis.circle")
+                        .labelStyle(.iconOnly)
                 }
             }
-            .disabled(isRefreshing)
+            .help("programs.actions")
+            .accessibilityLabel(Text("programs.actions"))
         }
     }
 
@@ -615,6 +610,7 @@ private struct ProgramLibraryRow: View {
     var showRecentTime: Bool = false
 
     @State private var icon: Image?
+    @State private var hovering = false
 
     private var relativePath: String {
         program.url.prettyPath(bottle)
@@ -638,20 +634,7 @@ private struct ProgramLibraryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(.quaternary)
-                if let icon {
-                    icon
-                        .resizable()
-                        .interpolation(.high)
-                        .padding(6)
-                } else {
-                    Image(systemName: "app.fill")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 40, height: 40)
+            iconView
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -664,31 +647,42 @@ private struct ProgramLibraryRow: View {
                             .foregroundStyle(.orange)
                     }
                 }
+
                 Text(relativePath)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+
+                HStack(spacing: 6) {
+                    if let arch = program.peFile?.architecture.toString() {
+                        Label(arch, systemImage: arch.contains("64") ? "cpu" : "cpu.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    if let recentText, showRecentTime {
+                        Label(recentText, systemImage: "clock")
+                            .font(.caption2)
+                            .foregroundStyle(.teal)
+                    }
+                    Label(folderName, systemImage: "folder")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
             }
 
             Spacer(minLength: 8)
-
-            if showRecentTime, let recentText {
-                StatusPill(title: recentText, systemImage: "clock", color: .teal)
-            }
-
-            if let arch = program.peFile?.architecture.toString() {
-                StatusPill(title: arch, color: arch.contains("64") ? .blue : .purple)
-            }
-
-            StatusPill(title: folderName, systemImage: "folder", color: .secondary)
 
             Button {
                 program.pinned.toggle()
             } label: {
                 Image(systemName: program.pinned ? "pin.fill" : "pin")
+                    .foregroundStyle(program.pinned ? Color.orange : Color.secondary)
+                    .frame(width: 26, height: 26)
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
+            .opacity(program.pinned || hovering ? 1 : 0.5)
             .help(program.pinned ? "programs.unpin" : "programs.pin")
             .accessibilityLabel(Text(program.pinned ? "programs.unpin" : "programs.pin"))
 
@@ -696,12 +690,30 @@ private struct ProgramLibraryRow: View {
                 program.run()
             } label: {
                 Image(systemName: "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(hovering ? Color.white : Color.accentColor)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        hovering
+                            ? Color.accentColor
+                            : Color.accentColor.opacity(0.12),
+                        in: Circle()
+                    )
             }
-            .buttonStyle(.borderless)
+            .buttonStyle(.plain)
             .help("programs.run")
             .accessibilityLabel(Text("programs.run"))
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 5)
+        .padding(.horizontal, 4)
+        .background {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(hovering ? Color.accentColor.opacity(0.07) : Color.clear)
+        }
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
+        .animation(AppMotion.quick, value: hovering)
+        .listRowSeparator(.hidden)
         .task(id: program.url) {
             guard let peFile = program.peFile else {
                 icon = nil
@@ -712,5 +724,25 @@ private struct ProgramLibraryRow: View {
                 return Image(nsImage: nsImage)
             }.value
         }
+    }
+
+    private var iconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.accentColor.opacity(0.12))
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .strokeBorder(Color.accentColor.opacity(0.22), lineWidth: 0.5)
+            if let icon {
+                icon
+                    .resizable()
+                    .interpolation(.high)
+                    .padding(5)
+            } else {
+                Image(systemName: "app.fill")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
+        .frame(width: 42, height: 42)
     }
 }
