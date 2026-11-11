@@ -1,6 +1,6 @@
 //
 //  D3DMetalCapability.swift
-//  WhiskyKit
+//  MacBottleKit
 //
 //  This file is part of Whisky.
 //

@@ -24,6 +24,102 @@ The signature is the outer trust boundary; the SHA-256 is the inner one.
 A compromised CDN cannot swap the archive without the private key, and a
 compromised archive cannot pass the digest check.
 
+## Manifest schema 2
+
+Schema 1 described only a download: engine id, version, URL, digest,
+size, minimum macOS, and architecture. Schema 2 adds the package metadata
+the catalog and installer need, so adding an engine no longer requires a
+new Swift branch:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `display_name` | no | Human-readable name for the engine picker |
+| `kind` | no | `wine`, `crossover`, `gptk`, or `custom` |
+| `capabilities` | no | Machine tokens such as `wine`, `arm64`, `rosetta`, `d3dmetal`, `dxvk` |
+| `package_format` | no | Archive hint (`tar.xz`, `tar.gz`) |
+| `install_layout` | no | `wine-root` (default) or `gcenx-app-bundle` |
+| `channel` | no | `stable`, `beta`, or a custom channel name |
+| `license` | no | License note shown with the package |
+| `notes` | no | Short install/limitation note |
+
+Schema 2 signs every field the UI displays. `signingPayload` appends
+`display_name`, `kind`, sorted `capabilities`, `package_format`,
+`install_layout`, `channel`, `license`, and `notes` to the schema 1 line;
+the signer and the client must stay in lockstep. Schema 1 manifests still
+decode and verify, so older builds keep working.
+
+Engine IDs are install slots. A new build gets a new ID
+(`macbottle-arm64`, `macbottle-crossover`, ...). The only legacy
+exception is `crossover`, which still installs into the existing
+`Libraries/` folder; newer builds live under `Engines/<engine_id>/`.
+Reusing an existing built-in ID for a different archive would collide
+with the slot the user already has selected.
+
+## Manifest-driven catalog
+
+`EnginePackageCatalog` turns the signed manifest into `EnginePackage`
+values. For each engine it selects the newest release compatible with
+the current macOS, and:
+
+- prefers a newer version over a native architecture, so an x86_64
+  update is not hidden behind an older arm64 build;
+- prefers native arm64 over x86_64 when versions tie;
+- keeps x86_64 packages visible on Apple Silicon because they run under
+  Rosetta.
+
+`EnginePackageInstaller` downloads the archive through
+`EngineDownloadService` (resume support, SHA-256 verification, tar
+readability check), then dispatches on `install_layout`: `wine-root`
+uses `EngineImportService.importTarball`, `gcenx-app-bundle` uses the
+Gcenx-specific extractor. Settings lists every signed package that is
+not installed yet and installs it without a restart.
+
+## Publishing an engine package
+
+1. Build or obtain the engine tree, with `Wine/bin/wine64` (or
+   `Wine/bin/wine`) at its root.
+2. Package it:
+
+   ```sh
+   scripts/package-engine.sh ~/engines/macbottle-arm64 dist/wine-arm64.tar.xz
+   ```
+
+3. Upload the archive to a GitHub Release or another HTTPS host.
+4. Add the release entry and re-sign:
+
+   ```sh
+   python3 scripts/add-engine-release.py \
+     --engine-id macbottle-arm64 \
+     --version 11.21 \
+     --url https://github.com/OWNER/REPO/releases/download/engine-11.21/wine-arm64.tar.xz \
+     --archive dist/wine-arm64.tar.xz \
+     --display-name "MacBottle Wine (ARM64)" \
+     --kind wine \
+     --layout wine-root \
+     --arch arm64 \
+     --min-macos 14.0 \
+     --capabilities wine,arm64,msync \
+     --license "Wine is LGPL-2.1" \
+     --notes "Native Apple Silicon build."
+   ```
+
+5. Commit `engine-manifest.json`. CI (`EngineManifest.yml`) re-signs the
+   Gcenx entry weekly; manual engine entries are preserved.
+
+`EngineDownloadService` trusts the signed digest, not the host. A
+compromised CDN cannot swap the archive without the signing key, and a
+compromised archive cannot pass the digest check.
+
+### First-party CrossOver-compatible package
+
+The mechanism is ready for it, but the artifact itself is not created
+here: Apple's D3DMetal is closed source and CrossOver is licensed, so a
+CrossOver-compatible archive with D3DMetal/DXVK cannot be fabricated or
+redistributed by this repository. A maintainer with the appropriate
+license builds the tree, packages it with the commands above, and adds
+it to the manifest. Until then, the signed Gcenx Wine 11.21 fallback is
+the only hosted engine, and local import remains fully supported.
+
 ## Update checks
 
 The Gcenx engine (`LocalPathEngine` with `manifestEngineID`) checks for
@@ -74,5 +170,7 @@ it never commits an unsigned manifest.
 - Discovered engines dropped under `Engines/`.
 
 The CrossOver/Whisky primary feed remains dead (404 as of 2026-11).
-Self-owned CrossOver-compatible distribution is still the long-term
-goal; this manifest is the mechanism that will carry it.
+The signed manifest is now the self-owned distribution mechanism: it
+carries package metadata, the catalog installs from it, and the
+packaging scripts publish to it. The remaining dependency is a
+licensed CrossOver-compatible archive, not client code.

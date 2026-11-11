@@ -1,6 +1,6 @@
 //
 //  Rosetta2.swift
-//  Whisky
+//  MacBottle
 //
 //  This file is part of Whisky.
 //

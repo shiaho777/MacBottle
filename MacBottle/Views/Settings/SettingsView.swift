@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  Whisky
+//  MacBottle
 //
 //  This file is part of Whisky.
 //
@@ -33,6 +33,8 @@ struct SettingsView: View {
     @State private var engineMessage: String?
     @State private var autoSelectEngine = LaunchEnginePolicy.autoSelectEnabled
     @State private var engineDescriptions: [String: String] = [:]
+    @State private var enginePackages: [EnginePackage] = []
+    @State private var packageBusyID: String?
 
     var body: some View {
         Form {
@@ -94,6 +96,37 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
+                if !enginePackages.isEmpty {
+                    Text("settings.engine.available")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ForEach(enginePackages) { package in
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: "\(package.displayName) · \(package.version)")
+                                Text(verbatim: package.capabilities.joined(separator: " · "))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if package.isInstalled {
+                                Text("engineCatalog.installed")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Button(
+                                    packageBusyID == package.id
+                                        ? String(localized: "settings.engine.busy")
+                                        : String(localized: "settings.engine.package.install")
+                                ) {
+                                    installEnginePackage(package)
+                                }
+                                .disabled(packageBusyID != nil || engineBusy)
+                            }
+                        }
+                    }
+                }
+
                 if let engineMessage {
                     Text(engineMessage)
                         .font(.caption)
@@ -139,6 +172,13 @@ struct SettingsView: View {
             selectedEngineID = WineEngineRegistry.shared.current.identifier
             refreshEngineDescriptions()
         }
+        .task {
+            let packages = await EnginePackageCatalog.load()
+            await MainActor.run {
+                enginePackages = packages
+                refreshEngineDescriptions()
+            }
+        }
     }
 
     private func refreshEngineDescriptions() {
@@ -146,7 +186,44 @@ struct SettingsView: View {
         for engine in WineEngineCatalog.allEngines() {
             map[engine.identifier] = WineEngineCatalog.describe(engine)
         }
+        for package in enginePackages where package.isInstalled {
+            var parts = [package.displayName]
+            if let version = package.installedVersion {
+                parts.append("v\(version.major).\(version.minor).\(version.patch)")
+            }
+            parts.append(String(localized: "engineCatalog.installed"))
+            map[package.id] = parts.joined(separator: " · ")
+        }
         engineDescriptions = map
+    }
+
+    private func installEnginePackage(_ package: EnginePackage) {
+        packageBusyID = package.id
+        engineMessage = nil
+        Task.detached(priority: .userInitiated) {
+            do {
+                let engine = try await EnginePackageInstaller.install(package)
+                _ = try WineEngineRegistry.shared.select(
+                    identifier: engine.identifier,
+                    installIfNeeded: false
+                )
+                await MainActor.run {
+                    MacBottleApp.killBottles()
+                    ProgramLaunchCoordinator.shared.invalidateEngineBoundState()
+                    selectedEngineID = engine.identifier
+                    packageBusyID = nil
+                    let format = String(localized: "settings.engine.package.installed %@")
+                    engineMessage = String(format: format, engine.displayName)
+                    refreshEngineDescriptions()
+                }
+            } catch {
+                await MainActor.run {
+                    packageBusyID = nil
+                    engineMessage = error.localizedDescription
+                    refreshEngineDescriptions()
+                }
+            }
+        }
     }
 
     private func confirmEngineSwitch() -> Bool {

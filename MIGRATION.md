@@ -2,7 +2,7 @@
 
 本文档跟踪从 Whisky 迁移到 MacBottle 过程中需要改动的所有地方。
 
-**重要原则：** 代码层面的大改名已完成（`MacBottle.xcodeproj`、`MacBottleKit`、`MacBottleCmd`、`MacBottleThumbnail`）。为兼容已有安装和保留署名，GPL 许可头、磁盘上的 `WhiskyWineVersion.plist`、旧版 `com.isaacmarovitz.Whisky` 恢复路径、`@AppStorage` 键与本地化键保持不变。
+**重要原则：** 代码层面的大改名已完成（`MacBottle.xcodeproj`、`MacBottleKit`、`MacBottleCmd`、`MacBottleThumbnail`，以及全部 Swift 源文件头）。为兼容已有安装和保留署名，GPL 许可正文中的 "Whisky"、磁盘上的 `WhiskyWineVersion.plist`、旧版 `com.isaacmarovitz.Whisky` 恢复路径、`@AppStorage` 键与历史本地化键保持不变；这些是**有意冻结**的兼容面，不是未完成的改名。`scripts/check-branding.sh` 会在 CI 中阻止源文件头或 target 名回归到上游名称。
 
 ## 分类
 
@@ -31,13 +31,20 @@
 | Swift Package `WhiskyKit` | → `MacBottleKit` | ✅ 已完成 |
 | CLI `WhiskyCmd` | → `MacBottleCmd`，命令名 `macbottle` | ✅ 已完成 |
 | Extension bundle `WhiskyThumbnail` | → `MacBottleThumbnail` | ✅ 已完成 |
-| Swift 源码中的 `Whisky` 字样 | 已改名；许可头与兼容性相关的名字保留 | ✅ 已完成 |
+| Swift 源文件头 | `Whisky` / `WhiskyKit` / `WhiskyCmd` / `WhiskyKitTests` / `WhiskyThumbnail` → `MacBottle` 对应名称 | ✅ 已完成 |
+| Swift 源码中的 `Whisky` 字样 | 除下方冻结兼容面外均已改名 | ✅ 已完成 |
+| 改名回归防护 | `scripts/check-branding.sh`，由 SwiftLint CI 执行 | ✅ 已完成 |
 
-### ❌ 永不改动（保留上游痕迹）
+### ❌ 永不改动（保留上游痕迹与兼容面）
 
 - 所有致谢、贡献者信息、Copyright 头
+- GPL 许可正文中的 "Whisky" 字样（衍生作品署名）
 - Git 历史中引用的原作者 commits
 - 上游依赖（CrossOver、Sparkle、DXVK 等）的名称与链接
+- 磁盘兼容标识：`WhiskyWineVersion.plist`（引擎版本文件，已有安装和上游构建都依赖该文件名）
+- 旧版安装恢复路径：`com.isaacmarovitz.Whisky`
+- `@AppStorage` 兼容键：`checkWhiskyWineUpdates`
+- 引擎展示名中的上游署名：`CrossOver Wine (Whisky build)`
 
 ## GPL-3.0 合规要点
 

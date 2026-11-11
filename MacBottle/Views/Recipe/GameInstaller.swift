@@ -1,6 +1,6 @@
 //
 //  GameInstaller.swift
-//  Whisky
+//  MacBottle
 //
 //  This file is part of Whisky.
 //

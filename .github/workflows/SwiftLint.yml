@@ -37,6 +37,9 @@ jobs:
             echo "- Do not merge while required checks are red."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify branding headers
+        run: ./scripts/check-branding.sh
+
       - name: Install SwiftLint
         run: brew install swiftlint
 
