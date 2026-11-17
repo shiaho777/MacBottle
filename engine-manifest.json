@@ -42,12 +42,12 @@
       "min_macos" : "15.0",
       "notes" : "Clean redistributable build from MetalSharp bundles (Wine 11.17, Rosetta 2). D3DMetal/GPTK stripped; detected from local GPTK at run time. Requires the macOS 26 prefix-init fix (#198). Verified: wineboot, 64-bit and 32-bit x86.",
       "package_format" : "tar.xz",
-      "sha256" : "c8043598d3965f195d0831fdc2448aab19916557c2218e51a66eaad15063576e",
-      "size" : 490151288,
+      "sha256" : "7c16707422f71ceaeb2af59e75cd35d74907e27808c6bb33459e8630a348ceaa",
+      "size" : 490127776,
       "url" : "https://github.com/shiaho777/MacBottle/releases/download/engine-clean-11.17/macbottle-wine-clean-11.17-x86_64.tar.xz",
       "version" : "11.17"
     }
   ],
   "schema" : 2,
-  "signature" : "gTU867Js2e4wMl+Pu4HtwqKH7xQkkFQftLNsJWqbjpyWdPcIbZd8/nYHzVsEYCkc6n8czdE6GSmGlsE57ocHAA=="
+  "signature" : "GbpkuprhzQvLx/qOtsy3ynfjLlKbM0Vu+jpUZ+YkIlQP72OyXC8XQlDcdYqOv7pRnrIqyz7zo+U6hmH8aszfBw=="
 }
