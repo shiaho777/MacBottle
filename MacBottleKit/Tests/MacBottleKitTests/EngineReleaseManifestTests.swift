@@ -300,7 +300,7 @@ final class EngineReleaseManifestTests: XCTestCase {
             .deletingLastPathComponent()
         let data = try Data(contentsOf: repoRoot.appending(path: "engine-manifest.json"))
         let manifest = try JSONDecoder().decode(EngineReleaseManifest.self, from: data)
-        let publicKey = "abqGeOEAtB1ntAlCsNNbi80AfWP3Tsgn3X9IWXFsLnI="
+        let publicKey = "o6knuVbyQtAkah8xOAHL9CgkLJJ8mabdhcmdpLh5vVA="
         XCTAssertNoThrow(try manifest.verify(publicKeyBase64: publicKey))
         XCTAssertEqual(manifest.schema, 2)
         let release = manifest.release(engineID: "gcenx-wine", arch: "x86_64")
