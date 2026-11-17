@@ -1,5 +1,5 @@
 {
-  "generated_at" : "2026-11-02T20:46:00Z",
+  "generated_at" : "2026-11-17T14:17:48Z",
   "releases" : [
     {
       "arch" : "x86_64",
@@ -21,8 +21,33 @@
       "size" : 225612636,
       "url" : "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-devel-11.21-osx64.tar.xz",
       "version" : "11.21"
+    },
+    {
+      "arch" : "x86_64",
+      "capabilities" : [
+        "dxvk",
+        "moltenvk",
+        "mullion",
+        "rosetta",
+        "vkd3d",
+        "wine",
+        "x86_64"
+      ],
+      "channel" : "stable",
+      "display_name" : "MetalSharp Wine 11.17 (clean, x86_64/Rosetta)",
+      "engine_id" : "metalsharp-wine-clean",
+      "install_layout" : "wine-root",
+      "kind" : "wine",
+      "license" : "Wine LGPL-2.1; Mullion/DXVK-MacOS/VKD3D-Proton-MacOS/MoltenVK per their licenses; no D3DMetal payload.",
+      "min_macos" : "15.0",
+      "notes" : "Clean redistributable build from MetalSharp bundles (Wine 11.17, Rosetta 2). D3DMetal/GPTK stripped; detected from local GPTK at run time. Requires the macOS 26 prefix-init fix (#198). Verified: wineboot, 64-bit and 32-bit x86.",
+      "package_format" : "tar.xz",
+      "sha256" : "7c16707422f71ceaeb2af59e75cd35d74907e27808c6bb33459e8630a348ceaa",
+      "size" : 490127776,
+      "url" : "https://github.com/shiaho777/MacBottle/releases/download/engine-clean-11.17/macbottle-wine-clean-11.17-x86_64.tar.xz",
+      "version" : "11.17"
     }
   ],
   "schema" : 2,
-  "signature" : "E11ZNaZzX5coszEAGbRkDjxVXagJC1LLsqbz8Et+pePQMQ8LzHA9iLqygrcfem+A6adh8U/0TjulZkvov7FqCQ=="
+  "signature" : "GbpkuprhzQvLx/qOtsy3ynfjLlKbM0Vu+jpUZ+YkIlQP72OyXC8XQlDcdYqOv7pRnrIqyz7zo+U6hmH8aszfBw=="
 }
