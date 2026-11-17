@@ -40,11 +40,14 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 COPYFILE_DISABLE=1 cp -R "$ENGINE_ROOT/" "$STAGE/"
 find "$STAGE" -iname "*d3dmetal*" -prune -exec rm -rf {} + 2>/dev/null || true
-find "$STAGE" -type d -iname "*gptk*" -prune -exec rm -rf {} + 2>/dev/null || true
+find "$STAGE" -iname "*gptk*" -prune -exec rm -rf {} + 2>/dev/null || true
+# Drop AppleDouble (._) sidecars so no closed-source payload metadata or
+# other resource-fork junk survives into the archive.
+find "$STAGE" -name "._*" -type f -delete 2>/dev/null || true
 
 # COPYFILE_DISABLE keeps AppleDouble ._ files out of the archive; Wine
 # does not care about them, but they waste space and confuse reviewers.
-COPYFILE_DISABLE=1 tar -cJf "$OUTPUT" -C "$STAGE" .
+COPYFILE_DISABLE=1 tar --no-mac-metadata -cJf "$OUTPUT" -C "$STAGE" .
 
 SHA="$(shasum -a 256 "$OUTPUT" | awk '{print $1}')"
 SIZE="$(stat -f%z "$OUTPUT")"

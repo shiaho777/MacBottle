@@ -1,28 +1,53 @@
 {
-  "generated_at" : "2026-11-02T20:46:00Z",
-  "releases" : [
+  "generated_at": "2026-11-17T14:17:48Z",
+  "releases": [
     {
-      "arch" : "x86_64",
-      "capabilities" : [
+      "arch": "x86_64",
+      "capabilities": [
         "wine",
         "x86_64",
         "rosetta"
       ],
-      "channel" : "stable",
-      "display_name" : "Wine 11.21 (Gcenx, x86_64)",
-      "engine_id" : "gcenx-wine",
-      "install_layout" : "gcenx-app-bundle",
-      "kind" : "wine",
-      "license" : "Wine is LGPL-2.1; this build is produced by Gcenx/macOS_Wine_builds.",
-      "min_macos" : "14.0",
-      "notes" : "Open-source fallback; no D3DMetal or DXVK payload.",
-      "package_format" : "tar.xz",
-      "sha256" : "9909b486657e10ab66c7279371ae1f990345b596b3b1b3a0cf21f28af24fa0ce",
-      "size" : 225612636,
-      "url" : "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-devel-11.21-osx64.tar.xz",
-      "version" : "11.21"
+      "channel": "stable",
+      "display_name": "Wine 11.21 (Gcenx, x86_64)",
+      "engine_id": "gcenx-wine",
+      "install_layout": "gcenx-app-bundle",
+      "kind": "wine",
+      "license": "Wine is LGPL-2.1; this build is produced by Gcenx/macOS_Wine_builds.",
+      "min_macos": "14.0",
+      "notes": "Open-source fallback; no D3DMetal or DXVK payload.",
+      "package_format": "tar.xz",
+      "sha256": "9909b486657e10ab66c7279371ae1f990345b596b3b1b3a0cf21f28af24fa0ce",
+      "size": 225612636,
+      "url": "https://github.com/Gcenx/macOS_Wine_builds/releases/download/11.21/wine-devel-11.21-osx64.tar.xz",
+      "version": "11.21"
+    },
+    {
+      "arch": "x86_64",
+      "capabilities": [
+        "dxvk",
+        "moltenvk",
+        "mullion",
+        "rosetta",
+        "vkd3d",
+        "wine",
+        "x86_64"
+      ],
+      "channel": "stable",
+      "display_name": "MetalSharp Wine 11.17 (clean, x86_64/Rosetta)",
+      "engine_id": "metalsharp-wine-clean",
+      "install_layout": "wine-root",
+      "kind": "wine",
+      "license": "Wine LGPL-2.1; Mullion/DXVK-MacOS/VKD3D-Proton-MacOS/MoltenVK per their licenses; no D3DMetal payload.",
+      "min_macos": "15.0",
+      "notes": "Clean redistributable build from MetalSharp bundles (Wine 11.17, Rosetta 2). D3DMetal/GPTK stripped; detected from local GPTK at run time. Requires the macOS 26 prefix-init fix (#198). Verified: wineboot, 64-bit and 32-bit x86.",
+      "package_format": "tar.xz",
+      "sha256": "c8043598d3965f195d0831fdc2448aab19916557c2218e51a66eaad15063576e",
+      "size": 490151288,
+      "url": "https://github.com/shiaho777/MacBottle/releases/download/engine-clean-11.17/macbottle-wine-clean-11.17-x86_64.tar.xz",
+      "version": "11.17"
     }
   ],
-  "schema" : 2,
-  "signature" : "E11ZNaZzX5coszEAGbRkDjxVXagJC1LLsqbz8Et+pePQMQ8LzHA9iLqygrcfem+A6adh8U/0TjulZkvov7FqCQ=="
+  "schema": 2,
+  "signature": "E11ZNaZzX5coszEAGbRkDjxVXagJC1LLsqbz8Et+pePQMQ8LzHA9iLqygrcfem+A6adh8U/0TjulZkvov7FqCQ=="
 }
