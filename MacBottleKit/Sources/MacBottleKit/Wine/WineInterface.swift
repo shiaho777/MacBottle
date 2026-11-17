@@ -276,9 +276,27 @@ extension Wine {
             bottleDXVKEnabled: bottle.settingsSnapshot.dxvk && dxvkAvailable,
             base: result
         )
-        guard !environment.isEmpty else { return result }
-        result.merge(environment, uniquingKeysWith: { $1 })
+        if !environment.isEmpty {
+            result.merge(environment, uniquingKeysWith: { $1 })
+        }
+        if !prefixBootComplete(bottle: bottle) {
+            result["WINEDLLOVERRIDES"] = RendererEnvironment.mergingOverride(
+                "winemac.drv=d",
+                into: result["WINEDLLOVERRIDES"]
+            )
+        }
         return result
+    }
+
+    /// A prefix that has finished its first `wineboot` carries a
+    /// `.update-timestamp`. Until then the macOS driver must stay disabled:
+    /// on macOS 26 `winemac` drives the bootstrap into a Cocoa main-loop
+    /// deadlock (see issue #197). Once boot-complete, normal launches use
+    /// the mac driver again.
+    static func prefixBootComplete(bottle: Bottle) -> Bool {
+        FileManager.default.fileExists(
+            atPath: bottle.url.appending(path: ".update-timestamp").path(percentEncoded: false)
+        )
     }
 
     static func constructWineServerEnvironment(

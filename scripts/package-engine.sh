@@ -31,9 +31,20 @@ fi
 
 mkdir -p "$(dirname "$OUTPUT")"
 rm -f "$OUTPUT"
+
+# Apple's D3DMetal (Game Porting Toolkit) is closed source and may not be
+# redistributed. Stage a copy of the engine tree and strip any D3DMetal
+# payload before archiving; the app detects a local GPTK install at run
+# time instead. The source engine tree is left untouched.
+STAGE="$(mktemp -d)"
+trap 'rm -rf "$STAGE"' EXIT
+COPYFILE_DISABLE=1 cp -R "$ENGINE_ROOT/" "$STAGE/"
+find "$STAGE" -iname "*d3dmetal*" -prune -exec rm -rf {} + 2>/dev/null || true
+find "$STAGE" -type d -iname "*gptk*" -prune -exec rm -rf {} + 2>/dev/null || true
+
 # COPYFILE_DISABLE keeps AppleDouble ._ files out of the archive; Wine
 # does not care about them, but they waste space and confuse reviewers.
-COPYFILE_DISABLE=1 tar -cJf "$OUTPUT" -C "$ENGINE_ROOT" .
+COPYFILE_DISABLE=1 tar -cJf "$OUTPUT" -C "$STAGE" .
 
 SHA="$(shasum -a 256 "$OUTPUT" | awk '{print $1}')"
 SIZE="$(stat -f%z "$OUTPUT")"
