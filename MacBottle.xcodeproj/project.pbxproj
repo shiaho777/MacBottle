@@ -40,6 +40,9 @@
 		6E40495829CCA19C006E3F1B /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E40495729CCA19C006E3F1B /* ContentView.swift */; };
 		6E40495A29CCA19C006E3F1B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6E40495929CCA19C006E3F1B /* Assets.xcassets */; };
 		ECE00000000000000000009A /* wqy-microhei.ttc in Resources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000009B /* wqy-microhei.ttc */; };
+		ECE00000000000000000061A /* AboutSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000061B /* AboutSection.swift */; };
+		ECE00000000000000000062A /* LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000062B /* LICENSE.txt */; };
+		ECE00000000000000000063A /* NOTICE.txt in Resources */ = {isa = PBXBuildFile; fileRef = ECE00000000000000000063B /* NOTICE.txt */; };
 		6E40495D29CCA19C006E3F1B /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6E40495C29CCA19C006E3F1B /* Preview Assets.xcassets */; };
 		6E40498129CCA8B0006E3F1B /* BottleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E40498029CCA8B0006E3F1B /* BottleView.swift */; };
 		596E16A5CF044AC8A32D8E41 /* WorkspaceImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADD65335ED545A6827FC927 /* WorkspaceImportView.swift */; };
@@ -158,6 +161,9 @@
 		6E40495729CCA19C006E3F1B /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		6E40495929CCA19C006E3F1B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		ECE00000000000000000009B /* wqy-microhei.ttc */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/wqy-microhei.ttc"; sourceTree = "<group>"; };
+		ECE00000000000000000061B /* AboutSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSection.swift; sourceTree = "<group>"; };
+		ECE00000000000000000062B /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Resources/LICENSE.txt"; sourceTree = "<group>"; };
+		ECE00000000000000000063B /* NOTICE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "Resources/NOTICE.txt"; sourceTree = "<group>"; };
 		6E40495C29CCA19C006E3F1B /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		6E40495E29CCA19C006E3F1B /* MacBottle.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacBottle.entitlements; sourceTree = "<group>"; };
 		6E40498029CCA8B0006E3F1B /* BottleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottleView.swift; sourceTree = "<group>"; };
@@ -332,6 +338,8 @@
 				6E5197CD29D71FCD00CF655E /* Views */,
 				6E40495929CCA19C006E3F1B /* Assets.xcassets */,
 				ECE00000000000000000009B /* wqy-microhei.ttc */,
+				ECE00000000000000000062B /* LICENSE.txt */,
+				ECE00000000000000000063B /* NOTICE.txt */,
 				6E899D1129CFC41D00A4A083 /* Info.plist */,
 				6E40495E29CCA19C006E3F1B /* MacBottle.entitlements */,
 				6E40495B29CCA19C006E3F1B /* Preview Content */,
@@ -352,6 +360,7 @@
 			isa = PBXGroup;
 			children = (
 				6E49E0202AECB7DB00009CAC /* SettingsView.swift */,
+				ECE00000000000000000061B /* AboutSection.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -605,6 +614,8 @@
 				6EB58AC92AEACE5E00B1ED3F /* Localizable.xcstrings in Resources */,
 				6E40495A29CCA19C006E3F1B /* Assets.xcassets in Resources */,
 				ECE00000000000000000009A /* wqy-microhei.ttc in Resources */,
+				ECE00000000000000000062A /* LICENSE.txt in Resources */,
+				ECE00000000000000000063A /* NOTICE.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -681,6 +692,7 @@
 				6E50D98329CD6066008C39F6 /* BottleVM.swift in Sources */,
 				6E2B25C12B0E20F50084A67A /* PinAddView.swift in Sources */,
 				6E49E0212AECB7DB00009CAC /* SettingsView.swift in Sources */,
+				ECE00000000000000000061A /* AboutSection.swift in Sources */,
 				6E7C07C02AAF570100F6E66B /* FileOpenView.swift in Sources */,
 				6E6C0CF22A419A6800356232 /* WelcomeView.swift in Sources */,
 				6E40498129CCA8B0006E3F1B /* BottleView.swift in Sources */,
