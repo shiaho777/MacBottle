@@ -1,5 +1,5 @@
 {
-  "generated_at" : "2026-11-17T14:17:48Z",
+  "generated_at" : "2026-11-18T02:49:50Z",
   "releases" : [
     {
       "arch" : "x86_64",
@@ -49,5 +49,5 @@
     }
   ],
   "schema" : 2,
-  "signature" : "GbpkuprhzQvLx/qOtsy3ynfjLlKbM0Vu+jpUZ+YkIlQP72OyXC8XQlDcdYqOv7pRnrIqyz7zo+U6hmH8aszfBw=="
+  "signature" : "O8uTjYTpQab5QCkIiQyPvKyjA0QX7hgtWp6acPHOxBYtwTjIyoOGjAnHi55DFABr5QP94Oyfj4boMDW77z8WCg=="
 }
