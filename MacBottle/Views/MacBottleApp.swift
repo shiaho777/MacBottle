@@ -113,8 +113,13 @@ struct MacBottleApp: App {
                         openURL(url)
                     }
                 }
-                Button("help.github") {
-                    if let url = URL(string: "https://github.com/shiaho777/MacBottle") {
+                Button("help.reportIssue") {
+                    if let url = URL(string: "https://github.com/shiaho777/MacBottle/issues/new/choose") {
+                        openURL(url)
+                    }
+                }
+                Button("help.contribute") {
+                    if let url = URL(string: "https://github.com/shiaho777/MacBottle/blob/main/CONTRIBUTING.md") {
                         openURL(url)
                     }
                 }

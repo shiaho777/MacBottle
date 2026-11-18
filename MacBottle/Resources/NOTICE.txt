@@ -1,0 +1,60 @@
+MacBottle
+Copyright (C) 2026 MacBottle contributors
+
+This product is derived from Whisky:
+    Whisky - A modern Wine wrapper for macOS built with SwiftUI
+    Copyright (C) 2022-2025 Isaac Marovitz and contributors
+    https://github.com/Whisky-App/Whisky
+    Licensed under GNU General Public License v3.0 (GPL-3.0)
+    Archived 2025-05-11
+
+MacBottle contains modifications to the original Whisky source code.
+The modifications are also licensed under GPL-3.0 as required.
+
+--------------------------------------------------------------------
+
+This product uses, depends on, or interoperates with the following
+third-party components. Their licenses apply to their respective
+portions and are NOT covered by MacBottle's own GPL-3.0 license.
+
+Wine / CrossOver (CodeWeavers)
+    https://www.codeweavers.com/crossover
+    Licensed under LGPL with CodeWeavers' commercial terms for packaged
+    distributions. Used here for runtime interoperability only.
+
+Apple D3DMetal / Game Porting Toolkit
+    https://developer.apple.com/documentation/gameportingtoolkit
+    Closed-source, distributed by Apple under their own license.
+    NOT redistributed with MacBottle.
+
+DXVK / DXVK-macOS
+    https://github.com/Gcenx/DXVK-macOS
+    Licensed under zlib license.
+
+MoltenVK
+    https://github.com/KhronosGroup/MoltenVK
+    Licensed under Apache License 2.0.
+
+Sparkle
+    https://github.com/sparkle-project/Sparkle
+    Licensed under MIT license (with BSD-style bsdiff/bspatch portions).
+
+SemanticVersion
+    https://github.com/SwiftPackageIndex/SemanticVersion
+    Licensed under MIT license.
+
+swift-argument-parser
+    https://github.com/apple/swift-argument-parser
+    Licensed under Apache License 2.0.
+
+SwiftyTextTable
+    https://github.com/scottrhoyt/SwiftyTextTable
+    Licensed under MIT license.
+
+msync
+    https://github.com/marzent/wine-msync
+    Licensed under LGPL-2.1-or-later.
+
+--------------------------------------------------------------------
+
+See LICENSE for the full text of the GNU General Public License v3.0.

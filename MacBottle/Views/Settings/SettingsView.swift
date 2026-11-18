@@ -163,6 +163,10 @@ struct SettingsView: View {
                 Toggle("settings.toggle.whisky.updates", isOn: $appUpdateChecks)
                 Toggle("settings.toggle.whiskywine.updates", isOn: $checkEngineUpdates)
             }
+
+            AboutSection()
+
+            CommunitySection()
         }
         .formStyle(.grouped)
         .defaultScrollAnchor(.top)
