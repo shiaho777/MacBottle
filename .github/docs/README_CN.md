@@ -10,6 +10,8 @@
 
 [English](https://github.com/shiaho777/MacBottle/blob/main/README.md) · **简体中文**
 
+[![Release](https://img.shields.io/github/v/release/shiaho777/MacBottle?style=for-the-badge&color=brightgreen)](https://github.com/shiaho777/MacBottle/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/shiaho777/MacBottle/Build.yml?style=for-the-badge&label=CI)](https://github.com/shiaho777/MacBottle/actions/workflows/Build.yml)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](../../LICENSE)
 [![Platform](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple&logoColor=white)](#系统要求)
 [![Chip](https://img.shields.io/badge/Apple%20Silicon-Only-red?style=for-the-badge)](#系统要求)
@@ -18,6 +20,7 @@
 </div>
 
 <p align="center">
+  <a href="#快速上手">快速上手</a> ·
   <a href="#为什么选择-macbottle">为什么是 MacBottle</a> ·
   <a href="#能力概览">能力概览</a> ·
   <a href="#你能用它做什么">你能用它做什么</a> ·
@@ -27,6 +30,21 @@
   <a href="#路线图">路线图</a> ·
   <a href="#如何参与">如何参与</a>
 </p>
+
+---
+
+<!-- Hero 截图占位：截好 docs/assets/hero.png 后在此嵌入。 -->
+
+## 快速上手
+
+一次坐定，从零到能玩：
+
+1. **下载** 最新 Release 的 [`MacBottle.zip`](https://github.com/shiaho777/MacBottle/releases/latest)（附带 `.sha256` 校验文件），解压后把 **MacBottle.app** 拖进「应用程序」。
+2. **首次启动** —— 安装向导会检查 Rosetta 2，并从应用内签名引擎目录安装 Wine 引擎。不用终端，不用手动找下载。
+3. **安装游戏** —— 创建一个容器，指向游戏的安装器或 `.exe`。如果社区已有这款游戏的配方，渲染器、winetricks、注册表调整会自动应用。
+4. **点击开始。** 引擎预热、真实启动反馈，出问题时还有运行日志可查。
+
+系统要求：Apple Silicon、macOS 14+（[详情](#系统要求)）。
 
 ---
 
@@ -52,7 +70,7 @@
 | **瓶子管理** | 创建、配置、重命名、删除;Pin 快捷方式;每个瓶子独立绑定引擎 |
 | **游戏配方** | 社区 JSON 配方(Steam / GOG / 通用),内置目录 + ETag 缓存远程同步,diff UI 逐条勾选 |
 | **渲染方案** | 自动选择 **D3DMetal**(Apple GPTK)、**DXVK**(异步 + HUD)、**DXMT**(D3D11 → Metal)、**vkd3d-proton**(D3D12 → Vulkan)、**MoltenVK** 或 **WineD3D**;Metal HUD/Trace;DXR 开关 |
-| **Wine 引擎层** | 目前为 CrossOver 系引擎;可插拔的 `WineEngine` 协议,为将来接入纯上游 Wine 留好位置 |
+| **Wine 引擎层** | 签名引擎目录(MetalSharp Wine 11.17 clean + Wine 11.21 后备),支持导入 CrossOver;可插拔的 `WineEngine` 协议 |
 | **启动体验** | wineserver 预热、启动状态反馈、每个程序的运行日志、冻结运行时强制停止、陈旧状态对账 |
 | **瓶子内部** | Winetricks 分类动词表、环境变量、Windows 版本与增强同步(msync/esync)、AVX 开关 |
 | **集成与工具** | CLI 伴生工具(`MacBottleCmd`)、Finder 中 `.exe` 文件的缩略图预览、着色器缓存清理 |
@@ -179,8 +197,8 @@ MacBottleThumbnail/         Finder 缩略图扩展(PE 文件)
 | 版本 | 状态 | 核心交付 |
 | -- | -- | -- |
 | v0.1 – v0.5 | ✅ 已完成 | 品牌切换、可运行 `.app`、配方系统、CI + 文档 + 配方 UI、引擎抽象层、远程配方同步 |
-| v0.6 | 🚧 收尾中 | 用户可切换引擎;第二引擎实现移入引擎 Track 单独评估,不再阻塞检查点 |
-| v0.7 | 计划中 | 自有引擎分发渠道(摆脱已归档上游基础设施);发布工程:真实更新源、签名公证构建 |
+| v0.6 | ✅ 已完成 | 用户可切换引擎;第二引擎实现移入引擎 Track 单独评估 |
+| v0.7 | ✅ 已发布 | 签名清单驱动的引擎分发;打包/签名工具链;源码更名完成并加守护;首个 GitHub Release |
 | v1.0 | 目标 | 正式发布,以明确的完成定义为验收标准 |
 
 完整规划——包括四条 Track 的拆解与明确的不做清单(不做虚拟机、不碰 DRM/反作弊、不分发游戏本体)——见 [`PROJECT_PLAN.md`](../../PROJECT_PLAN.md)。
@@ -195,10 +213,13 @@ MacBottleThumbnail/         Finder 缩略图扩展(PE 文件)
 
 MacBottle **不提供游戏本体**。游戏通过 Steam、Epic、GOG、Battle.net 等合法渠道获取;MacBottle 只负责让它们在你的 Mac 上跑起来。
 
-> **引擎可用性(2026-11):** 已归档上游的下载地址(`data.getwhisky.app`)现已返回 404。
-> 在自有引擎分发上线之前,请使用 **安装向导 → 导入 Wine 引擎**,或在同一界面复用已有的
-> Whisky/CrossOver 安装、下载固定版本的开源 Wine 11.21 后备引擎(x86_64,不含 D3DMetal/DXVK),
-> 也可以用 [`scripts/build-wine-arm64.sh`](../../scripts/build-wine-arm64.sh) 构建原生 ARM64 引擎。
+> **引擎可用性(2026-11):** 已归档上游的下载地址(`data.getwhisky.app`)现已返回 404,
+> MacBottle 因此提供自有签名引擎目录:**MetalSharp Wine 11.17(clean,x86_64/Rosetta)**
+> ——内置 DXVK、vkd3d-proton 与 MoltenVK——外加 **Wine 11.21(Gcenx)** 后备引擎,
+> 均可从安装向导或设置页直接安装。D3DMetal 永不再分发,仅在本机装有
+> Game Porting Toolkit 时检测使用。也可以在 **安装向导 → 导入 Wine 引擎** 复用已有的
+> Whisky/CrossOver 安装,或用 [`scripts/build-wine-arm64.sh`](../../scripts/build-wine-arm64.sh)
+> 构建原生 ARM64 引擎。
 
 ---
 

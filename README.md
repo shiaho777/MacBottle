@@ -10,6 +10,8 @@
 
 **English** · [简体中文](.github/docs/README_CN.md)
 
+[![Release](https://img.shields.io/github/v/release/shiaho777/MacBottle?style=for-the-badge&color=brightgreen)](https://github.com/shiaho777/MacBottle/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/shiaho777/MacBottle/Build.yml?style=for-the-badge&label=CI)](https://github.com/shiaho777/MacBottle/actions/workflows/Build.yml)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/macOS-14%2B-black?style=for-the-badge&logo=apple&logoColor=white)](#system-requirements)
 [![Chip](https://img.shields.io/badge/Apple%20Silicon-Only-red?style=for-the-badge)](#system-requirements)
@@ -18,6 +20,7 @@
 </div>
 
 <p align="center">
+  <a href="#quick-start">Quick start</a> ·
   <a href="#why-macbottle">Why MacBottle</a> ·
   <a href="#capability-overview">Capability overview</a> ·
   <a href="#what-you-can-build">What you can build</a> ·
@@ -27,6 +30,21 @@
   <a href="#roadmap">Roadmap</a> ·
   <a href="#contributing">Contributing</a>
 </p>
+
+---
+
+<!-- Hero screenshot slot: add docs/assets/hero.png and embed it here once captured. -->
+
+## Quick start
+
+Zero to gaming in one sitting:
+
+1. **Download** [`MacBottle.zip`](https://github.com/shiaho777/MacBottle/releases/latest) from the latest release (a `.sha256` checksum ships alongside), unzip, and drag **MacBottle.app** to Applications.
+2. **First launch** — the setup assistant checks Rosetta 2 and installs a Wine engine from the signed in-app catalog. No terminal, no manual downloads.
+3. **Install your game** — create a bottle, point MacBottle at the game's installer or `.exe`. If a community recipe exists for the title, it applies the right renderer, winetricks, and registry tweaks automatically.
+4. **Hit play.** Prewarmed engine, real launch feedback, and a run log if anything misbehaves.
+
+Requirements: Apple Silicon, macOS 14+ ([details](#system-requirements)).
 
 ---
 
@@ -52,7 +70,7 @@ A quick scan of what's in the box.
 | **Bottle management** | Create, configure, rename, and delete bottles; pins/shortcuts; per-bottle engine binding |
 | **Game recipes** | Community JSON recipes (Steam / GOG / generic), bundled catalog + remote sync with ETag cache, diff UI with per-row selection |
 | **Rendering** | Auto-selected **D3DMetal** (Apple GPTK), **DXVK** (+ async, HUD), **DXMT** (D3D11 → Metal), **vkd3d-proton** (D3D12 → Vulkan), **MoltenVK** for Vulkan titles, or **WineD3D**; Metal HUD/trace; DXR toggle; per-game DXVK config outside the game directory |
-| **Wine engine layer** | CrossOver-based engine today; pluggable `WineEngine` protocol so pure upstream Wine can slot in later |
+| **Wine engine layer** | Signed engine catalog (MetalSharp Wine 11.17 clean + Wine 11.21 fallback), CrossOver-import support; pluggable `WineEngine` protocol |
 | **Launch experience** | Wineserver prewarm, launch-status feedback, per-program run logs, force-stop for frozen runtimes, stale-status reconciliation |
 | **Bottle internals** | Winetricks catalog with categorized verbs, environment variables, Windows version & enhanced-sync (msync/esync) selection, AVX toggle |
 | **Integration** | CLI companion (`MacBottleCmd`), Finder thumbnail previews for `.exe` files, shader-cache wiping |
@@ -196,11 +214,14 @@ The full plan — including the track breakdown and the explicit non-goals (no v
 MacBottle does not ship game content. You obtain games through legitimate channels (Steam, Epic, GOG, Battle.net); MacBottle only concerns itself with running them well on your Mac.
 
 > **Engine availability (2026-11):** the archived upstream feed
-> (`data.getwhisky.app`) now returns 404. Until self-owned engine
-> distribution ships, use **Setup → Import Wine engine**, reuse an
-> existing Whisky/CrossOver install from the same screen, download the
-> pinned open-source Wine 11.21 fallback (x86_64, no D3DMetal/DXVK), or
-> build a native ARM64 engine with
+> (`data.getwhisky.app`) now returns 404, so MacBottle ships its own
+> signed engine catalog: **MetalSharp Wine 11.17 (clean, x86_64/Rosetta)**
+> — with DXVK, vkd3d-proton, and MoltenVK built in — plus a
+> **Wine 11.21 (Gcenx)** fallback, both installable from the setup
+> assistant or Settings. D3DMetal is never redistributed; it is detected
+> from a local Game Porting Toolkit install when present. You can also
+> reuse an existing Whisky/CrossOver install via **Setup → Import Wine
+> engine**, or build a native ARM64 engine with
 > [`scripts/build-wine-arm64.sh`](scripts/build-wine-arm64.sh).
 
 ---
